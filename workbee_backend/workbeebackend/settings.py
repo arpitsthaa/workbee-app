@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-#-s^ihpkros=7t3n2j!to)-*8rk$o4m3$fx8p4f)xn-wya*g#x
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = [".onrender.com", "localhost", "127.0.0.1", "0.0.0.0"]
+ALLOWED_HOSTS = ["workbee-app.onrender.com", ".onrender.com", "localhost", "127.0.0.1", "0.0.0.0"]
 
 load_dotenv()  # Reads DATABASE_URL from your local .env file
 # Application definition
