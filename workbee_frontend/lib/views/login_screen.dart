@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../controller/login_controller.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -9,35 +8,31 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _controller = LoginController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
-    _controller.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
-  Future<void> _handleLogin() async {
-    final success = await _controller.login();
-    if (!mounted) return;
+  void _handleLogin() {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
 
-    if (!success) {
+    if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_controller.errorMessage ?? 'Login failed')),
+        const SnackBar(content: Text('Please enter both email and password')),
       );
       return;
     }
 
-    final user = _controller.currentUser!;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Logged in as ${user.email}')),
+      SnackBar(content: Text('Logging in as $email...')),
     );
-
-    if (user.role == 'business') {
-      // Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const BusinessDashboardPage()));
-    } else {
-      // Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const StudentGigsPage()));
-    }
   }
 
   @override
@@ -50,19 +45,48 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: ListenableBuilder(
-          listenable: _controller,
-          builder: (context, _) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0),
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 460),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Brand Logo
-                  Image.asset(
-                    'assets/workbee_logo.png',
-                    height: 44,
-                    fit: BoxFit.contain,
+                  // Bigger, Cleaner Brand Header
+                  Row(
+                    children: [
+                      Container(
+                        width: 54,
+                        height: 54,
+                        decoration: BoxDecoration(
+                          color: primaryBlue,
+                          borderRadius: BorderRadius.circular(15),
+                          boxShadow: [
+                            BoxShadow(
+                              color: primaryBlue.withOpacity(0.22),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.school_outlined,
+                          color: Colors.white,
+                          size: 30,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      const Text(
+                        'WorkBee',
+                        style: TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w800,
+                          color: darkText,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 36),
 
@@ -80,35 +104,37 @@ class _LoginScreenState extends State<LoginScreen> {
                     'Bee Busy Be Paid\nConnect with opportunities across Nepal.',
                     style: TextStyle(
                       fontSize: 15,
-                      height: 1.4,
+                      height: 1.45,
                       color: subtitleText,
                     ),
                   ),
                   const SizedBox(height: 32),
 
-                  // Reusable Email Input
+                  // Email Input
                   _WorkBeeInput(
                     label: 'Email',
                     hint: 'Enter your email',
-                    controller: _controller.emailController,
+                    controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
                   ),
                   const SizedBox(height: 20),
 
-                  // Reusable Password Input
+                  // Password Input
                   _WorkBeeInput(
                     label: 'Password',
                     hint: 'Enter your password',
-                    controller: _controller.passwordController,
-                    obscureText: _controller.obscurePassword,
+                    controller: _passwordController,
+                    obscureText: _obscurePassword,
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _controller.obscurePassword
+                        _obscurePassword
                             ? Icons.visibility_off_outlined
                             : Icons.visibility_outlined,
                         color: subtitleText,
                       ),
-                      onPressed: _controller.togglePassword,
+                      onPressed: () {
+                        setState(() => _obscurePassword = !_obscurePassword);
+                      },
                     ),
                   ),
 
@@ -128,12 +154,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  // Log In Button
+                  // Primary Log In Button
                   SizedBox(
                     width: double.infinity,
                     height: 52,
                     child: ElevatedButton(
-                      onPressed: _controller.isLoading ? null : _handleLogin,
+                      onPressed: _handleLogin,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryBlue,
                         foregroundColor: Colors.white,
@@ -142,16 +168,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: _controller.isLoading
-                          ? const SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.5,
-                          color: Colors.white,
-                        ),
-                      )
-                          : const Text(
+                      child: const Text(
                         'Log in',
                         style: TextStyle(
                           fontSize: 16,
@@ -162,7 +179,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 28),
 
-                  // Registration Options
+                  // Registration Section
                   const Center(
                     child: Text(
                       'New to WorkBee? Register as:',
@@ -187,8 +204,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ],
               ),
-            );
-          },
+            ),
+          ),
         ),
       ),
     );
@@ -196,7 +213,7 @@ class _LoginScreenState extends State<LoginScreen> {
 }
 
 // ---------------------------------------------------------------------------
-// REUSABLE WIDGETS (Exact same as your original code)
+// REUSABLE WIDGETS
 // ---------------------------------------------------------------------------
 
 class _WorkBeeInput extends StatelessWidget {
@@ -300,30 +317,6 @@ class _RegistrationButton extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _EmptyCard extends StatelessWidget {
-  final double height;
-  final Widget? child;
-
-  const _EmptyCard({
-    this.height = 100,
-    this.child,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      height: height,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: child,
     );
   }
 }
