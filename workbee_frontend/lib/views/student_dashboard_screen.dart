@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:workbee_frontend/views/browse_gigs_screen.dart';
 import 'package:workbee_frontend/views/my_work_screen.dart';
 import 'package:workbee_frontend/views/passport_screen.dart';
+import 'package:workbee_frontend/views/profile_screen.dart';
 
 class StudentDashboardScreen extends StatefulWidget {
   final String studentName;
@@ -35,6 +36,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           ? const MyWorkScreen()
           : _selectedIndex == 3
           ? const PassportScreen()
+          : _selectedIndex == 4
+          ? const ProfileScreen()
           : SafeArea(
         child: Center(
           child: ConstrainedBox(
