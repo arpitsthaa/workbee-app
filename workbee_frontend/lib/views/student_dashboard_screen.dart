@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:workbee_frontend/services/auth_service.dart';
 import 'package:workbee_frontend/models/api_models.dart';
 import 'package:workbee_frontend/views/browse_gigs_screen.dart';
@@ -43,6 +44,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     }
   }
 
+  Future<void> _onRefresh() async {
+    await _loadDashboard();
+  }
+
   String _formatNpr(int amount) {
     final str = amount.toString();
     if (str.length <= 3) return 'NPR $str';
@@ -65,7 +70,11 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
       body: IndexedStack(
         index: _selectedIndex,
         children: [
-          _buildHomeBody(),
+          RefreshIndicator(
+            onRefresh: _onRefresh,
+            color: primaryBlue,
+            child: _buildHomeBody(),
+          ),
           const BrowseGigsScreen(),
           const MyWorkScreen(),
           const PassportScreen(),
@@ -118,6 +127,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     const bodyText = Color(0xFF1E293B);
     const mutedText = Color(0xFF64748B);
     const borderColor = Color(0xFFE2E8F0);
+    const shimmerBase = Color(0xFFEFF6FF);
+    const shimmerHighlight = Color(0xFFDBEAFE);
 
     final studentName = _dashboard?.fullName ?? 'Student';
     final profileCompletion = _dashboard?.profileCompletion ?? 0;
@@ -127,7 +138,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     final projectsSummary = _dashboard?.projectsSummary ?? <String, dynamic>{};
 
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return _buildShimmerHomeBody(
+        shimmerBase: shimmerBase,
+        shimmerHighlight: shimmerHighlight,
+      );
     }
 
     if (_error != null) {
@@ -148,6 +162,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 480),
           child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -347,7 +362,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                   ],
                 ),
                 const SizedBox(height: 14),
-                ...recommendedGigs.map((gig) {
+                ...recommendedGigs.take(3).map((gig) {
                   return Column(
                     children: [
                       _GigCard(
@@ -447,6 +462,96 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildShimmerHomeBody({
+    required Color shimmerBase,
+    required Color shimmerHighlight,
+  }) {
+    return SafeArea(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildShimmerRow(
+                  shimmerBase: shimmerBase,
+                  shimmerHighlight: shimmerHighlight,
+                  children: [
+                    _shimmerBox(width: 44, height: 44, borderRadius: 8),
+                    const SizedBox(width: 12),
+                    _shimmerBox(width: 100, height: 20, borderRadius: 4),
+                    const SizedBox(height: 4),
+                    _shimmerBox(width: 80, height: 12, borderRadius: 4),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                _shimmerBox(width: 150, height: 28, borderRadius: 4),
+                const SizedBox(height: 4),
+                _shimmerBox(width: 200, height: 14, borderRadius: 4),
+                const SizedBox(height: 12),
+                _shimmerBox(width: 100, height: 24, borderRadius: 20),
+                const SizedBox(height: 20),
+                _shimmerBox(width: double.infinity, height: 80, borderRadius: 14),
+                const SizedBox(height: 24),
+                _shimmerBox(width: 150, height: 18, borderRadius: 4),
+                const SizedBox(height: 14),
+                ...List.generate(3, (index) => Column(
+                  children: [
+                    _shimmerBox(width: double.infinity, height: 80, borderRadius: 14),
+                    const SizedBox(height: 12),
+                  ],
+                )),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(child: _shimmerBox(width: double.infinity, height: 60, borderRadius: 14)),
+                    const SizedBox(width: 12),
+                    Expanded(child: _shimmerBox(width: double.infinity, height: 60, borderRadius: 14)),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _shimmerBox(width: double.infinity, height: 60, borderRadius: 14),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildShimmerRow({
+    required Color shimmerBase,
+    required Color shimmerHighlight,
+    required List<Widget> children,
+  }) {
+    return Shimmer.fromColors(
+      baseColor: shimmerBase,
+      highlightColor: shimmerHighlight,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: children,
+      ),
+    );
+  }
+
+  Widget _shimmerBox({
+    required double width,
+    required double height,
+    required double borderRadius,
+  }) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(borderRadius),
       ),
     );
   }

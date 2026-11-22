@@ -282,6 +282,7 @@ class ProfileResponse {
   final String semester;
   final String bio;
   final List<String> skills;
+  final List<String> interests;
   final String portfolioUrl;
   final bool isVerified;
   final int profileCompletion;
@@ -296,6 +297,7 @@ class ProfileResponse {
     required this.semester,
     required this.bio,
     required this.skills,
+    required this.interests,
     required this.portfolioUrl,
     required this.isVerified,
     required this.profileCompletion,
@@ -312,6 +314,7 @@ class ProfileResponse {
       semester: (json['semester'] ?? '') as String,
       bio: (json['bio'] ?? '') as String,
       skills: List<String>.from(json['skills'] ?? []),
+      interests: List<String>.from(json['interests'] ?? []),
       portfolioUrl: (json['portfolio_url'] ?? '') as String,
       isVerified: json['is_verified'] ?? false,
       profileCompletion: (json['profile_completion'] ?? 0) as int,

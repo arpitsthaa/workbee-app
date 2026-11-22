@@ -15,8 +15,7 @@ class AuthService {
 
   Future<void> warmUp() async {
     try {
-      await http.get(Uri.parse('$_baseUrl/api/health/'))
-          .timeout(const Duration(seconds: 10));
+      await http.get(Uri.parse('$_baseUrl/api/health/')).timeout(const Duration(seconds: 10));
     } catch (_) {
       // best-effort wake-up; ignore
     }
@@ -30,6 +29,50 @@ class AuthService {
       'Accept': 'application/json',
       if (token != null) 'Authorization': 'Token $token',
     };
+  }
+
+  /// Safely decodes a response body. Returns null when the body is empty or
+  /// the response is not JSON, logging a preview of the raw body for debugging.
+  dynamic _decodeBody(http.Response response) {
+    final body = response.body;
+    if (body.isEmpty) return null;
+    final contentType = response.headers['content-type'] ?? '';
+    if (!contentType.contains('application/json')) {
+      final preview = body.length > 200 ? '${body.substring(0, 200)}...' : body;
+      debugPrint('Non-JSON response (${response.statusCode}): $preview');
+      return null;
+    }
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map) {
+        return Map<String, dynamic>.from(decoded);
+      }
+      return decoded;
+    } catch (e) {
+      debugPrint('JSON decode error: $e');
+      return null;
+    }
+  }
+
+  /// Builds an error map from a response. Extracts detail/message from JSON
+  /// bodies; otherwise falls back to the first 200 chars of the raw body.
+  Map<String, dynamic> _errorBody(http.Response response, dynamic decoded, String defaultMessage) {
+    final body = response.body;
+    if (decoded is Map<String, dynamic> && decoded.isNotEmpty) {
+      final detail = decoded['detail'] ?? decoded['message'];
+      if (detail != null) {
+        return {'error': detail.toString(), 'status': response.statusCode};
+      }
+      final firstValue = decoded.values.first;
+      if (firstValue is List && firstValue.isNotEmpty) {
+        return {'error': firstValue.first.toString(), 'status': response.statusCode};
+      } else if (firstValue is String) {
+        return {'error': firstValue, 'status': response.statusCode};
+      }
+      return {'error': defaultMessage, 'status': response.statusCode};
+    }
+    final preview = body.isNotEmpty ? (body.length > 200 ? '${body.substring(0, 200)}...' : body) : '';
+    return {'error': preview.isNotEmpty ? preview : '$defaultMessage (${response.statusCode})', 'status': response.statusCode};
   }
 
   Future<StudentRegistrationResponse> registerStudent(
@@ -52,30 +95,18 @@ class AuthService {
       debugPrint('Register Status: ${response.statusCode}');
       debugPrint('Register Body: ${response.body}');
 
-      final Map<String, dynamic> decodedBody = response.body.isNotEmpty
-          ? Map<String, dynamic>.from(jsonDecode(response.body))
-          : <String, dynamic>{};
+      final decodedBody = _decodeBody(response);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return StudentRegistrationResponse.fromJson(
-          decodedBody,
+          decodedBody is Map<String, dynamic> ? decodedBody : <String, dynamic>{},
           response.statusCode,
         );
       }
 
-      String errorMessage = 'Registration failed (${response.statusCode}).';
-      if (decodedBody.isNotEmpty) {
-        final firstValue = decodedBody.values.first;
-        if (firstValue is List && firstValue.isNotEmpty) {
-          errorMessage = firstValue.first.toString();
-        } else if (firstValue is String) {
-          errorMessage = firstValue;
-        }
-      }
-
       return StudentRegistrationResponse(
         success: false,
-        message: errorMessage,
+        message: _errorBody(response, decodedBody, 'Registration failed').values.first.toString(),
       );
     } on TimeoutException {
       return StudentRegistrationResponse(
@@ -111,30 +142,22 @@ class AuthService {
       debugPrint('Business Register Status: ${response.statusCode}');
       debugPrint('Business Register Body: ${response.body}');
 
-      final Map<String, dynamic> decodedBody = response.body.isNotEmpty
-          ? Map<String, dynamic>.from(jsonDecode(response.body))
-          : <String, dynamic>{};
+      final decodedBody = _decodeBody(response);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
+        final prefs = await SharedPreferences.getInstance();
+        if (decodedBody is Map && decodedBody['token'] != null) {
+          await prefs.setString('auth_token', decodedBody['token'].toString());
+        }
         return BusinessRegistrationResponse.fromJson(
-          decodedBody,
+          decodedBody is Map<String, dynamic> ? decodedBody : <String, dynamic>{},
           response.statusCode,
         );
       }
 
-      String errorMessage = 'Registration failed (${response.statusCode}).';
-      if (decodedBody.isNotEmpty) {
-        final firstValue = decodedBody.values.first;
-        if (firstValue is List && firstValue.isNotEmpty) {
-          errorMessage = firstValue.first.toString();
-        } else if (firstValue is String) {
-          errorMessage = firstValue;
-        }
-      }
-
       return BusinessRegistrationResponse(
         success: false,
-        message: errorMessage,
+        message: _errorBody(response, decodedBody, 'Registration failed').values.first.toString(),
       );
     } on TimeoutException {
       return BusinessRegistrationResponse(
@@ -159,14 +182,12 @@ class AuthService {
         const Duration(seconds: 30),
       );
 
-      final body = response.body.isNotEmpty
-          ? jsonDecode(response.body) as Map<String, dynamic>
-          : <String, dynamic>{};
+      final decoded = _decodeBody(response);
 
       if (response.statusCode == 200) {
-        return body;
+        return decoded is Map<String, dynamic> ? decoded : <String, dynamic>{};
       }
-      return {'error': body['detail'] ?? 'Failed to load dashboard', 'status': response.statusCode};
+      return _errorBody(response, decoded, 'Failed to load dashboard');
     } on TimeoutException {
       return {'error': 'Server took too long to respond.', 'status': 408};
     } catch (e) {
@@ -200,14 +221,13 @@ class AuthService {
       debugPrint('BrowseGigs Response Status: ${response.statusCode}');
       debugPrint('BrowseGigs Response Body: ${response.body}');
 
-      final body = response.body.isNotEmpty
-          ? jsonDecode(response.body) as List<dynamic>
-          : <dynamic>[];
+      final decoded = _decodeBody(response);
 
       if (response.statusCode == 200) {
-        return {'gigs': body};
+        final gigs = decoded is List ? decoded : <dynamic>[];
+        return {'gigs': gigs};
       }
-      return {'error': 'Failed to load gigs (${response.statusCode})', 'status': response.statusCode};
+      return _errorBody(response, decoded, 'Failed to load gigs');
     } on TimeoutException {
       return {'error': 'Server took too long to respond.', 'status': 408};
     } catch (e) {
@@ -225,14 +245,12 @@ class AuthService {
         const Duration(seconds: 30),
       );
 
-      final body = response.body.isNotEmpty
-          ? jsonDecode(response.body) as Map<String, dynamic>
-          : <String, dynamic>{};
+      final decoded = _decodeBody(response);
 
       if (response.statusCode == 200) {
-        return body;
+        return decoded is Map<String, dynamic> ? decoded : <String, dynamic>{};
       }
-      return {'error': 'Failed to load work', 'status': response.statusCode};
+      return _errorBody(response, decoded, 'Failed to load work');
     } on TimeoutException {
       return {'error': 'Server took too long to respond.', 'status': 408};
     } catch (e) {
@@ -249,14 +267,12 @@ class AuthService {
         const Duration(seconds: 30),
       );
 
-      final body = response.body.isNotEmpty
-          ? jsonDecode(response.body) as Map<String, dynamic>
-          : <String, dynamic>{};
+      final decoded = _decodeBody(response);
 
       if (response.statusCode == 200) {
-        return body;
+        return decoded is Map<String, dynamic> ? decoded : <String, dynamic>{};
       }
-      return {'error': 'Failed to load passport', 'status': response.statusCode};
+      return _errorBody(response, decoded, 'Failed to load passport');
     } on TimeoutException {
       return {'error': 'Server took too long to respond.', 'status': 408};
     } catch (e) {
@@ -273,14 +289,12 @@ class AuthService {
         const Duration(seconds: 30),
       );
 
-      final body = response.body.isNotEmpty
-          ? jsonDecode(response.body) as Map<String, dynamic>
-          : <String, dynamic>{};
+      final decoded = _decodeBody(response);
 
       if (response.statusCode == 200) {
-        return body;
+        return decoded is Map<String, dynamic> ? decoded : <String, dynamic>{};
       }
-      return {'error': 'Failed to load profile', 'status': response.statusCode};
+      return _errorBody(response, decoded, 'Failed to load profile');
     } on TimeoutException {
       return {'error': 'Server took too long to respond.', 'status': 408};
     } catch (e) {
@@ -301,14 +315,12 @@ class AuthService {
       )
           .timeout(const Duration(seconds: 30));
 
-      final body = response.body.isNotEmpty
-          ? jsonDecode(response.body) as Map<String, dynamic>
-          : <String, dynamic>{};
+      final decoded = _decodeBody(response);
 
       if (response.statusCode == 200) {
-        return body;
+        return decoded is Map<String, dynamic> ? decoded : <String, dynamic>{};
       }
-      return {'error': body['detail'] ?? 'Failed to update profile', 'status': response.statusCode};
+      return _errorBody(response, decoded, 'Failed to update profile');
     } on TimeoutException {
       return {'error': 'Server took too long to respond.', 'status': 408};
     } catch (e) {

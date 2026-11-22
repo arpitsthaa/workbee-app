@@ -3,6 +3,10 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 
+def _empty_list():
+    return []
+
+
 class StudentProfile(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -12,7 +16,8 @@ class StudentProfile(models.Model):
     program = models.CharField(max_length=100, blank=True, default="")  # e.g., BCA
     semester = models.CharField(max_length=50, blank=True, default="")  # e.g., Semester 4
     bio = models.TextField(blank=True, default="")
-    skills = models.JSONField(default=list, blank=True)  # e.g., ["Canva", "Figma"]
+    skills = models.JSONField(default=_empty_list, blank=True)  # e.g., ["Canva", "Figma"]
+    interests = models.JSONField(default=_empty_list, blank=True, null=True)  # e.g., ["Design", "Marketing"]
     portfolio_url = models.URLField(blank=True, default="")
     is_verified = models.BooleanField(default=False)
     verified_date = models.DateField(null=True, blank=True)
@@ -27,6 +32,7 @@ class StudentProfile(models.Model):
             self.semester,
             self.bio,
             bool(self.skills),
+            bool(self.interests),
             self.portfolio_url,
         ]
         filled = sum(1 for item in fields if item)
@@ -66,8 +72,6 @@ class Gig(models.Model):
     )
     title = models.CharField(max_length=200)
     description = models.TextField()
-    deliverables = models.JSONField(default=list, blank=True)
-    required_skills = models.JSONField(default=list, blank=True)
     category = models.CharField(max_length=100, default="Design & creative")
     budget_npr = models.PositiveIntegerField()
     duration_days = models.PositiveIntegerField(default=7)

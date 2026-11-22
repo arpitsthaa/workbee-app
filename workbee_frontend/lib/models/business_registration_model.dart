@@ -37,11 +37,13 @@ class BusinessRegistrationResponse {
   final bool success;
   final String message;
   final Map<String, dynamic>? data;
+  final String? token;
 
   BusinessRegistrationResponse({
     required this.success,
     required this.message,
     this.data,
+    this.token,
   });
 
   factory BusinessRegistrationResponse.fromJson(
@@ -52,6 +54,7 @@ class BusinessRegistrationResponse {
       success: statusCode == 200 || statusCode == 201,
       message: json['message'] ?? 'Business account created successfully!',
       data: json,
+      token: json['token']?.toString(),
     );
   }
 }
