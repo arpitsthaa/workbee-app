@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:workbee_frontend/services/auth_service.dart';
+import 'package:workbee_frontend/models/api_models.dart';
 import 'package:workbee_frontend/views/browse_gigs_screen.dart';
 import 'package:workbee_frontend/views/my_work_screen.dart';
 import 'package:workbee_frontend/views/passport_screen.dart';
 import 'package:workbee_frontend/views/profile_screen.dart';
 
 class StudentDashboardScreen extends StatefulWidget {
-  final String studentName;
-
-  const StudentDashboardScreen({
-    super.key,
-    this.studentName = 'Anisha',
-  });
+  const StudentDashboardScreen({super.key});
 
   @override
   State<StudentDashboardScreen> createState() => _StudentDashboardScreenState();
@@ -18,6 +15,41 @@ class StudentDashboardScreen extends StatefulWidget {
 
 class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   int _selectedIndex = 0;
+  final AuthService _authService = AuthService();
+
+  DashboardResponse? _dashboard;
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDashboard();
+  }
+
+  Future<void> _loadDashboard() async {
+    final result = await _authService.getStudentDashboard();
+    if (!mounted) return;
+    if (result.containsKey('error')) {
+      setState(() {
+        _error = result['error'] as String?;
+        _isLoading = false;
+      });
+    } else {
+      setState(() {
+        _dashboard = DashboardResponse.fromJson(result as Map<String, dynamic>);
+        _isLoading = false;
+      });
+    }
+  }
+
+  String _formatNpr(int amount) {
+    final str = amount.toString();
+    if (str.length <= 3) return 'NPR $str';
+    final prefix = str.substring(0, str.length - 3);
+    final suffix = str.substring(str.length - 3);
+    return 'NPR $prefix,$suffix';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,29 +60,47 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     const mutedText = Color(0xFF64748B);
     const borderColor = Color(0xFFE2E8F0);
 
+    final studentName = _dashboard?.fullName ?? 'Student';
+    final profileCompletion = _dashboard?.profileCompletion ?? 0;
+    final isVerified = _dashboard?.isVerified ?? false;
+    final recommendedGigs = _dashboard?.recommendedGigs ?? <Gig>[];
+    final appsSummary = _dashboard?.applicationsSummary ?? <String, dynamic>{};
+    final projectsSummary = _dashboard?.projectsSummary ?? <String, dynamic>{};
+    final passport = _dashboard?.careerPassport ?? <String, dynamic>{};
+
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_error != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Error: $_error', style: const TextStyle(color: Colors.red)),
+            const SizedBox(height: 12),
+            ElevatedButton(onPressed: _loadDashboard, child: const Text('Retry')),
+          ],
+        ),
+      );
+    }
+
+    if (_selectedIndex == 1) return const BrowseGigsScreen();
+    if (_selectedIndex == 2) return const MyWorkScreen();
+    if (_selectedIndex == 3) return const PassportScreen();
+    if (_selectedIndex == 4) return const ProfileScreen();
+
     return Scaffold(
       backgroundColor: Colors.white,
-      body: _selectedIndex == 1
-          ? const BrowseGigsScreen()
-          : _selectedIndex == 2
-          ? const MyWorkScreen()
-          : _selectedIndex == 3
-          ? const PassportScreen()
-          : _selectedIndex == 4
-          ? const ProfileScreen()
-          : SafeArea(
+      body: SafeArea(
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 480),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 16,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Top Brand Header & User Avatar
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -101,9 +151,11 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                           shape: BoxShape.circle,
                         ),
                         alignment: Alignment.center,
-                        child: const Text(
-                          'AS',
-                          style: TextStyle(
+                        child: Text(
+                          studentName.isNotEmpty
+                              ? studentName[0].toUpperCase()
+                              : 'S',
+                          style: const TextStyle(
                             color: primaryBlue,
                             fontWeight: FontWeight.w700,
                             fontSize: 14,
@@ -113,10 +165,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
-
-                  // Greeting & Verified Pill
                   Text(
-                    'Hi, ${widget.studentName}!',
+                    'Hi, $studentName!',
                     style: const TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.w800,
@@ -141,29 +191,27 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       color: softBlueBg,
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.check,
                           size: 14,
                           color: primaryBlue,
                         ),
-                        SizedBox(width: 4),
+                        const SizedBox(width: 4),
                         Text(
                           'Student verified',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: primaryBlue,
+                            color: isVerified ? primaryBlue : mutedText,
                           ),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 20),
-
-                  // Profile Completion Card
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
@@ -175,21 +223,18 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
-                          mainAxisAlignment:
-                          MainAxisAlignment.spaceBetween,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
-                              'Profile 90% complete',
-                              style: TextStyle(
+                            Text(
+                              'Profile $profileCompletion% complete',
+                              style: const TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w700,
                                 color: bodyText,
                               ),
                             ),
                             GestureDetector(
-                              onTap: () {
-                                // TODO: Open profile edit screen
-                              },
+                              onTap: () => setState(() => _selectedIndex = 4),
                               child: const Text(
                                 'Edit',
                                 style: TextStyle(
@@ -204,18 +249,16 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                         const SizedBox(height: 10),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
-                          child: const LinearProgressIndicator(
-                            value: 0.9,
+                          child: LinearProgressIndicator(
+                            value: profileCompletion / 100,
                             minHeight: 6,
-                            backgroundColor: Color(0xFFDBEAFE),
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              primaryBlue,
-                            ),
+                            backgroundColor: const Color(0xFFDBEAFE),
+                            valueColor: AlwaysStoppedAnimation<Color>(primaryBlue),
                           ),
                         ),
                         const SizedBox(height: 10),
                         const Text(
-                          'Add one more portfolio sample to stand out.',
+                          'Complete your profile to stand out.',
                           style: TextStyle(
                             fontSize: 12.5,
                             color: mutedText,
@@ -225,8 +268,6 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-
-                  // Recommended Gigs Header
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -239,9 +280,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                         ),
                       ),
                       GestureDetector(
-                        onTap: () {
-                          setState(() => _selectedIndex = 1);
-                        },
+                        onTap: () => setState(() => _selectedIndex = 1),
                         child: const Row(
                           children: [
                             Text(
@@ -264,34 +303,29 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                     ],
                   ),
                   const SizedBox(height: 14),
-
-                  // Reusable Gig Cards
-                  _GigCard(
-                    title: 'Restaurant Social Media Design',
-                    subtitle: 'Momo Junction · Baneshwor, Kathmandu',
-                    payText: 'NPR 3,000',
-                    metaText: '7 days · Due 21 Oct',
-                    highlightMeta: false,
-                    onTap: () => setState(() => _selectedIndex = 1),
-                  ),
-                  const SizedBox(height: 12),
-                  _GigCard(
-                    title: 'Product Photo Editing',
-                    subtitle: 'Local Loom · Patan, Lalitpur',
-                    payText: 'NPR 2,500',
-                    metaText: '5 days · Due 19 Oct',
-                    highlightMeta: true,
-                    onTap: () => setState(() => _selectedIndex = 1),
-                  ),
+                  ...recommendedGigs.map((gig) {
+                    return Column(
+                      children: [
+                        _GigCard(
+                          title: gig.title,
+                          subtitle: '${gig.businessName} · ${gig.location}',
+                          payText: _formatNpr(gig.budgetNpr),
+                          metaText: '${gig.durationDays} days · ${gig.deadline}',
+                          highlightMeta: false,
+                          onTap: () => setState(() => _selectedIndex = 1),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                    );
+                  }).toList(),
                   const SizedBox(height: 18),
-
-                  // Two Side-by-Side Stat Cards
                   Row(
                     children: [
                       Expanded(
                         child: _StatCard(
-                          countText: '2 applications',
-                          subtitleText: '1 pending · 1 shortlisted',
+                          countText: '${appsSummary['total'] ?? 0} applications',
+                          subtitleText:
+                              '${appsSummary['pending'] ?? 0} pending · ${appsSummary['shortlisted'] ?? 0} shortlisted',
                           borderColor: borderColor,
                           onTap: () => setState(() => _selectedIndex = 2),
                         ),
@@ -299,8 +333,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: _StatCard(
-                          countText: '3 projects',
-                          subtitleText: '1 active · 2 approved',
+                          countText: '${projectsSummary['total'] ?? 0} projects',
+                          subtitleText:
+                              '${projectsSummary['active'] ?? 0} active · ${projectsSummary['approved'] ?? 0} approved',
                           borderColor: borderColor,
                           onTap: () => setState(() => _selectedIndex = 2),
                         ),
@@ -308,8 +343,6 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                     ],
                   ),
                   const SizedBox(height: 16),
-
-                  // Career Passport Banner Card
                   InkWell(
                     onTap: () => setState(() => _selectedIndex = 3),
                     borderRadius: BorderRadius.circular(14),
@@ -319,8 +352,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       decoration: BoxDecoration(
                         color: softBlueBg,
                         borderRadius: BorderRadius.circular(14),
-                        border:
-                        Border.all(color: primaryBlue, width: 1.5),
+                        border: Border.all(color: primaryBlue, width: 1.5),
                       ),
                       child: const Row(
                         children: [
@@ -332,8 +364,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                           SizedBox(width: 12),
                           Expanded(
                             child: Column(
-                              crossAxisAlignment:
-                              CrossAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
                                   children: [
@@ -353,9 +384,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                                     ),
                                   ],
                                 ),
-                                SizedBox(height: 4),
+                                const SizedBox(height: 4),
                                 Text(
-                                  '2 verified projects · 4.9/5 average rating',
+                                  'Verified projects · Avg rating',
                                   style: TextStyle(
                                     fontSize: 12.5,
                                     color: mutedText,
@@ -415,10 +446,6 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     );
   }
 }
-
-// ---------------------------------------------------------------------------
-// REUSABLE DASHBOARD WIDGETS
-// ---------------------------------------------------------------------------
 
 class _GigCard extends StatelessWidget {
   final String title;

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:workbee_frontend/controller/login_controller.dart';
 import 'package:workbee_frontend/views/register_student_screen.dart';
 import 'package:workbee_frontend/views/register_business_screen.dart';
 import 'package:workbee_frontend/views/student_dashboard_screen.dart';
@@ -11,38 +12,35 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final _controller = LoginController();
   bool _obscurePassword = true;
 
   @override
   void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
-  void _handleLogin() {
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
+  Future<void> _handleLogin() async {
+    final success = await _controller.login();
 
-    if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter both email and password')),
+    if (!mounted) return;
+
+    if (success) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const StudentDashboardScreen(),
+        ),
       );
-      return;
+    } else if (_controller.errorMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_controller.errorMessage!),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
     }
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const StudentDashboardScreen(),
-      ),
-    );
-
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Logging in as $email...')),
-    );
   }
 
   @override
@@ -124,7 +122,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   _WorkBeeInput(
                     label: 'Email',
                     hint: 'Enter your email',
-                    controller: _emailController,
+                    controller: _controller.emailController,
                     keyboardType: TextInputType.emailAddress,
                   ),
                   const SizedBox(height: 20),
@@ -133,7 +131,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   _WorkBeeInput(
                     label: 'Password',
                     hint: 'Enter your password',
-                    controller: _passwordController,
+                    controller: _controller.passwordController,
                     obscureText: _obscurePassword,
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -165,27 +163,42 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 12),
 
                   // Primary Log In Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton(
-                      onPressed: _handleLogin,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryBlue,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                  ListenableBuilder(
+                    listenable: _controller,
+                    builder: (context, _) {
+                      return SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: ElevatedButton(
+                          onPressed: _controller.isLoading ? null : _handleLogin,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primaryBlue,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            disabledBackgroundColor: primaryBlue.withValues(alpha: 0.6),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: _controller.isLoading
+                              ? const SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text(
+                                  'Log in',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                         ),
-                      ),
-                      child: const Text(
-                        'Log in',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 28),
 

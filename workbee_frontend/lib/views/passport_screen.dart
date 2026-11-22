@@ -1,7 +1,46 @@
 import 'package:flutter/material.dart';
+import 'package:workbee_frontend/services/auth_service.dart';
+import 'package:workbee_frontend/models/api_models.dart';
+import 'package:workbee_frontend/views/student_dashboard_screen.dart';
+import 'package:workbee_frontend/views/browse_gigs_screen.dart';
+import 'package:workbee_frontend/views/my_work_screen.dart';
+import 'package:workbee_frontend/views/profile_screen.dart';
 
-class PassportScreen extends StatelessWidget {
+class PassportScreen extends StatefulWidget {
   const PassportScreen({super.key});
+
+  @override
+  State<PassportScreen> createState() => _PassportScreenState();
+}
+
+class _PassportScreenState extends State<PassportScreen> {
+  final AuthService _authService = AuthService();
+
+  PassportResponse? _passport;
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPassport();
+  }
+
+  Future<void> _loadPassport() async {
+    final result = await _authService.getCareerPassport();
+    if (!mounted) return;
+    if (result.containsKey('error')) {
+      setState(() {
+        _error = result['error'] as String?;
+        _isLoading = false;
+      });
+    } else {
+      setState(() {
+        _passport = PassportResponse.fromJson(result as Map<String, dynamic>);
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -11,128 +50,97 @@ class PassportScreen extends StatelessWidget {
     const mutedText = Color(0xFF64748B);
     const borderColor = Color(0xFFE2E8F0);
 
-    return SafeArea(
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header
-                const Text(
-                  'Career Passport',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                    color: darkText,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Your work. Your verified experience.',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: mutedText,
-                  ),
-                ),
-                const SizedBox(height: 20),
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-                // Student Info Row
-                Row(
-                  children: [
-                    Container(
-                      width: 52,
-                      height: 52,
-                      decoration: const BoxDecoration(
-                        color: softBlueBg,
-                        shape: BoxShape.circle,
-                      ),
-                      alignment: Alignment.center,
-                      child: const Text(
-                        'AS',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          color: primaryBlue,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Anisha Shrestha',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: darkText,
-                          ),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          'Patan Multiple Campus · BCA',
-                          style: TextStyle(
-                            fontSize: 13.5,
-                            color: mutedText,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 18),
+    if (_error != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Error: $_error',
+                style: const TextStyle(color: Colors.red)),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: _loadPassport,
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
 
-                // Summary Banner
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: softBlueBg,
-                    borderRadius: BorderRadius.circular(14),
+    final fullName = _passport?.fullName ?? 'Student';
+    final collegeUniversity = _passport?.collegeUniversity ?? '';
+    final program = _passport?.program ?? '';
+    final verifiedProjects = _passport?.verifiedProjectsCount ?? 0;
+    final avgRating = _passport?.averageRating ?? 0.0;
+    final completedProjects = _passport?.completedProjects ?? [];
+
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Career Passport',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      color: darkText,
+                    ),
                   ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Your work. Your verified experience.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: mutedText,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
                     children: [
+                      Container(
+                        width: 52,
+                        height: 52,
+                        decoration: const BoxDecoration(
+                          color: softBlueBg,
+                          shape: BoxShape.circle,
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          fullName.isNotEmpty ? fullName[0].toUpperCase() : 'A',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: primaryBlue,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 14),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '2 verified projects',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
-                              color: primaryBlue,
-                            ),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            'Completed & business-approved',
-                            style: TextStyle(
-                              fontSize: 12.5,
-                              color: mutedText,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            '4.9/5',
+                            fullName,
                             style: TextStyle(
                               fontSize: 18,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w700,
                               color: darkText,
                             ),
                           ),
-                          SizedBox(height: 4),
+                          SizedBox(height: 2),
                           Text(
-                            'Avg. rating',
+                            '$collegeUniversity · $program',
                             style: TextStyle(
-                              fontSize: 12.5,
+                              fontSize: 13.5,
                               color: mutedText,
                             ),
                           ),
@@ -140,56 +148,167 @@ class PassportScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 24),
-
-                // Section Title
-                const Text(
-                  'Completed projects',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    color: darkText,
+                  const SizedBox(height: 18),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: softBlueBg,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '$verifiedProjects verified projects',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: primaryBlue,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'Completed & business-approved',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                color: mutedText,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              avgRating.toStringAsFixed(1),
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                                color: darkText,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'Avg. rating',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                color: mutedText,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-
-                // Project Card 1
-                _VerifiedProjectCard(
-                  title: 'Product Catalog Design',
-                  businessAndLocation: 'Patan Crafts · Patan, Lalitpur',
-                  roleAndSkills: 'Graphic designer · Canva, Layout design',
-                  dateText: 'Completed 24 Sep 2026',
-                  ratingText: '5.0/5',
-                  feedback:
-                  '"Beautiful layouts and delivered on time. Understood our products well."',
-                  borderColor: borderColor,
-                ),
-                const SizedBox(height: 14),
-
-                // Project Card 2
-                _VerifiedProjectCard(
-                  title: 'Menu Refresh',
-                  businessAndLocation: 'Himalayan Beans · Jhamsikhel, Lalitpur',
-                  roleAndSkills: 'Graphic designer · Figma, Typography',
-                  dateText: 'Completed 4 Oct 2026',
-                  ratingText: '4.8/5',
-                  feedback:
-                  '"A clean, readable menu our customers love. Great communication throughout."',
-                  borderColor: borderColor,
-                ),
-              ],
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Completed projects',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: darkText,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (completedProjects.isEmpty)
+                    const Text(
+                      'No verified projects yet. Complete gigs to build your passport.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: mutedText,
+                      ),
+                    )
+                  else
+                    ...completedProjects.map((review) {
+                      return Column(
+                        children: [
+                          _VerifiedProjectCard(
+                            title: review.gigTitle,
+                            businessAndLocation:
+                                '${review.businessName} · ${review.businessLocation}',
+                            roleAndSkills:
+                                '${review.roleTitle} · ${review.skills.join(', ')}',
+                            dateText: 'Completed ${review.completedAt ?? review.createdAt}',
+                            ratingText: '${review.rating.toStringAsFixed(1)}/5',
+                            feedback: review.reviewComment,
+                            borderColor: borderColor,
+                          ),
+                          const SizedBox(height: 14),
+                        ],
+                      );
+                    }).toList(),
+                ],
+              ),
             ),
           ),
         ),
       ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: 3,
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
+        selectedItemColor: primaryBlue,
+        unselectedItemColor: mutedText,
+        selectedFontSize: 12,
+        unselectedFontSize: 12,
+        onTap: (index) {
+          switch (index) {
+            case 0:
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const StudentDashboardScreen()),
+              );
+              break;
+            case 1:
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const BrowseGigsScreen()),
+              );
+              break;
+            case 2:
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const MyWorkScreen()),
+              );
+              break;
+            case 4:
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const ProfileScreen()),
+              );
+              break;
+          }
+        },
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.search),
+            label: 'Gigs',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.work_outline),
+            activeIcon: Icon(Icons.work),
+            label: 'My work',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.verified_outlined),
+            activeIcon: Icon(Icons.verified),
+            label: 'Passport',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
+            label: 'Profile',
+          ),
+        ],
+      ),
     );
   }
 }
-
-// ---------------------------------------------------------------------------
-// REUSABLE VERIFIED PROJECT CARD
-// ---------------------------------------------------------------------------
 
 class _VerifiedProjectCard extends StatelessWidget {
   final String title;
@@ -228,7 +347,6 @@ class _VerifiedProjectCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title + Verified Badge
           Row(
             children: [
               Expanded(
@@ -269,13 +387,11 @@ class _VerifiedProjectCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 6),
-
           Text(
             businessAndLocation,
             style: const TextStyle(fontSize: 13.5, color: mutedText),
           ),
           const SizedBox(height: 6),
-
           Text(
             roleAndSkills,
             style: const TextStyle(
@@ -285,8 +401,6 @@ class _VerifiedProjectCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-
-          // Rating & Date Row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -315,8 +429,6 @@ class _VerifiedProjectCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-
-          // Client Quote
           Text(
             feedback,
             style: const TextStyle(

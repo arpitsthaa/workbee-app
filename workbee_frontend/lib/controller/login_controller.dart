@@ -13,6 +13,8 @@ class LoginController extends ChangeNotifier {
   String? errorMessage;
   UserModel? currentUser;
 
+  static const String _loginUrl = 'http://localhost:8000/api/users/login/';
+
   void togglePassword() {
     obscurePassword = !obscurePassword;
     notifyListeners();
@@ -35,7 +37,7 @@ class LoginController extends ChangeNotifier {
     try {
       final response = await http
           .post(
-        Uri.parse('https://workbee-zi7l.onrender.com/api/login/'),
+        Uri.parse(_loginUrl),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email, 'password': password}),
       )
@@ -60,7 +62,7 @@ class LoginController extends ChangeNotifier {
         return false;
       }
     } catch (e) {
-      errorMessage = 'Connection failed. Render server might be waking up, try again.';
+      errorMessage = 'Connection failed. Make sure the backend is running on localhost:8000.';
       isLoading = false;
       notifyListeners();
       return false;

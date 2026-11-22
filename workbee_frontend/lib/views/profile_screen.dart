@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:workbee_frontend/services/auth_service.dart';
+import 'package:workbee_frontend/models/api_models.dart';
 import 'package:workbee_frontend/views/login_screen.dart';
+import 'package:workbee_frontend/views/student_dashboard_screen.dart';
+import 'package:workbee_frontend/views/browse_gigs_screen.dart';
+import 'package:workbee_frontend/views/my_work_screen.dart';
+import 'package:workbee_frontend/views/passport_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -9,16 +15,13 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  bool _isEditing = false;
+  final AuthService _authService = AuthService();
 
-  String _name = 'Anisha Shrestha';
-  String _location = 'Patan, Lalitpur';
-  String _college = 'Patan Multiple Campus';
-  String _course = 'BCA · Semester 4';
-  String _about =
-      'BCA student creating clear, thoughtful designs for local businesses.';
-  String _skillsText = 'Canva, Figma, Social media design';
-  String _portfolio = 'behance.net/aayushashrestha';
+  bool _isEditing = false;
+  bool _isLoading = true;
+  String? _error;
+
+  ProfileResponse? _profile;
 
   final _nameController = TextEditingController();
   final _locationController = TextEditingController();
@@ -27,6 +30,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _aboutController = TextEditingController();
   final _skillsController = TextEditingController();
   final _portfolioController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
 
   @override
   void dispose() {
@@ -40,41 +49,66 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.dispose();
   }
 
-  void _openEdit() {
-    _nameController.text = _name;
-    _locationController.text = _location;
-    _collegeController.text = _college;
-    _courseController.text = _course;
-    _aboutController.text = _about;
-    _skillsController.text = _skillsText;
-    _portfolioController.text = _portfolio;
-    setState(() => _isEditing = true);
+  Future<void> _loadProfile() async {
+    final result = await _authService.getStudentProfile();
+    if (!mounted) return;
+    if (result.containsKey('error')) {
+      setState(() {
+        _error = result['error'] as String?;
+        _isLoading = false;
+      });
+    } else {
+      final profile = ProfileResponse.fromJson(result as Map<String, dynamic>);
+      setState(() {
+        _profile = profile;
+        _nameController.text = profile.fullName;
+        _locationController.text = profile.location ?? '';
+        _collegeController.text = profile.collegeUniversity ?? '';
+        _courseController.text = '${profile.program} · ${profile.semester}'.trim();
+        _aboutController.text = profile.bio;
+        _skillsController.text = profile.skills.join(', ');
+        _portfolioController.text = profile.portfolioUrl;
+        _isLoading = false;
+      });
+    }
   }
 
-  void _saveEdit() {
-    setState(() {
-      if (_nameController.text.trim().isNotEmpty) {
-        _name = _nameController.text.trim();
-      }
-      _location = _locationController.text.trim();
-      _college = _collegeController.text.trim();
-      _course = _courseController.text.trim();
-      _about = _aboutController.text.trim();
-      _skillsText = _skillsController.text.trim();
-      _portfolio = _portfolioController.text.trim();
-      _isEditing = false;
-    });
+  Future<void> _saveProfile() async {
+    final data = {
+      'full_name': _nameController.text.trim(),
+      'location': _locationController.text.trim(),
+      'college_university': _collegeController.text.trim(),
+      'program': _courseController.text.trim().split(' · ').first,
+      'semester': _courseController.text.trim().split(' · ').length > 1
+          ? _courseController.text.trim().split(' · ').last
+          : '',
+      'bio': _aboutController.text.trim(),
+      'skills': _skillsController.text.trim().split(',').where((s) => s.trim().isNotEmpty).map((s) => s.trim()).toList(),
+      'portfolio_url': _portfolioController.text.trim(),
+    };
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Profile saved')),
-    );
+    final result = await _authService.updateStudentProfile(data);
+    if (!mounted) return;
+    if (result.containsKey('error')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['error'] as String? ?? 'Save failed'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    } else {
+      setState(() => _isEditing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile saved')),
+      );
+    }
   }
 
   void _handleLogout() {
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (context) => const LoginScreen()),
-          (route) => false,
+      (route) => false,
     );
   }
 
@@ -86,309 +120,378 @@ class _ProfileScreenState extends State<ProfileScreen> {
     const mutedText = Color(0xFF64748B);
     const borderColor = Color(0xFFE2E8F0);
 
-    final skillsList = _skillsText
-        .split(',')
-        .map((s) => s.trim())
-        .where((s) => s.isNotEmpty)
-        .toList();
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-    return SafeArea(
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'My profile',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                    color: darkText,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Your skills. Your student identity.',
-                  style: TextStyle(fontSize: 14, color: mutedText),
-                ),
-                const SizedBox(height: 20),
+    if (_error != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Error: $_error', style: const TextStyle(color: Colors.red)),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: _loadProfile,
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
 
-                if (_isEditing) ...[
-                  TextField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(labelText: 'Full name'),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _locationController,
-                    decoration: const InputDecoration(labelText: 'Location'),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _collegeController,
-                    decoration: const InputDecoration(labelText: 'College'),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _courseController,
-                    decoration:
-                    const InputDecoration(labelText: 'Course & semester'),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _aboutController,
-                    maxLines: 3,
-                    decoration: const InputDecoration(labelText: 'About me'),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _skillsController,
-                    decoration: const InputDecoration(
-                      labelText: 'Skills (separate with commas)',
+    final profile = _profile!;
+    final skillsList = profile.skills;
+
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'My profile',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      color: darkText,
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _portfolioController,
-                    decoration:
-                    const InputDecoration(labelText: 'Portfolio link'),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Your skills. Your student identity.',
+                    style: TextStyle(fontSize: 14, color: mutedText),
                   ),
                   const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => setState(() => _isEditing = false),
-                          child: const Text('Cancel'),
-                        ),
+
+                  if (_isEditing) ...[
+                    TextField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(labelText: 'Full name'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _locationController,
+                      decoration: const InputDecoration(labelText: 'Location'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _collegeController,
+                      decoration: const InputDecoration(labelText: 'College'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _courseController,
+                      decoration: const InputDecoration(
+                        labelText: 'Course & semester',
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: _saveEdit,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: primaryBlue,
-                            foregroundColor: Colors.white,
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _aboutController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(labelText: 'About me'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _skillsController,
+                      decoration: const InputDecoration(
+                        labelText: 'Skills (separate with commas)',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _portfolioController,
+                      decoration: const InputDecoration(
+                        labelText: 'Portfolio link',
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => setState(() => _isEditing = false),
+                            child: const Text('Cancel'),
                           ),
-                          child: const Text('Save'),
                         ),
-                      ),
-                    ],
-                  ),
-                ] else ...[
-                  // Name & Location
-                  Row(
-                    children: [
-                      Container(
-                        width: 56,
-                        height: 56,
-                        decoration: const BoxDecoration(
-                          color: softBlueBg,
-                          shape: BoxShape.circle,
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          _name.isNotEmpty ? _name[0].toUpperCase() : 'A',
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            color: primaryBlue,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _saveProfile,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryBlue,
+                              foregroundColor: Colors.white,
+                            ),
+                            child: const Text('Save'),
                           ),
                         ),
+                      ],
+                    ),
+                  ] else ...[
+                    Row(
+                      children: [
+                        Container(
+                          width: 56,
+                          height: 56,
+                          decoration: const BoxDecoration(
+                            color: softBlueBg,
+                            shape: BoxShape.circle,
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            profile.fullName.isNotEmpty
+                                ? profile.fullName[0].toUpperCase()
+                                : 'A',
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              color: primaryBlue,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              profile.fullName,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                                color: darkText,
+                              ),
+                            ),
+                            Text(
+                              profile.location ?? '',
+                              style: const TextStyle(
+                                fontSize: 13.5,
+                                color: mutedText,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: borderColor),
                       ),
-                      const SizedBox(width: 14),
-                      Column(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            _name,
+                            '${profile.collegeUniversity ?? ''}',
                             style: const TextStyle(
-                              fontSize: 20,
+                              fontSize: 15,
                               fontWeight: FontWeight.w700,
                               color: darkText,
                             ),
                           ),
+                          const SizedBox(height: 4),
                           Text(
-                            _location,
+                            '${profile.program} · ${profile.semester}',
                             style: const TextStyle(
-                              fontSize: 13.5,
+                              fontSize: 13,
                               color: mutedText,
                             ),
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-
-                  // College Box
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: borderColor),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _college,
-                          style: const TextStyle(
+                    const SizedBox(height: 18),
+                    const Text(
+                      'About me',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: darkText,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      profile.bio,
+                      style: const TextStyle(fontSize: 14, color: mutedText),
+                    ),
+                    const SizedBox(height: 18),
+                    const Text(
+                      'Skills',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: darkText,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: skillsList
+                          .map(
+                            (skill) => Chip(
+                          label: Text(
+                            skill,
+                            style: const TextStyle(
+                              color: primaryBlue,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          backgroundColor: softBlueBg,
+                          side: BorderSide.none,
+                        ),
+                      )
+                          .toList(),
+                    ),
+                    const SizedBox(height: 18),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: borderColor),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Portfolio',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: darkText,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            profile.portfolioUrl,
+                            style: const TextStyle(
+                              fontSize: 13.5,
+                              color: primaryBlue,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: () => setState(() => _isEditing = true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryBlue,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Edit Profile',
+                          style: TextStyle(
                             fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: darkText,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _course,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: mutedText,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-
-                  // About Me
-                  const Text(
-                    'About me',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: darkText,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    _about,
-                    style: const TextStyle(fontSize: 14, color: mutedText),
-                  ),
-                  const SizedBox(height: 18),
-
-                  // Skills
-                  const Text(
-                    'Skills',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: darkText,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: skillsList
-                        .map(
-                          (skill) => Chip(
-                        label: Text(
-                          skill,
-                          style: const TextStyle(
-                            color: primaryBlue,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        backgroundColor: softBlueBg,
-                        side: BorderSide.none,
                       ),
-                    )
-                        .toList(),
-                  ),
-                  const SizedBox(height: 18),
-
-                  // Portfolio
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: borderColor),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Portfolio',
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: OutlinedButton.icon(
+                        onPressed: _handleLogout,
+                        icon: const Icon(Icons.logout, size: 18),
+                        label: const Text(
+                          'Log out',
                           style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: darkText,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _portfolio,
-                          style: const TextStyle(
-                            fontSize: 13.5,
-                            color: primaryBlue,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFFDC2626),
+                          side: const BorderSide(color: Color(0xFFFECACA)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 22),
-
-                  // Edit Profile Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: _openEdit,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryBlue,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        'Edit Profile',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Log Out Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: OutlinedButton.icon(
-                      onPressed: _handleLogout,
-                      icon: const Icon(Icons.logout, size: 18),
-                      label: const Text(
-                        'Log out',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFFDC2626),
-                        side: const BorderSide(color: Color(0xFFFECACA)),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: 4,
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
+        selectedItemColor: primaryBlue,
+        unselectedItemColor: mutedText,
+        selectedFontSize: 12,
+        unselectedFontSize: 12,
+        onTap: (index) {
+          switch (index) {
+            case 0:
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const StudentDashboardScreen()),
+              );
+              break;
+            case 1:
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const BrowseGigsScreen()),
+              );
+              break;
+            case 2:
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const MyWorkScreen()),
+              );
+              break;
+            case 3:
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const PassportScreen()),
+              );
+              break;
+          }
+        },
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.search),
+            label: 'Gigs',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.work_outline),
+            activeIcon: Icon(Icons.work),
+            label: 'My work',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.verified_outlined),
+            activeIcon: Icon(Icons.verified),
+            label: 'Passport',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
+            label: 'Profile',
+          ),
+        ],
       ),
     );
   }

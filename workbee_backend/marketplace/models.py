@@ -81,7 +81,7 @@ class Gig(models.Model):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"{self.title} - {self.business.business_name or self.business.email}"
+        return f"{self.title} - {self.business.email}"
 
 
 class GigApplication(models.Model):
