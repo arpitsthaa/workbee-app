@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:workbee_frontend/views/register_student_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -192,7 +193,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     title: 'Student Registration',
                     borderColor: primaryBlue,
                     accentColor: beeGold,
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const StudentRegistrationScreen(),
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 12),
 
@@ -200,7 +208,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     title: 'Business Registration',
                     borderColor: primaryBlue,
                     accentColor: beeGold,
-                    onTap: () {},
+                    onTap: () {
+                      // Replace with your BusinessRegistrationScreen once created
+                    },
                   ),
                 ],
               ),
