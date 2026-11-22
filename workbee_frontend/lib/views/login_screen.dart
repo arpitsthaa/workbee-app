@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:workbee_frontend/views/register_student_screen.dart';
 import 'package:workbee_frontend/views/register_business_screen.dart';
+import 'package:workbee_frontend/views/student_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -31,6 +32,13 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       return;
     }
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const StudentDashboardScreen(),
+      ),
+    );
+
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Logging in as $email...')),
