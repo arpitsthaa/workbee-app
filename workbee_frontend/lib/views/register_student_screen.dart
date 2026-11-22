@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../controller/student_registration_controller.dart';
 
 class StudentRegistrationScreen extends StatefulWidget {
   const StudentRegistrationScreen({super.key});
@@ -9,6 +10,9 @@ class StudentRegistrationScreen extends StatefulWidget {
 }
 
 class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
+  final StudentRegistrationController _controller =
+  StudentRegistrationController();
+
   final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -18,11 +22,42 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
 
   @override
   void dispose() {
+    _controller.dispose();
     _fullNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _collegeController.dispose();
     super.dispose();
+  }
+
+  Future<void> _onRegisterPressed() async {
+    FocusScope.of(context).unfocus();
+
+    final success = await _controller.registerAndLoginStudent(
+      fullName: _fullNameController.text,
+      email: _emailController.text,
+      password: _passwordController.text,
+      college: _collegeController.text,
+    );
+
+    if (!mounted) return;
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Registration and login successful!'),
+          backgroundColor: Color(0xFF16A34A),
+          duration: Duration(seconds: 3),
+        ),
+      );
+    } else if (_controller.errorMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_controller.errorMessage!),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
   }
 
   InputDecoration _buildInputDecoration({
@@ -182,27 +217,44 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
                 ),
               ),
               const SizedBox(height: 28),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2563EB),
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+              ListenableBuilder(
+                listenable: _controller,
+                builder: (context, _) {
+                  return SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed:
+                      _controller.isLoading ? null : _onRegisterPressed,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2563EB),
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor:
+                        const Color(0xFF2563EB).withValues(alpha: 0.6),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: _controller.isLoading
+                          ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: Colors.white,
+                        ),
+                      )
+                          : const Text(
+                        'Create account',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
-                  ),
-                  child: const Text(
-                    'Create account',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
+                  );
+                },
               ),
               const SizedBox(height: 20),
               Row(
