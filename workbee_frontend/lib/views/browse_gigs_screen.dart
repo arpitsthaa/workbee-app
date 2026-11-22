@@ -3,10 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:workbee_frontend/services/auth_service.dart';
 import 'package:workbee_frontend/models/api_models.dart';
 import 'package:workbee_frontend/widgets/gig_post_card.dart';
-import 'package:workbee_frontend/views/student_dashboard_screen.dart';
-import 'package:workbee_frontend/views/my_work_screen.dart';
-import 'package:workbee_frontend/views/passport_screen.dart';
-import 'package:workbee_frontend/views/profile_screen.dart';
 
 class BrowseGigsScreen extends StatefulWidget {
   const BrowseGigsScreen({super.key});
@@ -334,188 +330,198 @@ class _BrowseGigsScreenState extends State<BrowseGigsScreen> {
     const borderColor = Color(0xFFE2E8F0);
     const errorColor = Color(0xFFEF4444);
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () async {
-            _reload();
-          },
-          child: FutureBuilder<List<Gig>>(
-            future: _gigsFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (snapshot.hasError) {
-                return Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.error_outline, color: errorColor, size: 40),
-                      const SizedBox(height: 8),
-                      Text(
-                        snapshot.error.toString(),
-                        style: const TextStyle(color: errorColor),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 12),
-                      TextButton(onPressed: _reload, child: const Text('Retry')),
-                    ],
-                  ),
-                );
-              }
+    return SafeArea(
+      child: RefreshIndicator(
+        onRefresh: () async {
+          _reload();
+        },
+        child: FutureBuilder<List<Gig>>(
+          future: _gigsFuture,
+          builder: (context, snapshot) {
+            final waiting = snapshot.connectionState == ConnectionState.waiting;
+            final hasError = snapshot.hasError;
+            final gigs = (waiting || hasError)
+                ? <Gig>[]
+                : _filterAndSort(snapshot.data ?? []);
 
-              final gigs = _filterAndSort(snapshot.data ?? []);
-
-              return Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 480),
-                  child: CustomScrollView(
-                    slivers: [
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Browse gigs',
-                                style: TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.w800,
-                                  color: darkText,
-                                ),
+            return Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Browse gigs',
+                              style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.w800,
+                                color: darkText,
                               ),
-                              const SizedBox(height: 4),
-                              const Text(
-                                'Small projects. Real experience.',
-                                style: TextStyle(
-                                  fontSize: 14,
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Small projects. Real experience.',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: mutedText,
+                              ),
+                            ),
+                            const SizedBox(height: 18),
+                            TextField(
+                              controller: _searchController,
+                              onChanged: (value) {
+                                setState(() => _searchQuery = value);
+                              },
+                              decoration: InputDecoration(
+                                hintText: 'Search gigs or businesses',
+                                hintStyle: const TextStyle(
+                                  color: Color(0xFF94A3B8),
+                                  fontSize: 14.5,
+                                ),
+                                prefixIcon: const Icon(
+                                  Icons.search,
                                   color: mutedText,
+                                  size: 22,
                                 ),
-                              ),
-                              const SizedBox(height: 18),
-                              TextField(
-                                controller: _searchController,
-                                onChanged: (value) {
-                                  setState(() => _searchQuery = value);
-                                },
-                                decoration: InputDecoration(
-                                  hintText: 'Search gigs or businesses',
-                                  hintStyle: const TextStyle(
-                                    color: Color(0xFF94A3B8),
-                                    fontSize: 14.5,
-                                  ),
-                                  prefixIcon: const Icon(
-                                    Icons.search,
-                                    color: mutedText,
-                                    size: 22,
-                                  ),
-                                  suffixIcon: _searchQuery.isNotEmpty
-                                      ? IconButton(
-                                          icon: const Icon(Icons.close, size: 18),
-                                          onPressed: () {
-                                            _searchController.clear();
-                                            setState(() => _searchQuery = '');
-                                          },
-                                        )
-                                      : null,
-                                  filled: true,
-                                  fillColor: const Color(0xFFF8FAFC),
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 14,
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: const BorderSide(color: borderColor),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: const BorderSide(
-                                      color: primaryBlue,
-                                      width: 1.5,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 14),
-                              SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                child: Row(
-                                  children: [
-                                    _FilterChipButton(
-                                      label: _selectedCategory,
-                                      isActive: _selectedCategory != 'All categories',
-                                      onTap: () => _pickFilter(
-                                        title: 'Select Category',
-                                        options: _categories,
-                                        currentValue: _selectedCategory,
-                                        onSelected: (val) {
-                                          setState(() => _selectedCategory = val);
-                                          _reload();
+                                suffixIcon: _searchQuery.isNotEmpty
+                                    ? IconButton(
+                                        icon: const Icon(Icons.close, size: 18),
+                                        onPressed: () {
+                                          _searchController.clear();
+                                          setState(() => _searchQuery = '');
                                         },
-                                      ),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    _FilterChipButton(
-                                      label: _selectedBudget,
-                                      isActive: _selectedBudget != 'Any budget',
-                                      onTap: () => _pickFilter(
-                                        title: 'Select Budget',
-                                        options: _budgets,
-                                        currentValue: _selectedBudget,
-                                        onSelected: (val) {
-                                          setState(() => _selectedBudget = val);
-                                          _reload();
-                                        },
-                                      ),
-                                    ),
-                                  ],
+                                      )
+                                    : null,
+                                filled: true,
+                                fillColor: const Color(0xFFF8FAFC),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 14,
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(color: borderColor),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                    color: primaryBlue,
+                                    width: 1.5,
+                                  ),
                                 ),
                               ),
-                              const SizedBox(height: 16),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            ),
+                            const SizedBox(height: 14),
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
                                 children: [
-                                  Text(
-                                    '${gigs.length} ${gigs.length == 1 ? 'gig' : 'gigs'} for your skills',
-                                    style: const TextStyle(
-                                      fontSize: 13.5,
-                                      color: mutedText,
+                                  _FilterChipButton(
+                                    label: _selectedCategory,
+                                    isActive: _selectedCategory != 'All categories',
+                                    onTap: () => _pickFilter(
+                                      title: 'Select Category',
+                                      options: _categories,
+                                      currentValue: _selectedCategory,
+                                      onSelected: (val) {
+                                        setState(() => _selectedCategory = val);
+                                        _reload();
+                                      },
                                     ),
                                   ),
-                                  GestureDetector(
-                                    onTap: () {
-                                      setState(() {
-                                        _sortBy = _sortBy == 'Newest first'
-                                            ? 'Highest budget'
-                                            : 'Newest first';
-                                      });
-                                    },
-                                    child: Row(
-                                      children: [
-                                        Text(
-                                          _sortBy,
-                                          style: const TextStyle(
-                                            fontSize: 13.5,
-                                            fontWeight: FontWeight.w600,
-                                            color: primaryBlue,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 4),
-                                        const Icon(
-                                          Icons.arrow_downward,
-                                          size: 15,
-                                          color: primaryBlue,
-                                        ),
-                                      ],
+                                  const SizedBox(width: 10),
+                                  _FilterChipButton(
+                                    label: _selectedBudget,
+                                    isActive: _selectedBudget != 'Any budget',
+                                    onTap: () => _pickFilter(
+                                      title: 'Select Budget',
+                                      options: _budgets,
+                                      currentValue: _selectedBudget,
+                                      onSelected: (val) {
+                                        setState(() => _selectedBudget = val);
+                                        _reload();
+                                      },
                                     ),
                                   ),
                                 ],
                               ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (waiting)
+                      const SliverFillRemaining(
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    else if (hasError)
+                      SliverFillRemaining(
+                        child: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.error_outline,
+                                  color: errorColor, size: 40),
+                              const SizedBox(height: 8),
+                              Text(
+                                snapshot.error.toString(),
+                                style: const TextStyle(color: errorColor),
+                                textAlign: TextAlign.center,
+                              ),
                               const SizedBox(height: 12),
+                              TextButton(
+                                  onPressed: _reload,
+                                  child: const Text('Retry')),
+                            ],
+                          ),
+                        ),
+                      )
+                    else ...[
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '${gigs.length} ${gigs.length == 1 ? 'gig' : 'gigs'} for your skills',
+                                style: const TextStyle(
+                                  fontSize: 13.5,
+                                  color: mutedText,
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _sortBy = _sortBy == 'Newest first'
+                                        ? 'Highest budget'
+                                        : 'Newest first';
+                                  });
+                                },
+                                child: Row(
+                                  children: [
+                                    Text(
+                                      _sortBy,
+                                      style: const TextStyle(
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: primaryBlue,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    const Icon(
+                                      Icons.arrow_downward,
+                                      size: 15,
+                                      color: primaryBlue,
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -573,71 +579,12 @@ class _BrowseGigsScreenState extends State<BrowseGigsScreen> {
                           ),
                         ),
                     ],
-                  ),
+                  ],
                 ),
-              );
-            },
-          ),
+              ),
+            );
+          },
         ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 1,
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: primaryBlue,
-        unselectedItemColor: mutedText,
-        selectedFontSize: 12,
-        unselectedFontSize: 12,
-        onTap: (index) {
-          switch (index) {
-            case 0:
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const StudentDashboardScreen()),
-              );
-              break;
-            case 2:
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const MyWorkScreen()),
-              );
-              break;
-            case 3:
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const PassportScreen()),
-              );
-              break;
-            case 4:
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const ProfileScreen()),
-              );
-              break;
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search),
-            label: 'Gigs',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.work_outline),
-            activeIcon: Icon(Icons.work),
-            label: 'My work',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.verified_outlined),
-            activeIcon: Icon(Icons.verified),
-            label: 'Passport',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
       ),
     );
   }

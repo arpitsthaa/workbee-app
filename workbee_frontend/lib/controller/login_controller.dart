@@ -13,7 +13,7 @@ class LoginController extends ChangeNotifier {
   String? errorMessage;
   UserModel? currentUser;
 
-  static const String _loginUrl = 'http://localhost:8000/api/users/login/';
+  static const String _loginUrl = 'https://workbee-app.onrender.com/api/users/login/';
 
   void togglePassword() {
     obscurePassword = !obscurePassword;

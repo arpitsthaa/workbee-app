@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:workbee_frontend/services/auth_service.dart';
 import 'package:workbee_frontend/models/api_models.dart';
-import 'package:workbee_frontend/views/student_dashboard_screen.dart';
-import 'package:workbee_frontend/views/browse_gigs_screen.dart';
-import 'package:workbee_frontend/views/my_work_screen.dart';
-import 'package:workbee_frontend/views/profile_screen.dart';
 
 class PassportScreen extends StatefulWidget {
   const PassportScreen({super.key});
@@ -78,12 +74,10 @@ class _PassportScreenState extends State<PassportScreen> {
     final avgRating = _passport?.averageRating ?? 0.0;
     final completedProjects = _passport?.completedProjects ?? [];
 
-    return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
-            child: SingleChildScrollView(
+    return SafeArea(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -245,68 +239,7 @@ class _PassportScreenState extends State<PassportScreen> {
               ),
             ),
           ),
-        ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 3,
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: primaryBlue,
-        unselectedItemColor: mutedText,
-        selectedFontSize: 12,
-        unselectedFontSize: 12,
-        onTap: (index) {
-          switch (index) {
-            case 0:
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const StudentDashboardScreen()),
-              );
-              break;
-            case 1:
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const BrowseGigsScreen()),
-              );
-              break;
-            case 2:
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const MyWorkScreen()),
-              );
-              break;
-            case 4:
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const ProfileScreen()),
-              );
-              break;
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search),
-            label: 'Gigs',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.work_outline),
-            activeIcon: Icon(Icons.work),
-            label: 'My work',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.verified_outlined),
-            activeIcon: Icon(Icons.verified),
-            label: 'Passport',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
-      ),
-    );
+        );
   }
 }
 

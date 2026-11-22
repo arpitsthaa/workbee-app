@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:workbee_frontend/services/auth_service.dart';
 import 'package:workbee_frontend/models/api_models.dart';
-import 'package:workbee_frontend/views/student_dashboard_screen.dart';
-import 'package:workbee_frontend/views/browse_gigs_screen.dart';
-import 'package:workbee_frontend/views/passport_screen.dart';
-import 'package:workbee_frontend/views/profile_screen.dart';
 
 class MyWorkScreen extends StatefulWidget {
   const MyWorkScreen({super.key});
@@ -18,7 +14,7 @@ class _MyWorkScreenState extends State<MyWorkScreen> {
   final TextEditingController _linkController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
 
-  int _activeTab = 1;
+  int _activeTab = 0;
   bool _isLoading = true;
   String? _error;
   WorkResponse? _work;
@@ -52,6 +48,10 @@ class _MyWorkScreenState extends State<MyWorkScreen> {
     }
   }
 
+  Future<void> _refreshWork() async {
+    await _loadWork();
+  }
+
   List<GigApplication> get _applications => _work?.applications ?? [];
   List<Project> get _projects => _work?.projects ?? [];
 
@@ -72,108 +72,90 @@ class _MyWorkScreenState extends State<MyWorkScreen> {
     const borderColor = Color(0xFFE2E8F0);
     const inputFill = Color(0xFFF8FAFC);
 
-    return Scaffold(
-      body: SafeArea(
+    return SafeArea(
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
-            : Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 480),
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'My work',
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w800,
-                            color: darkText,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'Follow your progress. Keep work moving.',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: mutedText,
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-                        Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: inputFill,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: borderColor),
-                          ),
-                          child: Row(
+            : NestedScrollView(
+                headerSliverBuilder: (context, innerBoxIsScrolled) {
+                  return [
+                    SliverAppBar(
+                      pinned: true,
+                      floating: false,
+                      expandedHeight: 160,
+                      backgroundColor: Colors.white,
+                      elevation: innerBoxIsScrolled ? 1 : 0,
+                      shadowColor: borderColor,
+                      surfaceTintColor: Colors.white,
+                      automaticallyImplyLeading: false,
+                      flexibleSpace: FlexibleSpaceBar(
+                        background: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              Expanded(
-                                child: _SegmentTab(
-                                  label: 'Applications (${_applications.length})',
-                                  selected: _activeTab == 0,
-                                  onTap: () => setState(() => _activeTab = 0),
+                              const Text(
+                                'My work',
+                                style: TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w800,
+                                  color: darkText,
                                 ),
                               ),
-                              Expanded(
-                                child: _SegmentTab(
-                                  label: 'Projects (${_projects.length})',
-                                  selected: _activeTab == 1,
-                                  onTap: () => setState(() => _activeTab = 1),
+                              const SizedBox(height: 4),
+                              const Text(
+                                'Follow your progress. Keep work moving.',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: mutedText,
+                                ),
+                              ),
+                              const SizedBox(height: 18),
+                              Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  color: inputFill,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: borderColor),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: _SegmentTab(
+                                        label: 'Applications (${_applications.length})',
+                                        selected: _activeTab == 0,
+                                        onTap: () => setState(() => _activeTab = 0),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: _SegmentTab(
+                                        label: 'Projects (${_projects.length})',
+                                        selected: _activeTab == 1,
+                                        onTap: () => setState(() => _activeTab = 1),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(height: 22),
-                        if (_activeTab == 0) ...[
-                          const Text(
-                            'Application updates',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: darkText,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          if (_applications.isEmpty)
+                      ),
+                    ),
+                  ];
+                },
+                body: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 480),
+                  child: RefreshIndicator(
+                    onRefresh: _refreshWork,
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(20, 22, 20, 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (_activeTab == 0) ...[
                             const Text(
-                              'No applications yet. Browse gigs and apply!',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: mutedText,
-                              ),
-                            )
-                          else
-                            ..._applications.map((app) {
-                              return Column(
-                                children: [
-                                  _SimpleItemCard(
-                                    title: app.gigTitle,
-                                    subtitle:
-                                        '${app.businessName} · Applied ${_formatDate(app.appliedAt)}',
-                                    badgeText: app.status.toUpperCase(),
-                                    badgeBg: _badgeColor(app.status),
-                                    badgeColor: Colors.white,
-                                  ),
-                                  const SizedBox(height: 12),
-                                ],
-                              );
-                            }).toList(),
-                        ] else ...[
-                          if (_projects.isEmpty)
-                            const Text(
-                              'No projects yet. Get shortlisted for a gig to start working!',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: mutedText,
-                              ),
-                            )
-                          else ...[
-                            const Text(
-                              'Active projects',
+                              'Application updates',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
@@ -181,238 +163,223 @@ class _MyWorkScreenState extends State<MyWorkScreen> {
                               ),
                             ),
                             const SizedBox(height: 12),
-                            ..._projects.map((project) {
-                              return Column(
-                                children: [
-                                  Container(
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.all(16),
-                                    decoration: BoxDecoration(
-                                      color: softBlueBg,
-                                      borderRadius: BorderRadius.circular(14),
-                                      border: Border.all(color: const Color(0xFFBFDBFE)),
+                            if (_applications.isEmpty)
+                              const Text(
+                                'No applications yet. Browse gigs and apply!',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: mutedText,
+                                ),
+                              )
+                            else
+                              ..._applications.map((app) {
+                                return Column(
+                                  children: [
+                                    _SimpleItemCard(
+                                      title: app.gigTitle,
+                                      subtitle:
+                                          '${app.businessName} · Applied ${_formatDate(app.appliedAt)}',
+                                      badgeText: app.status.toUpperCase(),
+                                      badgeBg: _badgeColor(app.status),
+                                      badgeColor: const Color(0xFF1E293B),
+                                      onTap: () => _showApplicationDetails(app),
                                     ),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                project.gigTitle,
-                                                style: TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.w700,
-                                                  color: darkText,
+                                    const SizedBox(height: 12),
+                                  ],
+                                );
+                              }).toList(),
+                          ] else ...[
+                            if (_projects.isEmpty)
+                              const Text(
+                                'No projects yet. Get shortlisted for a gig to start working!',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: mutedText,
+                                ),
+                              )
+                            else ...[
+                              const Text(
+                                'Active projects',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: darkText,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              ..._projects.map((project) {
+                                return Column(
+                                  children: [
+                                    Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: softBlueBg,
+                                        borderRadius: BorderRadius.circular(14),
+                                        border: Border.all(color: const Color(0xFFBFDBFE)),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  project.gigTitle,
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: darkText,
+                                                  ),
                                                 ),
                                               ),
-                                            ),
-                                            Text(
-                                              project.status.replaceAll('_', ' ').toUpperCase(),
-                                              style: TextStyle(
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w600,
-                                                color: primaryBlue,
+                                              Text(
+                                                project.status.replaceAll('_', ' ').toUpperCase(),
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: primaryBlue,
+                                                ),
                                               ),
-                                            ),
-                                          ],
-                                        ),
-                                        SizedBox(height: 6),
-                                        Text(
-                                          '${project.businessName} · Due ${project.deadline}',
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            color: mutedText,
+                                            ],
                                           ),
-                                        ),
-                                        SizedBox(height: 10),
-                                        Text(
-                                          '${_formatNpr(project.budgetNpr)} · ${project.deliverables.join(', ')}',
-                                          style: TextStyle(
-                                            fontSize: 13.5,
-                                            fontWeight: FontWeight.w600,
-                                            color: primaryBlue,
-                                          ),
-                                        ),
-                                        if (project.submissionLink.isNotEmpty) ...[
-                                          SizedBox(height: 10),
+                                          const SizedBox(height: 6),
                                           Text(
-                                            'Submitted: ${project.submissionLink}',
+                                            '${project.businessName} · Due ${project.deadline}',
                                             style: TextStyle(
                                               fontSize: 13,
                                               color: mutedText,
                                             ),
                                           ),
+                                          const SizedBox(height: 10),
+                                          Text(
+                                            '${_formatNpr(project.budgetNpr)} · ${project.deliverables.join(', ')}',
+                                            style: TextStyle(
+                                              fontSize: 13.5,
+                                              fontWeight: FontWeight.w600,
+                                              color: primaryBlue,
+                                            ),
+                                          ),
+                                          if (project.submissionLink.isNotEmpty) ...[
+                                            const SizedBox(height: 10),
+                                            Text(
+                                              'Submitted: ${project.submissionLink}',
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                color: mutedText,
+                                              ),
+                                            ),
+                                          ],
                                         ],
-                                      ],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 14),
+                                  ],
+                                );
+                              }).toList(),
+                              const SizedBox(height: 22),
+                              const Text(
+                                'Submit work',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: darkText,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              const Text(
+                                'Paste your delivery link below.',
+                                style: TextStyle(fontSize: 13, color: mutedText),
+                              ),
+                              const SizedBox(height: 12),
+                              TextField(
+                                controller: _linkController,
+                                decoration: InputDecoration(
+                                  hintText: 'Paste Canva or Google Drive link',
+                                  hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                                  prefixIcon: const Icon(
+                                    Icons.link,
+                                    color: mutedText,
+                                    size: 20,
+                                  ),
+                                  filled: true,
+                                  fillColor: inputFill,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 14,
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(color: borderColor),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                      color: primaryBlue,
+                                      width: 1.5,
                                     ),
                                   ),
-                                  const SizedBox(height: 14),
-                                ],
-                              );
-                            }).toList(),
-                            const SizedBox(height: 22),
-                            const Text(
-                              'Submit work',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: darkText,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            const Text(
-                              'Paste your delivery link below.',
-                              style: TextStyle(fontSize: 13, color: mutedText),
-                            ),
-                            const SizedBox(height: 12),
-                            TextField(
-                              controller: _linkController,
-                              decoration: InputDecoration(
-                                hintText: 'Paste Canva or Google Drive link',
-                                hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
-                                prefixIcon: const Icon(
-                                  Icons.link,
-                                  color: mutedText,
-                                  size: 20,
-                                ),
-                                filled: true,
-                                fillColor: inputFill,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 14,
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(color: borderColor),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(
-                                    color: primaryBlue,
-                                    width: 1.5,
+                              const SizedBox(height: 12),
+                              TextField(
+                                controller: _noteController,
+                                maxLines: 2,
+                                decoration: InputDecoration(
+                                  hintText: 'Add a short note (optional)',
+                                  hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                                  filled: true,
+                                  fillColor: inputFill,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 12,
                                   ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            TextField(
-                              controller: _noteController,
-                              maxLines: 2,
-                              decoration: InputDecoration(
-                                hintText: 'Add a short note (optional)',
-                                hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
-                                filled: true,
-                                fillColor: inputFill,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 12,
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(color: borderColor),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(
-                                    color: primaryBlue,
-                                    width: 1.5,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            SizedBox(
-                              width: double.infinity,
-                              height: 48,
-                              child: ElevatedButton(
-                                onPressed: _handleSubmitWork,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: primaryBlue,
-                                  foregroundColor: Colors.white,
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
+                                  enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(color: borderColor),
                                   ),
-                                ),
-                                child: const Text(
-                                  'Submit for approval',
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                      color: primaryBlue,
+                                      width: 1.5,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
+                              const SizedBox(height: 16),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 48,
+                                child: ElevatedButton(
+                                  onPressed: _handleSubmitWork,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: primaryBlue,
+                                    foregroundColor: Colors.white,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'Submit for approval',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ],
-                      ],
+                      ),
                     ),
                   ),
                 ),
               ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 2,
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: primaryBlue,
-        unselectedItemColor: mutedText,
-        selectedFontSize: 12,
-        unselectedFontSize: 12,
-        onTap: (index) {
-          switch (index) {
-            case 0:
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const StudentDashboardScreen()),
-              );
-              break;
-            case 1:
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const BrowseGigsScreen()),
-              );
-              break;
-            case 3:
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const PassportScreen()),
-              );
-              break;
-            case 4:
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const ProfileScreen()),
-              );
-              break;
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search),
-            label: 'Gigs',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.work_outline),
-            activeIcon: Icon(Icons.work),
-            label: 'My work',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.verified_outlined),
-            activeIcon: Icon(Icons.verified),
-            label: 'Passport',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
-      ),
-    );
+      );
   }
 
   Color _badgeColor(String status) {
@@ -450,6 +417,162 @@ class _MyWorkScreenState extends State<MyWorkScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Work submitted for review!'),
+      ),
+    );
+  }
+
+  void _showApplicationDetails(GigApplication app) {
+    const darkText = Color(0xFF0F172A);
+    const mutedText = Color(0xFF64748B);
+    const borderColor = Color(0xFFE2E8F0);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  app.businessName,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: mutedText,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  app.gigTitle,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: darkText,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: _badgeColor(app.status),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: borderColor),
+                      ),
+                      child: Text(
+                        app.status.toUpperCase(),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF1E293B),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Applied ${_formatDate(app.appliedAt)}',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: mutedText,
+                      ),
+                    ),
+                  ],
+                ),
+                if (app.coverMessage.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Cover Message',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: darkText,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    app.coverMessage,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      height: 1.5,
+                      color: Color(0xFF334155),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                const Text(
+                  'Your Profile',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: darkText,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _ProfileInfoRow(label: 'Name', value: app.studentName),
+                _ProfileInfoRow(label: 'College', value: app.studentCollege),
+                _ProfileInfoRow(label: 'Skills', value: app.studentSkills.join(', ')),
+                _ProfileInfoRow(label: 'Rating', value: app.studentRating.toString()),
+                _ProfileInfoRow(
+                  label: 'Verified Projects',
+                  value: app.verifiedProjectsCount.toString(),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ProfileInfoRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _ProfileInfoRow({
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const mutedText = Color(0xFF64748B);
+    const darkText = Color(0xFF0F172A);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+                color: mutedText,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 13.5,
+                color: darkText,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -496,6 +619,7 @@ class _SimpleItemCard extends StatelessWidget {
   final String badgeText;
   final Color badgeBg;
   final Color badgeColor;
+  final VoidCallback? onTap;
 
   const _SimpleItemCard({
     required this.title,
@@ -503,11 +627,15 @@ class _SimpleItemCard extends StatelessWidget {
     required this.badgeText,
     required this.badgeBg,
     required this.badgeColor,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -558,6 +686,7 @@ class _SimpleItemCard extends StatelessWidget {
           ),
         ],
       ),
-    );
+    ),
+  );
   }
 }

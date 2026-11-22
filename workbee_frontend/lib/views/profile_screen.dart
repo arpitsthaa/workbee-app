@@ -2,10 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:workbee_frontend/services/auth_service.dart';
 import 'package:workbee_frontend/models/api_models.dart';
 import 'package:workbee_frontend/views/login_screen.dart';
-import 'package:workbee_frontend/views/student_dashboard_screen.dart';
-import 'package:workbee_frontend/views/browse_gigs_screen.dart';
-import 'package:workbee_frontend/views/my_work_screen.dart';
-import 'package:workbee_frontend/views/passport_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -143,12 +139,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final profile = _profile!;
     final skillsList = profile.skills;
 
-    return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
-            child: SingleChildScrollView(
+    return SafeArea(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -258,14 +252,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              profile.fullName,
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w700,
-                                color: darkText,
-                              ),
+                            Row(
+                              children: [
+                                Text(
+                                  profile.fullName,
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w700,
+                                    color: darkText,
+                                  ),
+                                ),
+                                if (profile.isVerified) ...[
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: softBlueBg,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.verified, size: 12, color: primaryBlue),
+                                        const SizedBox(width: 4),
+                                        const Text(
+                                          'Verified',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                            color: primaryBlue,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
+                            const SizedBox(height: 2),
                             Text(
                               profile.location ?? '',
                               style: const TextStyle(
@@ -273,6 +297,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 color: mutedText,
                               ),
                             ),
+                            if (profile.email.isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                profile.email,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: mutedText,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ],
@@ -303,6 +337,52 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             style: const TextStyle(
                               fontSize: 13,
                               color: mutedText,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: softBlueBg,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: borderColor),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Profile Completion',
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: darkText,
+                                ),
+                              ),
+                              Text(
+                                '${profile.profileCompletion}%',
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: primaryBlue,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                              value: profile.profileCompletion / 100,
+                              minHeight: 6,
+                              backgroundColor: borderColor,
+                              valueColor: AlwaysStoppedAnimation<Color>(primaryBlue),
                             ),
                           ),
                         ],
@@ -381,6 +461,64 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ],
                       ),
                     ),
+                    const SizedBox(height: 18),
+                    const Text(
+                      'Recent Activity',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: darkText,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: borderColor),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Verified Projects',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: darkText,
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  // Navigate to passport screen - handled by bottom nav
+                                },
+                                child: Text(
+                                  'View all',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: primaryBlue,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Complete gigs to build your verified work history',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: mutedText,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                     const SizedBox(height: 22),
                     SizedBox(
                       width: double.infinity,
@@ -432,67 +570,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
           ),
-        ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 4,
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: primaryBlue,
-        unselectedItemColor: mutedText,
-        selectedFontSize: 12,
-        unselectedFontSize: 12,
-        onTap: (index) {
-          switch (index) {
-            case 0:
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const StudentDashboardScreen()),
-              );
-              break;
-            case 1:
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const BrowseGigsScreen()),
-              );
-              break;
-            case 2:
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const MyWorkScreen()),
-              );
-              break;
-            case 3:
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const PassportScreen()),
-              );
-              break;
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search),
-            label: 'Gigs',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.work_outline),
-            activeIcon: Icon(Icons.work),
-            label: 'My work',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.verified_outlined),
-            activeIcon: Icon(Icons.verified),
-            label: 'Passport',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
-      ),
-    );
+        );
   }
 }

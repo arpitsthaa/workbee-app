@@ -51,359 +51,26 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     return 'NPR $prefix,$suffix';
   }
 
+  void _onTabTapped(int index) {
+    setState(() => _selectedIndex = index);
+  }
+
   @override
   Widget build(BuildContext context) {
     const primaryBlue = Color(0xFF1D61E7);
-    const softBlueBg = Color(0xFFEFF6FF);
-    const darkText = Color(0xFF0F172A);
-    const bodyText = Color(0xFF1E293B);
     const mutedText = Color(0xFF64748B);
-    const borderColor = Color(0xFFE2E8F0);
-
-    final studentName = _dashboard?.fullName ?? 'Student';
-    final profileCompletion = _dashboard?.profileCompletion ?? 0;
-    final isVerified = _dashboard?.isVerified ?? false;
-    final recommendedGigs = _dashboard?.recommendedGigs ?? <Gig>[];
-    final appsSummary = _dashboard?.applicationsSummary ?? <String, dynamic>{};
-    final projectsSummary = _dashboard?.projectsSummary ?? <String, dynamic>{};
-    final passport = _dashboard?.careerPassport ?? <String, dynamic>{};
-
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_error != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text('Error: $_error', style: const TextStyle(color: Colors.red)),
-            const SizedBox(height: 12),
-            ElevatedButton(onPressed: _loadDashboard, child: const Text('Retry')),
-          ],
-        ),
-      );
-    }
-
-    if (_selectedIndex == 1) return const BrowseGigsScreen();
-    if (_selectedIndex == 2) return const MyWorkScreen();
-    if (_selectedIndex == 3) return const PassportScreen();
-    if (_selectedIndex == 4) return const ProfileScreen();
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: primaryBlue,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(
-                              Icons.diamond_outlined,
-                              color: Colors.white,
-                              size: 24,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          const Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'WorkBee',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w800,
-                                  color: darkText,
-                                  height: 1.1,
-                                ),
-                              ),
-                              Text(
-                                'Bee Busy Be Paid',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: mutedText,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: const BoxDecoration(
-                          color: softBlueBg,
-                          shape: BoxShape.circle,
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          studentName.isNotEmpty
-                              ? studentName[0].toUpperCase()
-                              : 'S',
-                          style: const TextStyle(
-                            color: primaryBlue,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Hi, $studentName!',
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      color: darkText,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Your next opportunity starts here.',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: mutedText,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: softBlueBg,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.check,
-                          size: 14,
-                          color: primaryBlue,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Student verified',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: isVerified ? primaryBlue : mutedText,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: softBlueBg,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Profile $profileCompletion% complete',
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                                color: bodyText,
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: () => setState(() => _selectedIndex = 4),
-                              child: const Text(
-                                'Edit',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: primaryBlue,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: LinearProgressIndicator(
-                            value: profileCompletion / 100,
-                            minHeight: 6,
-                            backgroundColor: const Color(0xFFDBEAFE),
-                            valueColor: AlwaysStoppedAnimation<Color>(primaryBlue),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        const Text(
-                          'Complete your profile to stand out.',
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            color: mutedText,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Recommended gigs',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: darkText,
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () => setState(() => _selectedIndex = 1),
-                        child: const Row(
-                          children: [
-                            Text(
-                              'View all',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: primaryBlue,
-                              ),
-                            ),
-                            SizedBox(width: 4),
-                            Icon(
-                              Icons.arrow_forward,
-                              size: 16,
-                              color: primaryBlue,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  ...recommendedGigs.map((gig) {
-                    return Column(
-                      children: [
-                        _GigCard(
-                          title: gig.title,
-                          subtitle: '${gig.businessName} · ${gig.location}',
-                          payText: _formatNpr(gig.budgetNpr),
-                          metaText: '${gig.durationDays} days · ${gig.deadline}',
-                          highlightMeta: false,
-                          onTap: () => setState(() => _selectedIndex = 1),
-                        ),
-                        const SizedBox(height: 12),
-                      ],
-                    );
-                  }).toList(),
-                  const SizedBox(height: 18),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _StatCard(
-                          countText: '${appsSummary['total'] ?? 0} applications',
-                          subtitleText:
-                              '${appsSummary['pending'] ?? 0} pending · ${appsSummary['shortlisted'] ?? 0} shortlisted',
-                          borderColor: borderColor,
-                          onTap: () => setState(() => _selectedIndex = 2),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _StatCard(
-                          countText: '${projectsSummary['total'] ?? 0} projects',
-                          subtitleText:
-                              '${projectsSummary['active'] ?? 0} active · ${projectsSummary['approved'] ?? 0} approved',
-                          borderColor: borderColor,
-                          onTap: () => setState(() => _selectedIndex = 2),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  InkWell(
-                    onTap: () => setState(() => _selectedIndex = 3),
-                    borderRadius: BorderRadius.circular(14),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: softBlueBg,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: primaryBlue, width: 1.5),
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(
-                            Icons.verified_outlined,
-                            color: primaryBlue,
-                            size: 24,
-                          ),
-                          SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Text(
-                                      'Career Passport',
-                                      style: TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w700,
-                                        color: primaryBlue,
-                                      ),
-                                    ),
-                                    SizedBox(width: 4),
-                                    Icon(
-                                      Icons.arrow_forward,
-                                      size: 16,
-                                      color: primaryBlue,
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Verified projects · Avg rating',
-                                  style: TextStyle(
-                                    fontSize: 12.5,
-                                    color: mutedText,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: [
+          _buildHomeBody(),
+          const BrowseGigsScreen(),
+          const MyWorkScreen(),
+          const PassportScreen(),
+          const ProfileScreen(),
+        ],
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
@@ -413,9 +80,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         unselectedItemColor: mutedText,
         selectedFontSize: 12,
         unselectedFontSize: 12,
-        onTap: (index) {
-          setState(() => _selectedIndex = index);
-        },
+        onTap: _onTabTapped,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),
@@ -442,6 +107,346 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             label: 'Profile',
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildHomeBody() {
+    const primaryBlue = Color(0xFF1D61E7);
+    const softBlueBg = Color(0xFFEFF6FF);
+    const darkText = Color(0xFF0F172A);
+    const bodyText = Color(0xFF1E293B);
+    const mutedText = Color(0xFF64748B);
+    const borderColor = Color(0xFFE2E8F0);
+
+    final studentName = _dashboard?.fullName ?? 'Student';
+    final profileCompletion = _dashboard?.profileCompletion ?? 0;
+    final isVerified = _dashboard?.isVerified ?? false;
+    final recommendedGigs = _dashboard?.recommendedGigs ?? <Gig>[];
+    final appsSummary = _dashboard?.applicationsSummary ?? <String, dynamic>{};
+    final projectsSummary = _dashboard?.projectsSummary ?? <String, dynamic>{};
+
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_error != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Error: $_error', style: const TextStyle(color: Colors.red)),
+            const SizedBox(height: 12),
+            ElevatedButton(onPressed: _loadDashboard, child: const Text('Retry')),
+          ],
+        ),
+      );
+    }
+
+    return SafeArea(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Image.asset(
+                          'assets/workbee_logo.png',
+                          width: 44,
+                          height: 44,
+                          fit: BoxFit.contain,
+                        ),
+                        const SizedBox(width: 12),
+                        const Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'WorkBee',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                                color: darkText,
+                                height: 1.1,
+                              ),
+                            ),
+                            Text(
+                              'Bee Busy Be Paid',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: mutedText,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: const BoxDecoration(
+                        color: softBlueBg,
+                        shape: BoxShape.circle,
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        studentName.isNotEmpty
+                            ? studentName[0].toUpperCase()
+                            : 'S',
+                        style: const TextStyle(
+                          color: primaryBlue,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Hi, $studentName!',
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    color: darkText,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Your next opportunity starts here.',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: mutedText,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: softBlueBg,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.check,
+                        size: 14,
+                        color: primaryBlue,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Student verified',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: isVerified ? primaryBlue : mutedText,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: softBlueBg,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Profile $profileCompletion% complete',
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: bodyText,
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () => _onTabTapped(4),
+                            child: const Text(
+                              'Edit',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: primaryBlue,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: LinearProgressIndicator(
+                          value: profileCompletion / 100,
+                          minHeight: 6,
+                          backgroundColor: const Color(0xFFDBEAFE),
+                          valueColor: AlwaysStoppedAnimation<Color>(primaryBlue),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      const Text(
+                        'Complete your profile to stand out.',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: mutedText,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Recommended gigs',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: darkText,
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => _onTabTapped(1),
+                      child: const Row(
+                        children: [
+                          Text(
+                            'View all',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: primaryBlue,
+                            ),
+                          ),
+                          SizedBox(width: 4),
+                          Icon(
+                            Icons.arrow_forward,
+                            size: 16,
+                            color: primaryBlue,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                ...recommendedGigs.map((gig) {
+                  return Column(
+                    children: [
+                      _GigCard(
+                        title: gig.title,
+                        subtitle: '${gig.businessName} · ${gig.location}',
+                        payText: _formatNpr(gig.budgetNpr),
+                        metaText: '${gig.durationDays} days · ${gig.deadline}',
+                        highlightMeta: false,
+                        onTap: () => _onTabTapped(1),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                  );
+                }).toList(),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _StatCard(
+                        countText: '${appsSummary['total'] ?? 0} applications',
+                        subtitleText:
+                            '${appsSummary['pending'] ?? 0} pending · ${appsSummary['shortlisted'] ?? 0} shortlisted',
+                        borderColor: borderColor,
+                        onTap: () => _onTabTapped(2),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _StatCard(
+                        countText: '${projectsSummary['total'] ?? 0} projects',
+                        subtitleText:
+                            '${projectsSummary['active'] ?? 0} active · ${projectsSummary['approved'] ?? 0} approved',
+                        borderColor: borderColor,
+                        onTap: () => _onTabTapped(2),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                InkWell(
+                  onTap: () => _onTabTapped(3),
+                  borderRadius: BorderRadius.circular(14),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: softBlueBg,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: primaryBlue, width: 1.5),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(
+                          Icons.verified_outlined,
+                          color: primaryBlue,
+                          size: 24,
+                        ),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    'Career Passport',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                      color: primaryBlue,
+                                    ),
+                                  ),
+                                  SizedBox(width: 4),
+                                  Icon(
+                                    Icons.arrow_forward,
+                                    size: 16,
+                                    color: primaryBlue,
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'Verified projects · Avg rating',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  color: mutedText,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

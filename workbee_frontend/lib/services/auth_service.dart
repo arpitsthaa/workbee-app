@@ -7,11 +7,20 @@ import '../models/business_registration_model.dart';
 import '../models/student_registration_model.dart';
 
 class AuthService {
-  static const String _baseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:8000');
+  static const String _baseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'https://workbee-app.onrender.com');
 
   static final _gigCreatedController = StreamController<void>.broadcast();
   static Stream<void> get onGigCreated => _gigCreatedController.stream;
   static void notifyGigCreated() => _gigCreatedController.add(null);
+
+  Future<void> warmUp() async {
+    try {
+      await http.get(Uri.parse('$_baseUrl/api/health/'))
+          .timeout(const Duration(seconds: 10));
+    } catch (_) {
+      // best-effort wake-up; ignore
+    }
+  }
 
   Future<Map<String, String>> _authHeaders() async {
     final prefs = await SharedPreferences.getInstance();
