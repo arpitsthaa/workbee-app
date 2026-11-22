@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../controller/login_controller.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -8,31 +9,35 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  bool _obscurePassword = true;
+  final _controller = LoginController();
 
   @override
   void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
-  void _handleLogin() {
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
+  Future<void> _handleLogin() async {
+    final success = await _controller.login();
+    if (!mounted) return;
 
-    if (email.isEmpty || password.isEmpty) {
+    if (!success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter both email and password')),
+        SnackBar(content: Text(_controller.errorMessage ?? 'Login failed')),
       );
       return;
     }
 
+    final user = _controller.currentUser!;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Logging in as $email...')),
+      SnackBar(content: Text('Logged in as ${user.email}')),
     );
+
+    if (user.role == 'business') {
+      // Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const BusinessDashboardPage()));
+    } else {
+      // Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const StudentGigsPage()));
+    }
   }
 
   @override
@@ -45,130 +50,145 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Brand Logo
-              Image.asset(
-                'assets/workbee_logo.png',
-                height: 44,
-                fit: BoxFit.contain,
-              ),
-              const SizedBox(height: 36),
-
-              // Title & Subtitle
-              const Text(
-                'Welcome back',
-                style: TextStyle(
-                  fontSize: 30,
-                  fontWeight: FontWeight.bold,
-                  color: darkText,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Bee Busy Be Paid\nConnect with opportunities across Nepal.',
-                style: TextStyle(
-                  fontSize: 15,
-                  height: 1.4,
-                  color: subtitleText,
-                ),
-              ),
-              const SizedBox(height: 32),
-
-              // Reusable Email Input
-              _WorkBeeInput(
-                label: 'Email',
-                hint: 'Enter your email',
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 20),
-
-              // Reusable Password Input
-              _WorkBeeInput(
-                label: 'Password',
-                hint: 'Enter your password',
-                controller: _passwordController,
-                obscureText: _obscurePassword,
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _obscurePassword
-                        ? Icons.visibility_off_outlined
-                        : Icons.visibility_outlined,
-                    color: subtitleText,
+        child: ListenableBuilder(
+          listenable: _controller,
+          builder: (context, _) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Brand Logo
+                  Image.asset(
+                    'assets/workbee_logo.png',
+                    height: 44,
+                    fit: BoxFit.contain,
                   ),
-                  onPressed: () {
-                    setState(() => _obscurePassword = !_obscurePassword);
-                  },
-                ),
-              ),
+                  const SizedBox(height: 36),
 
-              // Forgot Password
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () {},
-                  child: const Text(
-                    'Forgot password?',
+                  // Title & Subtitle
+                  const Text(
+                    'Welcome back',
                     style: TextStyle(
-                      color: primaryBlue,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 30,
+                      fontWeight: FontWeight.bold,
+                      color: darkText,
                     ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // Log In Button
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: _handleLogin,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryBlue,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Bee Busy Be Paid\nConnect with opportunities across Nepal.',
+                    style: TextStyle(
+                      fontSize: 15,
+                      height: 1.4,
+                      color: subtitleText,
                     ),
                   ),
-                  child: const Text(
-                    'Log in',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  const SizedBox(height: 32),
+
+                  // Reusable Email Input
+                  _WorkBeeInput(
+                    label: 'Email',
+                    hint: 'Enter your email',
+                    controller: _controller.emailController,
+                    keyboardType: TextInputType.emailAddress,
                   ),
-                ),
-              ),
-              const SizedBox(height: 28),
+                  const SizedBox(height: 20),
 
-              // Registration Options
-              const Center(
-                child: Text(
-                  'New to WorkBee? Register as:',
-                  style: TextStyle(fontSize: 14, color: subtitleText),
-                ),
-              ),
-              const SizedBox(height: 16),
+                  // Reusable Password Input
+                  _WorkBeeInput(
+                    label: 'Password',
+                    hint: 'Enter your password',
+                    controller: _controller.passwordController,
+                    obscureText: _controller.obscurePassword,
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _controller.obscurePassword
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                        color: subtitleText,
+                      ),
+                      onPressed: _controller.togglePassword,
+                    ),
+                  ),
 
-              _RegistrationButton(
-                title: 'Student Registration',
-                borderColor: primaryBlue,
-                accentColor: beeGold,
-                onTap: () {},
-              ),
-              const SizedBox(height: 12),
+                  // Forgot Password
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () {},
+                      child: const Text(
+                        'Forgot password?',
+                        style: TextStyle(
+                          color: primaryBlue,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
 
-              _RegistrationButton(
-                title: 'Business Registration',
-                borderColor: primaryBlue,
-                accentColor: beeGold,
-                onTap: () {},
+                  // Log In Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: _controller.isLoading ? null : _handleLogin,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryBlue,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: _controller.isLoading
+                          ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: Colors.white,
+                        ),
+                      )
+                          : const Text(
+                        'Log in',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+
+                  // Registration Options
+                  const Center(
+                    child: Text(
+                      'New to WorkBee? Register as:',
+                      style: TextStyle(fontSize: 14, color: subtitleText),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  _RegistrationButton(
+                    title: 'Student Registration',
+                    borderColor: primaryBlue,
+                    accentColor: beeGold,
+                    onTap: () {},
+                  ),
+                  const SizedBox(height: 12),
+
+                  _RegistrationButton(
+                    title: 'Business Registration',
+                    borderColor: primaryBlue,
+                    accentColor: beeGold,
+                    onTap: () {},
+                  ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
@@ -176,10 +196,9 @@ class _LoginScreenState extends State<LoginScreen> {
 }
 
 // ---------------------------------------------------------------------------
-// REUSABLE WIDGETS (Keep repeated UI components here to reduce code)
+// REUSABLE WIDGETS (Exact same as your original code)
 // ---------------------------------------------------------------------------
 
-/// 1. Reusable Text Input Field
 class _WorkBeeInput extends StatelessWidget {
   final String label;
   final String hint;
@@ -240,7 +259,6 @@ class _WorkBeeInput extends StatelessWidget {
   }
 }
 
-/// 2. Reusable Registration Option Button
 class _RegistrationButton extends StatelessWidget {
   final String title;
   final Color borderColor;
@@ -286,7 +304,6 @@ class _RegistrationButton extends StatelessWidget {
   }
 }
 
-/// 3. Reusable Empty Card (use anywhere you need placeholder/section cards)
 class _EmptyCard extends StatelessWidget {
   final double height;
   final Widget? child;
