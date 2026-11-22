@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:workbee_frontend/views/register_student_screen.dart';
+import 'package:workbee_frontend/views/register_business_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -209,7 +210,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     borderColor: primaryBlue,
                     accentColor: beeGold,
                     onTap: () {
-                      // Replace with your BusinessRegistrationScreen once created
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const BusinessRegistrationScreen(),
+                        ),
+                      );
                     },
                   ),
                 ],
