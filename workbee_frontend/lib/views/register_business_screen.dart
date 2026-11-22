@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../models/business_registration_model.dart';
+import '../services/auth_service.dart';
 
 class BusinessRegistrationScreen extends StatefulWidget {
   const BusinessRegistrationScreen({super.key});
@@ -10,6 +12,8 @@ class BusinessRegistrationScreen extends StatefulWidget {
 
 class _BusinessRegistrationScreenState
     extends State<BusinessRegistrationScreen> {
+  final _authService = AuthService();
+
   final _businessNameController = TextEditingController();
   final _contactPersonController = TextEditingController();
   final _emailController = TextEditingController();
@@ -21,6 +25,7 @@ class _BusinessRegistrationScreenState
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -35,13 +40,16 @@ class _BusinessRegistrationScreenState
     super.dispose();
   }
 
-  void _showMessage(String message) {
+  void _showMessage(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red.shade700 : Colors.green.shade700,
+      ),
     );
   }
 
-  void _handleCreateAccount() {
+  Future<void> _handleCreateAccount() async {
     final businessName = _businessNameController.text.trim();
     final contactPerson = _contactPersonController.text.trim();
     final email = _emailController.text.trim();
@@ -59,27 +67,50 @@ class _BusinessRegistrationScreenState
         pan.isEmpty ||
         password.isEmpty ||
         confirmPassword.isEmpty) {
-      _showMessage('Please fill in all fields.');
+      _showMessage('Please fill in all fields.', isError: true);
       return;
     }
 
     if (pan.length != 9) {
-      _showMessage('PAN number must be 9 digits.');
+      _showMessage('PAN number must be 9 digits.', isError: true);
       return;
     }
 
     if (password.length < 8) {
-      _showMessage('Password must be at least 8 characters.');
+      _showMessage('Password must be at least 8 characters.', isError: true);
       return;
     }
 
     if (password != confirmPassword) {
-      _showMessage('Passwords do not match.');
+      _showMessage('Passwords do not match.', isError: true);
       return;
     }
 
-    // TODO: Connect your backend registration API here
-    _showMessage('Business account created for $businessName!');
+    setState(() => _isLoading = true);
+
+    final request = BusinessRegistrationRequest(
+      businessName: businessName,
+      contactPerson: contactPerson,
+      email: email,
+      phone: phone,
+      location: location,
+      panNumber: pan,
+      password: password,
+      confirmPassword: confirmPassword,
+    );
+
+    final response = await _authService.registerBusiness(request);
+
+    if (!mounted) return;
+
+    setState(() => _isLoading = false);
+
+    if (response.success) {
+      _showMessage(response.message);
+      Navigator.pop(context);
+    } else {
+      _showMessage(response.message, isError: true);
+    }
   }
 
   @override
@@ -99,7 +130,6 @@ class _BusinessRegistrationScreenState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Brand Header
                   Row(
                     children: [
                       Container(
@@ -128,7 +158,6 @@ class _BusinessRegistrationScreenState
                   ),
                   const SizedBox(height: 28),
 
-                  // Page Title
                   const Text(
                     'Business Registration',
                     style: TextStyle(
@@ -178,7 +207,7 @@ class _BusinessRegistrationScreenState
 
                   _FormFieldItem(
                     label: 'PAN number',
-                    hint: 'Enter your 9-digit PAN number',
+                    hint: 'Enter your 9 digit PAN number',
                     controller: _panController,
                     keyboardType: TextInputType.number,
                   ),
@@ -205,7 +234,7 @@ class _BusinessRegistrationScreenState
 
                   _FormFieldItem(
                     label: 'Confirm password',
-                    hint: 'Re-enter your password',
+                    hint: 'Confirm your password',
                     controller: _confirmPasswordController,
                     obscureText: _obscureConfirmPassword,
                     suffixIcon: IconButton(
@@ -224,21 +253,31 @@ class _BusinessRegistrationScreenState
                   ),
                   const SizedBox(height: 28),
 
-                  // Submit Button
                   SizedBox(
                     width: double.infinity,
                     height: 52,
                     child: ElevatedButton(
-                      onPressed: _handleCreateAccount,
+                      onPressed: _isLoading ? null : _handleCreateAccount,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryBlue,
                         foregroundColor: Colors.white,
+                        disabledBackgroundColor:
+                        primaryBlue.withValues(alpha: 0.6),
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text(
+                      child: _isLoading
+                          ? const SizedBox(
+                        height: 22,
+                        width: 22,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2.5,
+                        ),
+                      )
+                          : const Text(
                         'Create Business Account',
                         style: TextStyle(
                           fontSize: 16,
@@ -249,7 +288,6 @@ class _BusinessRegistrationScreenState
                   ),
                   const SizedBox(height: 20),
 
-                  // Back to Login Row
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -258,7 +296,7 @@ class _BusinessRegistrationScreenState
                         style: TextStyle(fontSize: 14, color: subtitleText),
                       ),
                       GestureDetector(
-                        onTap: () => Navigator.pop(context),
+                        onTap: _isLoading ? null : () => Navigator.pop(context),
                         child: const Text(
                           'Log in',
                           style: TextStyle(
@@ -279,10 +317,6 @@ class _BusinessRegistrationScreenState
     );
   }
 }
-
-// ---------------------------------------------------------------------------
-// REUSABLE FORM FIELD WIDGET
-// ---------------------------------------------------------------------------
 
 class _FormFieldItem extends StatelessWidget {
   final String label;
