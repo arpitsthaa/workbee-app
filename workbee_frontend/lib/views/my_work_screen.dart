@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:workbee_frontend/services/auth_service.dart';
+import 'package:workbee_frontend/models/api_models.dart';
 
 class MyWorkScreen extends StatefulWidget {
   const MyWorkScreen({super.key});
@@ -8,11 +10,20 @@ class MyWorkScreen extends StatefulWidget {
 }
 
 class _MyWorkScreenState extends State<MyWorkScreen> {
-  // 0 = Applications, 1 = Projects
-  int _activeTab = 1;
-
+  final AuthService _authService = AuthService();
   final TextEditingController _linkController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
+
+  int _activeTab = 0;
+  bool _isLoading = true;
+  String? _error;
+  WorkResponse? _work;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadWork();
+  }
 
   @override
   void dispose() {
@@ -21,25 +32,35 @@ class _MyWorkScreenState extends State<MyWorkScreen> {
     super.dispose();
   }
 
-  void _handleSubmitWork() {
-    final link = _linkController.text.trim();
-    if (link.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please paste a Canva or Google Drive link first.'),
-        ),
-      );
-      return;
+  Future<void> _loadWork() async {
+    final result = await _authService.getStudentWork();
+    if (!mounted) return;
+    if (result.containsKey('error')) {
+      setState(() {
+        _error = result['error'] as String?;
+        _isLoading = false;
+      });
+    } else {
+      setState(() {
+        _work = WorkResponse.fromJson(result as Map<String, dynamic>);
+        _isLoading = false;
+      });
     }
+  }
 
-    _linkController.clear();
-    _noteController.clear();
+  Future<void> _refreshWork() async {
+    await _loadWork();
+  }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Work submitted for Book Fair Event Poster!'),
-      ),
-    );
+  List<GigApplication> get _applications => _work?.applications ?? [];
+  List<Project> get _projects => _work?.projects ?? [];
+
+  String _formatNpr(int amount) {
+    final str = amount.toString();
+    if (str.length <= 3) return 'NPR $str';
+    final prefix = str.substring(0, str.length - 3);
+    final suffix = str.substring(str.length - 3);
+    return 'NPR $prefix,$suffix';
   }
 
   @override
@@ -52,299 +73,510 @@ class _MyWorkScreenState extends State<MyWorkScreen> {
     const inputFill = Color(0xFFF8FAFC);
 
     return SafeArea(
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header
-                const Text(
-                  'My work',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                    color: darkText,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Follow your progress. Keep work moving.',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: mutedText,
-                  ),
-                ),
-                const SizedBox(height: 18),
-
-                // Simple Two-Tab Switcher
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: inputFill,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: borderColor),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _SegmentTab(
-                          label: 'Applications (2)',
-                          selected: _activeTab == 0,
-                          onTap: () => setState(() => _activeTab = 0),
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : NestedScrollView(
+                headerSliverBuilder: (context, innerBoxIsScrolled) {
+                  return [
+                    SliverAppBar(
+                      pinned: true,
+                      floating: false,
+                      expandedHeight: 160,
+                      backgroundColor: Colors.white,
+                      elevation: innerBoxIsScrolled ? 1 : 0,
+                      shadowColor: borderColor,
+                      surfaceTintColor: Colors.white,
+                      automaticallyImplyLeading: false,
+                      flexibleSpace: FlexibleSpaceBar(
+                        background: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              const Text(
+                                'My work',
+                                style: TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w800,
+                                  color: darkText,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              const Text(
+                                'Follow your progress. Keep work moving.',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: mutedText,
+                                ),
+                              ),
+                              const SizedBox(height: 18),
+                              Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  color: inputFill,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: borderColor),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: _SegmentTab(
+                                        label: 'Applications (${_applications.length})',
+                                        selected: _activeTab == 0,
+                                        onTap: () => setState(() => _activeTab = 0),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: _SegmentTab(
+                                        label: 'Projects (${_projects.length})',
+                                        selected: _activeTab == 1,
+                                        onTap: () => setState(() => _activeTab = 1),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      Expanded(
-                        child: _SegmentTab(
-                          label: 'Projects (3)',
-                          selected: _activeTab == 1,
-                          onTap: () => setState(() => _activeTab = 1),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 22),
-
-                if (_activeTab == 0) ...[
-                  // Applications Tab Content
-                  const Text(
-                    'Application updates',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: darkText,
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  _SimpleItemCard(
-                    title: 'Travel Carousel Design',
-                    subtitle: 'Thamel Trails · Applied 13 Oct',
-                    badgeText: 'Pending',
-                    badgeBg: const Color(0xFFFEF3C7),
-                    badgeColor: const Color(0xFFB45309),
-                  ),
-                  const SizedBox(height: 12),
-                  _SimpleItemCard(
-                    title: 'Packaging Design',
-                    subtitle: 'Bhaktapur Bakes · Applied 12 Oct',
-                    badgeText: 'Shortlisted',
-                    badgeBg: softBlueBg,
-                    badgeColor: primaryBlue,
-                  ),
-                ] else ...[
-                  // Projects Tab Content
-                  const Text(
-                    'Active project',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: darkText,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: softBlueBg,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFBFDBFE)),
-                    ),
-                    child: const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                'Book Fair Event Poster',
+                  ];
+                },
+                body: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 480),
+                  child: RefreshIndicator(
+                    onRefresh: _refreshWork,
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(20, 22, 20, 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (_activeTab == 0) ...[
+                            const Text(
+                              'Application updates',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: darkText,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            if (_applications.isEmpty)
+                              const Text(
+                                'No applications yet. Browse gigs and apply!',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: mutedText,
+                                ),
+                              )
+                            else
+                              ..._applications.map((app) {
+                                return Column(
+                                  children: [
+                                    _SimpleItemCard(
+                                      title: app.gigTitle,
+                                      subtitle:
+                                          '${app.businessName} · Applied ${_formatDate(app.appliedAt)}',
+                                      badgeText: app.status.toUpperCase(),
+                                      badgeBg: _badgeColor(app.status),
+                                      badgeColor: const Color(0xFF1E293B),
+                                      onTap: () => _showApplicationDetails(app),
+                                    ),
+                                    const SizedBox(height: 12),
+                                  ],
+                                );
+                              }).toList(),
+                          ] else ...[
+                            if (_projects.isEmpty)
+                              const Text(
+                                'No projects yet. Get shortlisted for a gig to start working!',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: mutedText,
+                                ),
+                              )
+                            else ...[
+                              const Text(
+                                'Active projects',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w700,
                                   color: darkText,
                                 ),
                               ),
-                            ),
-                            Text(
-                              'In progress',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: primaryBlue,
+                              const SizedBox(height: 12),
+                              ..._projects.map((project) {
+                                return Column(
+                                  children: [
+                                    Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: softBlueBg,
+                                        borderRadius: BorderRadius.circular(14),
+                                        border: Border.all(color: const Color(0xFFBFDBFE)),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  project.gigTitle,
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: darkText,
+                                                  ),
+                                                ),
+                                              ),
+                                              Text(
+                                                project.status.replaceAll('_', ' ').toUpperCase(),
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: primaryBlue,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            '${project.businessName} · Due ${project.deadline}',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: mutedText,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 10),
+                                          Text(
+                                            '${_formatNpr(project.budgetNpr)} · ${project.deliverables.join(', ')}',
+                                            style: TextStyle(
+                                              fontSize: 13.5,
+                                              fontWeight: FontWeight.w600,
+                                              color: primaryBlue,
+                                            ),
+                                          ),
+                                          if (project.submissionLink.isNotEmpty) ...[
+                                            const SizedBox(height: 10),
+                                            Text(
+                                              'Submitted: ${project.submissionLink}',
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                color: mutedText,
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 14),
+                                  ],
+                                );
+                              }).toList(),
+                              const SizedBox(height: 22),
+                              const Text(
+                                'Submit work',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: darkText,
+                                ),
                               ),
-                            ),
+                              const SizedBox(height: 4),
+                              const Text(
+                                'Paste your delivery link below.',
+                                style: TextStyle(fontSize: 13, color: mutedText),
+                              ),
+                              const SizedBox(height: 12),
+                              TextField(
+                                controller: _linkController,
+                                decoration: InputDecoration(
+                                  hintText: 'Paste Canva or Google Drive link',
+                                  hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                                  prefixIcon: const Icon(
+                                    Icons.link,
+                                    color: mutedText,
+                                    size: 20,
+                                  ),
+                                  filled: true,
+                                  fillColor: inputFill,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 14,
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(color: borderColor),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                      color: primaryBlue,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              TextField(
+                                controller: _noteController,
+                                maxLines: 2,
+                                decoration: InputDecoration(
+                                  hintText: 'Add a short note (optional)',
+                                  hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                                  filled: true,
+                                  fillColor: inputFill,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 12,
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(color: borderColor),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                      color: primaryBlue,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 48,
+                                child: ElevatedButton(
+                                  onPressed: _handleSubmitWork,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: primaryBlue,
+                                    foregroundColor: Colors.white,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'Submit for approval',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
-                        ),
-                        SizedBox(height: 6),
-                        Text(
-                          'Kathmandu Reads · Due 18 Oct',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: mutedText,
-                          ),
-                        ),
-                        SizedBox(height: 10),
-                        Text(
-                          'NPR 2,000 · 1 poster + 2 story sizes',
-                          style: TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w600,
-                            color: primaryBlue,
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 14),
+                ),
+              ),
+      );
+  }
 
-                  // Approved Summary Card
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: borderColor),
-                    ),
-                    child: const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '✓ Product Catalog Design · Patan Crafts',
-                          style: TextStyle(fontSize: 13.5, color: darkText),
-                        ),
-                        SizedBox(height: 6),
-                        Text(
-                          '✓ Menu Refresh · Himalayan Beans',
-                          style: TextStyle(fontSize: 13.5, color: darkText),
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          '2 approved projects verified in your Career Passport',
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                            color: primaryBlue,
-                          ),
-                        ),
-                      ],
-                    ),
+  Color _badgeColor(String status) {
+    switch (status.toUpperCase()) {
+      case 'PENDING':
+        return const Color(0xFFFEF3C7);
+      case 'SHORTLISTED':
+        return const Color(0xFFEFF6FF);
+      case 'ACCEPTED':
+        return const Color(0xFFD1FAE5);
+      case 'REJECTED':
+        return const Color(0xFFFEE2E2);
+      default:
+        return const Color(0xFFE2E8F0);
+    }
+  }
+
+  String _formatDate(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return 'recently';
+    return dateStr;
+  }
+
+  void _handleSubmitWork() {
+    final link = _linkController.text.trim();
+    if (link.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please paste a Canva or Google Drive link first.'),
+        ),
+      );
+      return;
+    }
+    _linkController.clear();
+    _noteController.clear();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Work submitted for review!'),
+      ),
+    );
+  }
+
+  void _showApplicationDetails(GigApplication app) {
+    const darkText = Color(0xFF0F172A);
+    const mutedText = Color(0xFF64748B);
+    const borderColor = Color(0xFFE2E8F0);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  app.businessName,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: mutedText,
                   ),
-                  const SizedBox(height: 22),
-
-                  // Simple Submit Work Section
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  app.gigTitle,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: darkText,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: _badgeColor(app.status),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: borderColor),
+                      ),
+                      child: Text(
+                        app.status.toUpperCase(),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF1E293B),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Applied ${_formatDate(app.appliedAt)}',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: mutedText,
+                      ),
+                    ),
+                  ],
+                ),
+                if (app.coverMessage.isNotEmpty) ...[
+                  const SizedBox(height: 16),
                   const Text(
-                    'Submit work',
+                    'Cover Message',
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 15,
                       fontWeight: FontWeight.w700,
                       color: darkText,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'For Book Fair Event Poster · Kathmandu Reads',
-                    style: TextStyle(fontSize: 13, color: mutedText),
-                  ),
-                  const SizedBox(height: 12),
-
-                  TextField(
-                    controller: _linkController,
-                    decoration: InputDecoration(
-                      hintText: 'Paste Canva or Google Drive link',
-                      hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
-                      prefixIcon: const Icon(
-                        Icons.link,
-                        color: mutedText,
-                        size: 20,
-                      ),
-                      filled: true,
-                      fillColor: inputFill,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 14,
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: borderColor),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: primaryBlue,
-                          width: 1.5,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  TextField(
-                    controller: _noteController,
-                    maxLines: 2,
-                    decoration: InputDecoration(
-                      hintText: 'Add a short note (optional)',
-                      hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
-                      filled: true,
-                      fillColor: inputFill,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 12,
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: borderColor),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: primaryBlue,
-                          width: 1.5,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: _handleSubmitWork,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryBlue,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        'Submit for approval',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                  const SizedBox(height: 6),
+                  Text(
+                    app.coverMessage,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      height: 1.5,
+                      color: Color(0xFF334155),
                     ),
                   ),
                 ],
+                const SizedBox(height: 16),
+                const Text(
+                  'Your Profile',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: darkText,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _ProfileInfoRow(label: 'Name', value: app.studentName),
+                _ProfileInfoRow(label: 'College', value: app.studentCollege),
+                _ProfileInfoRow(label: 'Skills', value: app.studentSkills.join(', ')),
+                _ProfileInfoRow(label: 'Rating', value: app.studentRating.toString()),
+                _ProfileInfoRow(
+                  label: 'Verified Projects',
+                  value: app.verifiedProjectsCount.toString(),
+                ),
               ],
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
 
-// ---------------------------------------------------------------------------
-// SMALL HELPER WIDGETS
-// ---------------------------------------------------------------------------
+class _ProfileInfoRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _ProfileInfoRow({
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const mutedText = Color(0xFF64748B);
+    const darkText = Color(0xFF0F172A);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+                color: mutedText,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 13.5,
+                color: darkText,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _SegmentTab extends StatelessWidget {
   final String label;
@@ -387,6 +619,7 @@ class _SimpleItemCard extends StatelessWidget {
   final String badgeText;
   final Color badgeBg;
   final Color badgeColor;
+  final VoidCallback? onTap;
 
   const _SimpleItemCard({
     required this.title,
@@ -394,11 +627,15 @@ class _SimpleItemCard extends StatelessWidget {
     required this.badgeText,
     required this.badgeBg,
     required this.badgeColor,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -449,6 +686,7 @@ class _SimpleItemCard extends StatelessWidget {
           ),
         ],
       ),
-    );
+    ),
+  );
   }
 }

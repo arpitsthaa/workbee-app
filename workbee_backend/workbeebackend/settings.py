@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-#-s^ihpkros=7t3n2j!to)-*8rk$o4m3$fx8p4f)xn-wya*g#x
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["workbee-app.onrender.com", ".onrender.com", "localhost", "127.0.0.1", "0.0.0.0"]
+ALLOWED_HOSTS = ["workbee-app.onrender.com", ".onrender.com", "localhost", "127.0.0.1", "0.0.0.0", "192.168.1.73"]
 
 load_dotenv()  # Reads DATABASE_URL from your local .env file
 # Application definition
@@ -80,15 +80,22 @@ WSGI_APPLICATION = 'workbeebackend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
-DATABASES = {
-    "default": dj_database_url.config(
-        default=os.environ.get("DATABASE_URL"),
-        conn_max_age=0,
-    )
-}
-
-# Explicitly disable server-side cursors for Nile's connection pooler
-DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = True
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if DATABASE_URL:
+    DATABASES = {
+        "default": dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=0,
+        )
+    }
+    DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = True
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 # Password validation
 # https://docs.djangoproject.com/en/6.1/ref/settings/#auth-password-validators
 

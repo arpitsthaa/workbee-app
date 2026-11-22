@@ -30,16 +30,10 @@ class User(AbstractUser):
     email = models.EmailField(unique=True)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="student")
 
-    # Student Registration fields
+    # Shared profile fields (student + business)
     full_name = models.CharField(max_length=150, blank=True, null=True)
     college_university = models.CharField(max_length=200, blank=True, null=True)
-
-    # Business Registration fields
-    business_name = models.CharField(max_length=150, blank=True, null=True)
-    contact_person = models.CharField(max_length=150, blank=True, null=True)
-    phone = models.CharField(max_length=20, blank=True, null=True)
     location = models.CharField(max_length=150, blank=True, null=True)
-    pan_number = models.CharField(max_length=9, blank=True, null=True)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []

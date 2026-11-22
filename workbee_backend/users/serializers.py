@@ -36,22 +36,7 @@ class BusinessRegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = [
-            "id",
-            "business_name",
-            "contact_person",
-            "email",
-            "phone",
-            "location",
-            "pan_number",
-            "password",
-            "confirm_password",
-        ]
-
-    def validate_pan_number(self, value):
-        if not value or not value.isdigit() or len(value) != 9:
-            raise serializers.ValidationError("PAN number must be exactly 9 digits.")
-        return value
+        fields = ["id", "email", "password", "confirm_password"]
 
     def validate(self, attrs):
         if attrs["password"] != attrs["confirm_password"]:
@@ -64,11 +49,6 @@ class BusinessRegisterSerializer(serializers.ModelSerializer):
             email=validated_data["email"],
             password=validated_data["password"],
             role="business",
-            business_name=validated_data["business_name"],
-            contact_person=validated_data["contact_person"],
-            phone=validated_data["phone"],
-            location=validated_data["location"],
-            pan_number=validated_data["pan_number"],
         )
 
 
@@ -93,9 +73,5 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "role",
             "full_name",
             "college_university",
-            "business_name",
-            "contact_person",
-            "phone",
             "location",
-            "pan_number",
         ]

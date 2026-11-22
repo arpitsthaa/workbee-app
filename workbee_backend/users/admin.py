@@ -3,6 +3,6 @@ from .models import User
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
-    list_display = ("email", "role", "full_name", "business_name", "is_staff")
+    list_display = ("email", "role", "full_name", "location", "is_staff")
     list_filter = ("role", "is_staff")
-    search_fields = ("email", "full_name", "business_name")
+    search_fields = ("email", "full_name", "location")
