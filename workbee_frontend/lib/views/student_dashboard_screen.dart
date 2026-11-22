@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:workbee_frontend/views/browse_gigs_screen.dart';
 
 class StudentDashboardScreen extends StatefulWidget {
   final String studentName;
@@ -26,12 +27,17 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
+      body: _selectedIndex == 1
+          ? const BrowseGigsScreen()
+          : SafeArea(
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 480),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 16,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -160,7 +166,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          mainAxisAlignment:
+                          MainAxisAlignment.spaceBetween,
                           children: [
                             const Text(
                               'Profile 90% complete',
@@ -188,11 +195,11 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                         const SizedBox(height: 10),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
-                          child: LinearProgressIndicator(
+                          child: const LinearProgressIndicator(
                             value: 0.9,
                             minHeight: 6,
-                            backgroundColor: const Color(0xFFDBEAFE),
-                            valueColor: const AlwaysStoppedAnimation<Color>(
+                            backgroundColor: Color(0xFFDBEAFE),
+                            valueColor: AlwaysStoppedAnimation<Color>(
                               primaryBlue,
                             ),
                           ),
@@ -256,7 +263,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                     payText: 'NPR 3,000',
                     metaText: '7 days · Due 21 Oct',
                     highlightMeta: false,
-                    onTap: () {},
+                    onTap: () => setState(() => _selectedIndex = 1),
                   ),
                   const SizedBox(height: 12),
                   _GigCard(
@@ -265,7 +272,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                     payText: 'NPR 2,500',
                     metaText: '5 days · Due 19 Oct',
                     highlightMeta: true,
-                    onTap: () {},
+                    onTap: () => setState(() => _selectedIndex = 1),
                   ),
                   const SizedBox(height: 18),
 
@@ -303,7 +310,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       decoration: BoxDecoration(
                         color: softBlueBg,
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: primaryBlue, width: 1.5),
+                        border:
+                        Border.all(color: primaryBlue, width: 1.5),
                       ),
                       child: const Row(
                         children: [
@@ -315,7 +323,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                           SizedBox(width: 12),
                           Expanded(
                             child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                              crossAxisAlignment:
+                              CrossAxisAlignment.start,
                               children: [
                                 Row(
                                   children: [
