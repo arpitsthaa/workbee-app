@@ -51,6 +51,7 @@ class StudentDashboardView(APIView):
 
         return Response(
             {
+                "status": 200,
                 "full_name": user.full_name or "Student",
                 "recommended_gigs": GigSerializer(
                     recommended, many=True, context={"request": request}
