@@ -3,7 +3,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Singleton Dio client with automatic auth header injection.
 class DioClient {
   static final DioClient _instance = DioClient._internal();
   factory DioClient() => _instance;
@@ -16,50 +15,21 @@ class DioClient {
   bool _initialized = false;
 
   Dio get dio {
-    if (!_initialized) {
-      init();
-    }
+    if (!_initialized) init();
     return _dioInstance!;
   }
 
   void init() {
     if (_initialized) return;
     _initialized = true;
-
-    _dioInstance = Dio(
-      BaseOptions(
-        baseUrl: _baseUrl,
-        connectTimeout: const Duration(seconds: 15),
-        receiveTimeout: const Duration(seconds: 20),
-        sendTimeout: const Duration(seconds: 20),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        contentType: Headers.jsonContentType,
-        responseType: ResponseType.json,
-      ),
-    );
-
+    _dioInstance = Dio(BaseOptions(baseUrl: _baseUrl));
     _dioInstance!.interceptors.add(_AuthInterceptor());
-    if (!kReleaseMode) {
-      _dioInstance!.interceptors.add(
-        LogInterceptor(
-          request: true,
-          requestHeader: true,
-          responseHeader: false,
-          error: true,
-        ),
-      );
-    }
   }
 
   Future<void> warmUp() async {
     try {
       await dio.get('/api/health/').timeout(const Duration(seconds: 10));
-    } catch (_) {
-      // best-effort wake-up; ignore
-    }
+    } catch (_) {}
   }
 }
 
