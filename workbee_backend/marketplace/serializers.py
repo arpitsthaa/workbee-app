@@ -50,25 +50,15 @@ class StudentProfileSerializer(serializers.ModelSerializer):
 
 
 class BusinessProfileSerializer(serializers.ModelSerializer):
-    business_name = serializers.CharField(source="user.business_name", required=False)
-    contact_person = serializers.CharField(
-        source="user.contact_person", required=False
-    )
     email = serializers.EmailField(source="user.email", read_only=True)
-    phone = serializers.CharField(source="user.phone", required=False)
     location = serializers.CharField(source="user.location", required=False)
-    pan_number = serializers.CharField(source="user.pan_number", read_only=True)
 
     class Meta:
         model = BusinessProfile
         fields = [
             "id",
-            "business_name",
-            "contact_person",
             "email",
-            "phone",
             "location",
-            "pan_number",
             "business_type",
             "about",
             "is_verified",
@@ -89,7 +79,7 @@ class BusinessProfileSerializer(serializers.ModelSerializer):
 
 class GigSerializer(serializers.ModelSerializer):
     business_name = serializers.CharField(
-        source="business.business_name", read_only=True
+        source="business.email", read_only=True
     )
     applicants_count = serializers.IntegerField(
         source="applications.count", read_only=True
@@ -129,7 +119,7 @@ class GigSerializer(serializers.ModelSerializer):
 class GigApplicationSerializer(serializers.ModelSerializer):
     gig_title = serializers.CharField(source="gig.title", read_only=True)
     business_name = serializers.CharField(
-        source="gig.business.business_name", read_only=True
+        source="gig.business.email", read_only=True
     )
     student_name = serializers.CharField(source="student.full_name", read_only=True)
     student_college = serializers.CharField(
@@ -176,7 +166,7 @@ class GigApplicationSerializer(serializers.ModelSerializer):
 class ProjectReviewSerializer(serializers.ModelSerializer):
     gig_title = serializers.CharField(source="project.gig.title", read_only=True)
     business_name = serializers.CharField(
-        source="business.business_name", read_only=True
+        source="business.email", read_only=True
     )
     business_location = serializers.CharField(
         source="business.location", read_only=True
@@ -220,7 +210,7 @@ class ProjectSerializer(serializers.ModelSerializer):
     deadline = serializers.DateField(source="gig.deadline", read_only=True)
     deliverables = serializers.JSONField(source="gig.deliverables", read_only=True)
     business_name = serializers.CharField(
-        source="business.business_name", read_only=True
+        source="business.email", read_only=True
     )
     student_name = serializers.CharField(source="student.full_name", read_only=True)
     has_review = serializers.SerializerMethodField()

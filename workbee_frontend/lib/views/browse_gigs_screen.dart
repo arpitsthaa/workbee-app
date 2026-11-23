@@ -1,34 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-
-class GigItem {
-  final String id;
-  final String businessName;
-  final String title;
-  final String category;
-  final String skillsTag;
-  final int budgetNpr;
-  final String duration;
-  final String dueDate;
-  final String location;
-  final String workMode;
-  final String description;
-  final DateTime postedAt;
-
-  const GigItem({
-    required this.id,
-    required this.businessName,
-    required this.title,
-    required this.category,
-    required this.skillsTag,
-    required this.budgetNpr,
-    required this.duration,
-    required this.dueDate,
-    required this.location,
-    required this.workMode,
-    required this.description,
-    required this.postedAt,
-  });
-}
+import 'package:workbee_frontend/services/auth_service.dart';
+import 'package:workbee_frontend/models/api_models.dart';
+import 'package:workbee_frontend/widgets/gig_post_card.dart';
 
 class BrowseGigsScreen extends StatefulWidget {
   const BrowseGigsScreen({super.key});
@@ -39,9 +13,10 @@ class BrowseGigsScreen extends StatefulWidget {
 
 class _BrowseGigsScreenState extends State<BrowseGigsScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final AuthService _authService = AuthService();
 
   String _searchQuery = '';
-  String _selectedCategory = 'Design & creative';
+  String _selectedCategory = 'All categories';
   String _selectedBudget = 'Any budget';
   String _sortBy = 'Newest first';
 
@@ -60,107 +35,65 @@ class _BrowseGigsScreenState extends State<BrowseGigsScreen> {
     'Above NPR 5,000',
   ];
 
-  // Sample dynamic data (replace with API response later)
-  final List<GigItem> _allGigs = [
-    GigItem(
-      id: '1',
-      businessName: 'Momo Junction',
-      title: 'Restaurant Social Media Design',
-      category: 'Design & creative',
-      skillsTag: 'Canva · Social media design',
-      budgetNpr: 3000,
-      duration: '7 days',
-      dueDate: 'Due 21 Oct',
-      location: 'Baneshwor, Kathmandu',
-      workMode: 'Remote-friendly',
-      description:
-      'Create 6 engaging Instagram & Facebook promotional posts for our Dashain & Tihar combo menu using Canva.',
-      postedAt: DateTime(2026, 10, 14),
-    ),
-    GigItem(
-      id: '2',
-      businessName: 'Local Loom',
-      title: 'Product Photo Editing',
-      category: 'Design & creative',
-      skillsTag: 'Canva · Photo editing',
-      budgetNpr: 2500,
-      duration: '5 days',
-      dueDate: 'Due 19 Oct',
-      location: 'Patan, Lalitpur',
-      workMode: 'Remote-friendly',
-      description:
-      'Clean up backgrounds, adjust lighting, and resize 20 handwoven product photos for our online store.',
-      postedAt: DateTime(2026, 10, 13),
-    ),
-    GigItem(
-      id: '3',
-      businessName: 'Himalayan Roast Coffee',
-      title: 'Menu & Flyer Layout',
-      category: 'Design & creative',
-      skillsTag: 'Figma · Print layout',
-      budgetNpr: 4500,
-      duration: '6 days',
-      dueDate: 'Due 24 Oct',
-      location: 'Jhamsikhel, Lalitpur',
-      workMode: 'Hybrid',
-      description:
-      'Redesign our A4 café menu and takeaway promotional flyer with clean typography and product photos.',
-      postedAt: DateTime(2026, 10, 12),
-    ),
-    GigItem(
-      id: '4',
-      businessName: 'TechNova Nepal',
-      title: 'Landing Page UI Fix',
-      category: 'Development & IT',
-      skillsTag: 'HTML/CSS · Responsive UI',
-      budgetNpr: 6000,
-      duration: '5 days',
-      dueDate: 'Due 22 Oct',
-      location: 'Putalisadak, Kathmandu',
-      workMode: 'Remote-friendly',
-      description:
-      'Fix mobile responsiveness issues and improve button spacing on our company landing page.',
-      postedAt: DateTime(2026, 10, 15),
-    ),
-    GigItem(
-      id: '5',
-      businessName: 'Kathmandu Books',
-      title: 'Instagram Reels Caption & Copy',
-      category: 'Content & marketing',
-      skillsTag: 'Copywriting · Social media',
-      budgetNpr: 2000,
-      duration: '4 days',
-      dueDate: 'Due 18 Oct',
-      location: 'Thamel, Kathmandu',
-      workMode: 'Remote-friendly',
-      description:
-      'Write 10 short, catchy Nepali-English captions for our upcoming book review reels.',
-      postedAt: DateTime(2026, 10, 11),
-    ),
-  ];
+  late Future<List<Gig>> _gigsFuture;
+  late StreamSubscription _gigSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _gigsFuture = _fetchGigs();
+    _gigSubscription = AuthService.onGigCreated.listen((_) => _reload());
+  }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _gigSubscription.cancel();
     super.dispose();
   }
 
-  List<GigItem> get _filteredGigs {
+  Future<List<Gig>> _fetchGigs() async {
+    int? maxBudget;
+    if (_selectedBudget == 'Under NPR 3,000') {
+      maxBudget = 3000;
+    } else if (_selectedBudget == 'NPR 3,000 - 5,000') {
+      maxBudget = 5000;
+    } else if (_selectedBudget == 'Above NPR 5,000') {
+      maxBudget = 999999;
+    }
+
+    final result = await _authService.browseGigs(
+      search: _searchQuery.isEmpty ? null : _searchQuery,
+      category: _selectedCategory == 'All categories' ? null : _selectedCategory,
+      maxBudget: maxBudget,
+    );
+
+    if (result.containsKey('error')) {
+      throw Exception(result['error'] as String?);
+    }
+
+    final list = result['gigs'] as List<dynamic>;
+    return list.map((g) => Gig.fromJson(g as Map<String, dynamic>)).toList();
+  }
+
+  void _reload() {
+    setState(() {
+      _gigsFuture = _fetchGigs();
+    });
+  }
+
+  List<Gig> _filterAndSort(List<Gig> gigs) {
     final query = _searchQuery.toLowerCase().trim();
 
-    final results = _allGigs.where((gig) {
-      // Search filter
+    var results = gigs.where((gig) {
       final matchesSearch = query.isEmpty ||
           gig.title.toLowerCase().contains(query) ||
           gig.businessName.toLowerCase().contains(query) ||
-          gig.skillsTag.toLowerCase().contains(query) ||
           gig.location.toLowerCase().contains(query);
 
-      // Category filter
       final matchesCategory = _selectedCategory == 'All categories' ||
-          gig.category == _selectedCategory;
+          gig.category.toLowerCase() == _selectedCategory.toLowerCase();
 
-      // Budget filter
       bool matchesBudget = true;
       if (_selectedBudget == 'Under NPR 3,000') {
         matchesBudget = gig.budgetNpr < 3000;
@@ -173,9 +106,8 @@ class _BrowseGigsScreenState extends State<BrowseGigsScreen> {
       return matchesSearch && matchesCategory && matchesBudget;
     }).toList();
 
-    // Sort logic
     if (_sortBy == 'Newest first') {
-      results.sort((a, b) => b.postedAt.compareTo(a.postedAt));
+      results.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     } else if (_sortBy == 'Highest budget') {
       results.sort((a, b) => b.budgetNpr.compareTo(a.budgetNpr));
     }
@@ -228,7 +160,7 @@ class _BrowseGigsScreenState extends State<BrowseGigsScreen> {
                       option,
                       style: TextStyle(
                         fontWeight:
-                        isSelected ? FontWeight.w700 : FontWeight.w500,
+                            isSelected ? FontWeight.w700 : FontWeight.w500,
                         color: isSelected
                             ? const Color(0xFF1D61E7)
                             : const Color(0xFF1E293B),
@@ -251,7 +183,7 @@ class _BrowseGigsScreenState extends State<BrowseGigsScreen> {
     );
   }
 
-  void _showGigDetails(GigItem gig) {
+  void _showGigDetails(Gig gig) {
     const primaryBlue = Color(0xFF1D61E7);
 
     showModalBottomSheet(
@@ -288,7 +220,7 @@ class _BrowseGigsScreenState extends State<BrowseGigsScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  gig.skillsTag,
+                  gig.requiredSkills.join(' · '),
                   style: const TextStyle(
                     fontSize: 14,
                     color: Color(0xFF475569),
@@ -307,7 +239,7 @@ class _BrowseGigsScreenState extends State<BrowseGigsScreen> {
                       ),
                     ),
                     Text(
-                      '${gig.duration} · ${gig.dueDate}',
+                      '${gig.durationDays} days · ${gig.deadline}',
                       style: const TextStyle(
                         fontSize: 13.5,
                         color: Color(0xFF64748B),
@@ -325,7 +257,7 @@ class _BrowseGigsScreenState extends State<BrowseGigsScreen> {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      '${gig.location} · ${gig.workMode}',
+                      '${gig.location} · ${gig.isRemote ? 'Remote-friendly' : 'On-site'}',
                       style: const TextStyle(
                         fontSize: 13.5,
                         color: Color(0xFF64748B),
@@ -343,9 +275,9 @@ class _BrowseGigsScreenState extends State<BrowseGigsScreen> {
                   ),
                 ),
                 const SizedBox(height: 6),
-                Text(
-                  gig.description,
-                  style: const TextStyle(
+                const Text(
+                  'Apply to see full project details and deliverables.',
+                  style: TextStyle(
                     fontSize: 14,
                     height: 1.5,
                     color: Color(0xFF334155),
@@ -358,7 +290,7 @@ class _BrowseGigsScreenState extends State<BrowseGigsScreen> {
                   child: ElevatedButton(
                     onPressed: () {
                       Navigator.pop(context);
-                      ScaffoldMessenger.of(this.context).showSnackBar(
+                      ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text('Applied to "${gig.title}"!'),
                         ),
@@ -396,221 +328,267 @@ class _BrowseGigsScreenState extends State<BrowseGigsScreen> {
     const darkText = Color(0xFF0F172A);
     const mutedText = Color(0xFF64748B);
     const borderColor = Color(0xFFE2E8F0);
-
-    final gigs = _filteredGigs;
+    const errorColor = Color(0xFFEF4444);
 
     return SafeArea(
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header
-                    const Text(
-                      'Browse gigs',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w800,
-                        color: darkText,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'Small projects. Real experience.',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: mutedText,
-                      ),
-                    ),
-                    const SizedBox(height: 18),
+      child: RefreshIndicator(
+        onRefresh: () async {
+          _reload();
+        },
+        child: FutureBuilder<List<Gig>>(
+          future: _gigsFuture,
+          builder: (context, snapshot) {
+            final waiting = snapshot.connectionState == ConnectionState.waiting;
+            final hasError = snapshot.hasError;
+            final gigs = (waiting || hasError)
+                ? <Gig>[]
+                : _filterAndSort(snapshot.data ?? []);
 
-                    // Search Bar
-                    TextField(
-                      controller: _searchController,
-                      onChanged: (value) {
-                        setState(() => _searchQuery = value);
-                      },
-                      decoration: InputDecoration(
-                        hintText: 'Search gigs or businesses',
-                        hintStyle: const TextStyle(
-                          color: Color(0xFF94A3B8),
-                          fontSize: 14.5,
-                        ),
-                        prefixIcon: const Icon(
-                          Icons.search,
-                          color: mutedText,
-                          size: 22,
-                        ),
-                        suffixIcon: _searchQuery.isNotEmpty
-                            ? IconButton(
-                          icon: const Icon(Icons.close, size: 18),
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() => _searchQuery = '');
-                          },
-                        )
-                            : null,
-                        filled: true,
-                        fillColor: const Color(0xFFF8FAFC),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: borderColor),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: primaryBlue,
-                            width: 1.5,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Filter Pills Row
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          _FilterChipButton(
-                            label: _selectedCategory,
-                            isActive: _selectedCategory != 'All categories',
-                            onTap: () => _pickFilter(
-                              title: 'Select Category',
-                              options: _categories,
-                              currentValue: _selectedCategory,
-                              onSelected: (val) =>
-                                  setState(() => _selectedCategory = val),
+            return Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Browse gigs',
+                              style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.w800,
+                                color: darkText,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 10),
-                          _FilterChipButton(
-                            label: _selectedBudget,
-                            isActive: _selectedBudget != 'Any budget',
-                            onTap: () => _pickFilter(
-                              title: 'Select Budget',
-                              options: _budgets,
-                              currentValue: _selectedBudget,
-                              onSelected: (val) =>
-                                  setState(() => _selectedBudget = val),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Small projects. Real experience.',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: mutedText,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Count & Sort Row
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '${gigs.length} ${gigs.length == 1 ? 'gig' : 'gigs'} for your skills',
-                          style: const TextStyle(
-                            fontSize: 13.5,
-                            color: mutedText,
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _sortBy = _sortBy == 'Newest first'
-                                  ? 'Highest budget'
-                                  : 'Newest first';
-                            });
-                          },
-                          child: Row(
-                            children: [
-                              Text(
-                                _sortBy,
-                                style: const TextStyle(
-                                  fontSize: 13.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: primaryBlue,
+                            const SizedBox(height: 18),
+                            TextField(
+                              controller: _searchController,
+                              onChanged: (value) {
+                                setState(() => _searchQuery = value);
+                              },
+                              decoration: InputDecoration(
+                                hintText: 'Search gigs or businesses',
+                                hintStyle: const TextStyle(
+                                  color: Color(0xFF94A3B8),
+                                  fontSize: 14.5,
+                                ),
+                                prefixIcon: const Icon(
+                                  Icons.search,
+                                  color: mutedText,
+                                  size: 22,
+                                ),
+                                suffixIcon: _searchQuery.isNotEmpty
+                                    ? IconButton(
+                                        icon: const Icon(Icons.close, size: 18),
+                                        onPressed: () {
+                                          _searchController.clear();
+                                          setState(() => _searchQuery = '');
+                                        },
+                                      )
+                                    : null,
+                                filled: true,
+                                fillColor: const Color(0xFFF8FAFC),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 14,
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(color: borderColor),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                    color: primaryBlue,
+                                    width: 1.5,
+                                  ),
                                 ),
                               ),
-                              const SizedBox(width: 4),
-                              const Icon(
-                                Icons.arrow_downward,
-                                size: 15,
-                                color: primaryBlue,
+                            ),
+                            const SizedBox(height: 14),
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: [
+                                  _FilterChipButton(
+                                    label: _selectedCategory,
+                                    isActive: _selectedCategory != 'All categories',
+                                    onTap: () => _pickFilter(
+                                      title: 'Select Category',
+                                      options: _categories,
+                                      currentValue: _selectedCategory,
+                                      onSelected: (val) {
+                                        setState(() => _selectedCategory = val);
+                                        _reload();
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  _FilterChipButton(
+                                    label: _selectedBudget,
+                                    isActive: _selectedBudget != 'Any budget',
+                                    onTap: () => _pickFilter(
+                                      title: 'Select Budget',
+                                      options: _budgets,
+                                      currentValue: _selectedBudget,
+                                      onSelected: (val) {
+                                        setState(() => _selectedBudget = val);
+                                        _reload();
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (waiting)
+                      const SliverFillRemaining(
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    else if (hasError)
+                      SliverFillRemaining(
+                        child: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.error_outline,
+                                  color: errorColor, size: 40),
+                              const SizedBox(height: 8),
+                              Text(
+                                snapshot.error.toString(),
+                                style: const TextStyle(color: errorColor),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 12),
+                              TextButton(
+                                  onPressed: _reload,
+                                  child: const Text('Retry')),
+                            ],
+                          ),
+                        ),
+                      )
+                    else ...[
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '${gigs.length} ${gigs.length == 1 ? 'gig' : 'gigs'} for your skills',
+                                style: const TextStyle(
+                                  fontSize: 13.5,
+                                  color: mutedText,
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _sortBy = _sortBy == 'Newest first'
+                                        ? 'Highest budget'
+                                        : 'Newest first';
+                                  });
+                                },
+                                child: Row(
+                                  children: [
+                                    Text(
+                                      _sortBy,
+                                      style: const TextStyle(
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: primaryBlue,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    const Icon(
+                                      Icons.arrow_downward,
+                                      size: 15,
+                                      color: primaryBlue,
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
+                      ),
+                      if (gigs.isEmpty)
+                        SliverFillRemaining(
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text(
+                                  'No matching gigs found',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: darkText,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                TextButton(
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() {
+                                      _searchQuery = '';
+                                      _selectedCategory = 'All categories';
+                                      _selectedBudget = 'Any budget';
+                                    });
+                                    _reload();
+                                  },
+                                  child: const Text('Reset filters'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+                          sliver: SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                final gig = gigs[index];
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 14),
+                                  child: GigPostCard(
+                                    gig: gig,
+                                    formattedBudget: _formatNpr(gig.budgetNpr),
+                                    softBlueBg: softBlueBg,
+                                    onDetailsTap: () => _showGigDetails(gig),
+                                  ),
+                                );
+                              },
+                              childCount: gigs.length,
+                            ),
+                          ),
+                        ),
+                    ],
                   ],
                 ),
               ),
-
-              // Dynamic Gig List
-              Expanded(
-                child: gigs.isEmpty
-                    ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
-                        'No matching gigs found',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: darkText,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      TextButton(
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() {
-                            _searchQuery = '';
-                            _selectedCategory = 'All categories';
-                            _selectedBudget = 'Any budget';
-                          });
-                        },
-                        child: const Text('Reset filters'),
-                      ),
-                    ],
-                  ),
-                )
-                    : ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
-                  itemCount: gigs.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 14),
-                  itemBuilder: (context, index) {
-                    final gig = gigs[index];
-                    return _BrowseGigCard(
-                      gig: gig,
-                      formattedBudget: _formatNpr(gig.budgetNpr),
-                      softBlueBg: softBlueBg,
-                      onDetailsTap: () => _showGigDetails(gig),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
   }
 }
-
-// ---------------------------------------------------------------------------
-// REUSABLE WIDGETS
-// ---------------------------------------------------------------------------
 
 class _FilterChipButton extends StatelessWidget {
   final String label;
@@ -658,150 +636,6 @@ class _FilterChipButton extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _BrowseGigCard extends StatelessWidget {
-  final GigItem gig;
-  final String formattedBudget;
-  final Color softBlueBg;
-  final VoidCallback onDetailsTap;
-
-  const _BrowseGigCard({
-    required this.gig,
-    required this.formattedBudget,
-    required this.softBlueBg,
-    required this.onDetailsTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const primaryBlue = Color(0xFF1D61E7);
-    const mutedText = Color(0xFF64748B);
-
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            gig.businessName,
-            style: const TextStyle(
-              fontSize: 13,
-              color: mutedText,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            gig.title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF0F172A),
-              height: 1.25,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            gig.skillsTag,
-            style: const TextStyle(
-              fontSize: 13.5,
-              color: Color(0xFF475569),
-            ),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                formattedBudget,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: primaryBlue,
-                ),
-              ),
-              Text(
-                '${gig.duration} · ${gig.dueDate}',
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: mutedText,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              const Icon(
-                Icons.location_on_outlined,
-                size: 16,
-                color: mutedText,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                gig.location,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: mutedText,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                gig.workMode,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: mutedText,
-                ),
-              ),
-              InkWell(
-                onTap: onDetailsTap,
-                borderRadius: BorderRadius.circular(10),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: softBlueBg,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Details',
-                        style: TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w700,
-                          color: primaryBlue,
-                        ),
-                      ),
-                      SizedBox(width: 4),
-                      Icon(
-                        Icons.arrow_forward,
-                        size: 15,
-                        color: primaryBlue,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }
