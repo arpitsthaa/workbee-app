@@ -23,17 +23,50 @@ from .serializers import (
 )
 
 
+from django.db.models import Q
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from rest_framework import generics, permissions, status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from .models import (
+    BusinessProfile,
+    Gig,
+    GigApplication,
+    Project,
+    ProjectReview,
+    StudentProfile,
+)
+from .serializers import (
+    BusinessProfileSerializer,
+    GigApplicationSerializer,
+    GigSerializer,
+    ProjectReviewSerializer,
+    ProjectSerializer,
+    StudentProfileSerializer,
+)
+
+
 class StudentDashboardView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         user = request.user
-        profile, _ = StudentProfile.objects.get_or_create(user=user)
 
+        try:
+            profile, _ = StudentProfile.objects.get_or_create(user=user)
+        except Exception as exc:
+            return Response(
+                {"error": f"Failed to load student profile: {str(exc)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        skills = profile.skills if isinstance(profile.skills, list) else []
         open_gigs = Gig.objects.filter(status="OPEN")
-        if profile.skills:
+        if skills:
             skill_query = Q()
-            for skill in profile.skills:
+            for skill in skills:
                 skill_query |= Q(required_skills__icontains=skill)
             recommended = open_gigs.filter(skill_query).distinct()[:5]
             if not recommended.exists():

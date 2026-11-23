@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:workbee_frontend/services/dio_client.dart';
 import 'views/splash_screen.dart';
 
 void main() {
+  DioClient().init();
   runApp(const WorkBeeApp());
 }
 

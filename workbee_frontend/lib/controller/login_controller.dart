@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/dio_client.dart';
 import '../models/user_model.dart';
 
 class LoginController extends ChangeNotifier {
@@ -13,7 +14,9 @@ class LoginController extends ChangeNotifier {
   String? errorMessage;
   UserModel? currentUser;
 
-  static const String _loginUrl = 'https://workbee-app.onrender.com/api/users/login/';
+  static const String _loginUrl = '/api/users/login/';
+
+  final Dio _dio = DioClient().dio;
 
   void togglePassword() {
     obscurePassword = !obscurePassword;
@@ -35,15 +38,17 @@ class LoginController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await http
-          .post(
-        Uri.parse(_loginUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email, 'password': password}),
-      )
-          .timeout(const Duration(seconds: 45));
+      final response = await _dio.post(
+        _loginUrl,
+        data: jsonEncode({'email': email, 'password': password}),
+        options: Options(
+          headers: {'Content-Type': 'application/json'},
+        ),
+      ).timeout(const Duration(seconds: 45));
 
-      final data = response.body.isNotEmpty ? jsonDecode(response.body) : {};
+      final data = response.data is Map
+          ? Map<String, dynamic>.from(response.data)
+          : <String, dynamic>{};
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         currentUser = UserModel.fromJson(data);
@@ -61,8 +66,13 @@ class LoginController extends ChangeNotifier {
         notifyListeners();
         return false;
       }
+    } on DioException catch (e) {
+      errorMessage = 'Connection failed: ${e.message}';
+      isLoading = false;
+      notifyListeners();
+      return false;
     } catch (e) {
-      errorMessage = 'Connection failed. Make sure the backend is running on localhost:8000.';
+      errorMessage = 'Connection failed: $e';
       isLoading = false;
       notifyListeners();
       return false;

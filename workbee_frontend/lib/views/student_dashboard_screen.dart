@@ -3,6 +3,7 @@ import 'package:shimmer/shimmer.dart';
 import 'package:workbee_frontend/services/auth_service.dart';
 import 'package:workbee_frontend/models/api_models.dart';
 import 'package:workbee_frontend/views/browse_gigs_screen.dart';
+import 'package:workbee_frontend/views/login_screen.dart';
 import 'package:workbee_frontend/views/my_work_screen.dart';
 import 'package:workbee_frontend/views/passport_screen.dart';
 import 'package:workbee_frontend/views/profile_screen.dart';
@@ -31,9 +32,19 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   Future<void> _loadDashboard() async {
     final result = await _authService.getStudentDashboard();
     if (!mounted) return;
+    final status = result['status'] as int?;
+    if (status == 401 || status == 403) {
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+        );
+      }
+      return;
+    }
     if (result.containsKey('error')) {
       setState(() {
-        _error = result['error'] as String?;
+        _error = 'Error (${status ?? '?' }): ${result['error'] as String?}';
         _isLoading = false;
       });
     } else {
