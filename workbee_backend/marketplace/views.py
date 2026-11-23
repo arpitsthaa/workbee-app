@@ -49,38 +49,12 @@ class StudentDashboardView(APIView):
         else:
             recommended = open_gigs[:5]
 
-        applications = GigApplication.objects.filter(student=user)
-        projects = Project.objects.filter(student=user)
-        reviews = ProjectReview.objects.filter(student=user)
-
-        avg_rating = 0.0
-        if reviews.exists():
-            avg_rating = round(
-                sum(float(r.rating) for r in reviews) / reviews.count(), 1
-            )
-
         return Response(
             {
                 "full_name": user.full_name or "Student",
-                "is_verified": profile.is_verified,
-                "profile_completion": profile.profile_completion,
                 "recommended_gigs": GigSerializer(
                     recommended, many=True, context={"request": request}
                 ).data,
-                "applications_summary": {
-                    "total": applications.count(),
-                    "pending": applications.filter(status="PENDING").count(),
-                    "shortlisted": applications.filter(status="SHORTLISTED").count(),
-                },
-                "projects_summary": {
-                    "total": projects.count(),
-                    "active": projects.exclude(status="APPROVED").count(),
-                    "approved": projects.filter(status="APPROVED").count(),
-                },
-                "career_passport": {
-                    "verified_projects": reviews.count(),
-                    "average_rating": avg_rating,
-                },
             }
         )
 
