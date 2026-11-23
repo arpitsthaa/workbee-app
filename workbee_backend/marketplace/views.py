@@ -42,7 +42,7 @@ class StudentDashboardView(APIView):
         if skills:
             skill_query = Q()
             for skill in skills:
-                skill_query |= Q(required_skills__icontains=skill)
+                skill_query |= Q(title__icontains=skill) | Q(description__icontains=skill) | Q(category__icontains=skill)
             recommended = open_gigs.filter(skill_query).distinct()[:5]
             if not recommended.exists():
                 recommended = open_gigs[:5]
