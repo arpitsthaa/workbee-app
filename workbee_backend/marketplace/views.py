@@ -1,5 +1,5 @@
 from django.db import DatabaseError
-from django.db.models import Q
+from django.db.models import Avg, Count, Exists, OuterRef, Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import generics, permissions, status
@@ -32,7 +32,15 @@ class StudentDashboardView(APIView):
             user = request.user
             profile, _ = StudentProfile.objects.get_or_create(user=user)
 
-            open_gigs = Gig.objects.filter(status="OPEN")
+            open_gigs = Gig.objects.filter(status="OPEN").select_related("business")
+            open_gigs = open_gigs.annotate(applicants_count=Count("applications"))
+            has_applied_subquery = GigApplication.objects.filter(
+                gig=OuterRef("pk"), student=user
+            )
+            open_gigs = open_gigs.annotate(
+                has_applied=Exists(has_applied_subquery)
+            )
+
             skills = profile.skills if isinstance(profile.skills, list) else []
             if skills:
                 skill_query = Q()
@@ -45,14 +53,27 @@ class StudentDashboardView(APIView):
                 recommended = open_gigs[:5]
 
             applications = GigApplication.objects.filter(student=user)
-            projects = Project.objects.filter(student=user)
-            reviews = ProjectReview.objects.filter(student=user)
+            projects = Project.objects.filter(student=user).select_related("gig", "business")
+            reviews = ProjectReview.objects.filter(student=user).select_related("project", "business")
 
-            avg_rating = 0.0
-            if reviews.exists():
-                avg_rating = round(
-                    sum(float(r.rating) for r in reviews) / reviews.count(), 1
-                )
+            app_agg = applications.aggregate(
+                total=Count("id"),
+                pending=Count("id", filter=Q(status="PENDING")),
+                shortlisted=Count("id", filter=Q(status="SHORTLISTED")),
+            )
+            proj_agg = projects.aggregate(
+                total=Count("id"),
+                active=Count("id", filter=~Q(status="APPROVED")),
+                approved=Count("id", filter=Q(status="APPROVED")),
+            )
+
+            rating_agg = reviews.aggregate(
+                avg_rating=Avg("rating"),
+                count=Count("id"),
+            )
+            avg_rating = (
+                round(rating_agg["avg_rating"], 1) if rating_agg["count"] else 0.0
+            )
 
             return Response(
                 {
@@ -63,17 +84,17 @@ class StudentDashboardView(APIView):
                         recommended, many=True, context={"request": request}
                     ).data,
                     "applications_summary": {
-                        "total": applications.count(),
-                        "pending": applications.filter(status="PENDING").count(),
-                        "shortlisted": applications.filter(status="SHORTLISTED").count(),
+                        "total": app_agg["total"],
+                        "pending": app_agg["pending"],
+                        "shortlisted": app_agg["shortlisted"],
                     },
                     "projects_summary": {
-                        "total": projects.count(),
-                        "active": projects.exclude(status="APPROVED").count(),
-                        "approved": projects.filter(status="APPROVED").count(),
+                        "total": proj_agg["total"],
+                        "active": proj_agg["active"],
+                        "approved": proj_agg["approved"],
                     },
                     "career_passport": {
-                        "verified_projects": reviews.count(),
+                        "verified_projects": rating_agg["count"],
                         "average_rating": avg_rating,
                     },
                 }
@@ -105,7 +126,16 @@ class BrowseGigsView(generics.ListAPIView):
 
     def get_queryset(self):
         try:
-            queryset = Gig.objects.filter(status="OPEN")
+            user = self.request.user
+            queryset = Gig.objects.filter(status="OPEN").select_related("business")
+            queryset = queryset.annotate(applicants_count=Count("applications"))
+            has_applied_subquery = GigApplication.objects.filter(
+                gig=OuterRef("pk"), student=user
+            )
+            queryset = queryset.annotate(
+                has_applied=Exists(has_applied_subquery)
+            )
+
             search = self.request.query_params.get("search")
             category = self.request.query_params.get("category")
             max_budget = self.request.query_params.get("max_budget")
