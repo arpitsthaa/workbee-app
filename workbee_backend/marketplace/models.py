@@ -49,7 +49,7 @@ class BusinessProfile(models.Model):
     is_verified = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"Business Profile: {self.user.business_name or self.user.email}"
+        return f"Business Profile: {self.user.email}"
 
 
 class Gig(models.Model):

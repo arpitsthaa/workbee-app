@@ -24,7 +24,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-#-s^ihpkros=7t3n2j!to)-*8rk$o4m3$fx8p4f)xn-wya*g#x'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get("DEBUG", "False").lower() in ("1", "true", "yes", "on")
 
 ALLOWED_HOSTS = ["workbee-app.onrender.com", ".onrender.com", "localhost", "127.0.0.1", "0.0.0.0", "192.168.1.73"]
 

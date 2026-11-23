@@ -1,3 +1,4 @@
+from django.db import DatabaseError
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -27,54 +28,66 @@ class StudentDashboardView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        user = request.user
-        profile, _ = StudentProfile.objects.get_or_create(user=user)
+        try:
+            user = request.user
+            profile, _ = StudentProfile.objects.get_or_create(user=user)
 
-        open_gigs = Gig.objects.filter(status="OPEN")
-        if profile.skills:
-            skill_query = Q()
-            for skill in profile.skills:
-                skill_query |= Q(required_skills__icontains=skill)
-            recommended = open_gigs.filter(skill_query).distinct()[:5]
-            if not recommended.exists():
+            open_gigs = Gig.objects.filter(status="OPEN")
+            skills = profile.skills if isinstance(profile.skills, list) else []
+            if skills:
+                skill_query = Q()
+                for skill in skills:
+                    skill_query |= Q(required_skills__icontains=skill)
+                recommended = open_gigs.filter(skill_query).distinct()[:5]
+                if not recommended.exists():
+                    recommended = open_gigs[:5]
+            else:
                 recommended = open_gigs[:5]
-        else:
-            recommended = open_gigs[:5]
 
-        applications = GigApplication.objects.filter(student=user)
-        projects = Project.objects.filter(student=user)
-        reviews = ProjectReview.objects.filter(student=user)
+            applications = GigApplication.objects.filter(student=user)
+            projects = Project.objects.filter(student=user)
+            reviews = ProjectReview.objects.filter(student=user)
 
-        avg_rating = 0.0
-        if reviews.exists():
-            avg_rating = round(
-                sum(float(r.rating) for r in reviews) / reviews.count(), 1
+            avg_rating = 0.0
+            if reviews.exists():
+                avg_rating = round(
+                    sum(float(r.rating) for r in reviews) / reviews.count(), 1
+                )
+
+            return Response(
+                {
+                    "full_name": user.full_name or "Student",
+                    "is_verified": profile.is_verified,
+                    "profile_completion": profile.profile_completion,
+                    "recommended_gigs": GigSerializer(
+                        recommended, many=True, context={"request": request}
+                    ).data,
+                    "applications_summary": {
+                        "total": applications.count(),
+                        "pending": applications.filter(status="PENDING").count(),
+                        "shortlisted": applications.filter(status="SHORTLISTED").count(),
+                    },
+                    "projects_summary": {
+                        "total": projects.count(),
+                        "active": projects.exclude(status="APPROVED").count(),
+                        "approved": projects.filter(status="APPROVED").count(),
+                    },
+                    "career_passport": {
+                        "verified_projects": reviews.count(),
+                        "average_rating": avg_rating,
+                    },
+                }
             )
-
-        return Response(
-            {
-                "full_name": user.full_name or "Student",
-                "is_verified": profile.is_verified,
-                "profile_completion": profile.profile_completion,
-                "recommended_gigs": GigSerializer(
-                    recommended, many=True, context={"request": request}
-                ).data,
-                "applications_summary": {
-                    "total": applications.count(),
-                    "pending": applications.filter(status="PENDING").count(),
-                    "shortlisted": applications.filter(status="SHORTLISTED").count(),
-                },
-                "projects_summary": {
-                    "total": projects.count(),
-                    "active": projects.exclude(status="APPROVED").count(),
-                    "approved": projects.filter(status="APPROVED").count(),
-                },
-                "career_passport": {
-                    "verified_projects": reviews.count(),
-                    "average_rating": avg_rating,
-                },
-            }
-        )
+        except DatabaseError as exc:
+            return Response(
+                {"error": "Dashboard unavailable due to a database error."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        except Exception as exc:
+            return Response(
+                {"error": "Dashboard unavailable. Please try again later."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 class StudentProfileView(generics.RetrieveUpdateAPIView):
@@ -91,24 +104,27 @@ class BrowseGigsView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        queryset = Gig.objects.filter(status="OPEN")
-        search = self.request.query_params.get("search")
-        category = self.request.query_params.get("category")
-        max_budget = self.request.query_params.get("max_budget")
+        try:
+            queryset = Gig.objects.filter(status="OPEN")
+            search = self.request.query_params.get("search")
+            category = self.request.query_params.get("category")
+            max_budget = self.request.query_params.get("max_budget")
 
-        if search:
-            queryset = queryset.filter(
-                Q(title__icontains=search)
-                | Q(description__icontains=search)
-                | Q(business__business_name__icontains=search)
-                | Q(location__icontains=search)
-            )
-        if category:
-            queryset = queryset.filter(category__iexact=category)
-        if max_budget and max_budget.isdigit():
-            queryset = queryset.filter(budget_npr__lte=int(max_budget))
+            if search:
+                queryset = queryset.filter(
+                    Q(title__icontains=search)
+                    | Q(description__icontains=search)
+                    | Q(business__email__icontains=search)
+                    | Q(location__icontains=search)
+                )
+            if category:
+                queryset = queryset.filter(category__iexact=category)
+            if max_budget and max_budget.isdigit():
+                queryset = queryset.filter(budget_npr__lte=int(max_budget))
 
-        return queryset
+            return queryset
+        except DatabaseError:
+            return Gig.objects.none()
 
 
 class GigDetailView(generics.RetrieveAPIView):
