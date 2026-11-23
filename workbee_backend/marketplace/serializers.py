@@ -81,10 +81,8 @@ class GigSerializer(serializers.ModelSerializer):
     business_name = serializers.CharField(
         source="business.email", read_only=True
     )
-    applicants_count = serializers.IntegerField(
-        source="applications.count", read_only=True
-    )
-    has_applied = serializers.SerializerMethodField()
+    applicants_count = serializers.IntegerField(read_only=True)
+    has_applied = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = Gig
@@ -108,12 +106,6 @@ class GigSerializer(serializers.ModelSerializer):
             "created_at",
         ]
         read_only_fields = ["business", "status", "created_at"]
-
-    def get_has_applied(self, obj):
-        request = self.context.get("request")
-        if request and request.user.is_authenticated and request.user.role == "student":
-            return obj.applications.filter(student=request.user).exists()
-        return False
 
 
 class GigApplicationSerializer(serializers.ModelSerializer):
