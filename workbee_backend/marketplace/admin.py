@@ -20,14 +20,14 @@ class StudentProfileAdmin(admin.ModelAdmin):
 class BusinessProfileAdmin(admin.ModelAdmin):
     list_display = ("user", "business_type", "is_verified")
     list_filter = ("is_verified",)
-    search_fields = ("user__email", "user__business_name")
+    search_fields = ("user__email",)
 
 
 @admin.register(Gig)
 class GigAdmin(admin.ModelAdmin):
     list_display = ("title", "business", "budget_npr", "deadline", "status")
     list_filter = ("status", "category", "is_remote")
-    search_fields = ("title", "business__business_name", "location")
+    search_fields = ("title", "business__email", "location")
 
 
 @admin.register(GigApplication)

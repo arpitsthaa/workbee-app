@@ -32,6 +32,32 @@ class AuthService {
     };
   }
 
+  Map<String, dynamic> _decodeMap(String body) {
+    if (body.isEmpty) return <String, dynamic>{};
+    try {
+      final decoded = jsonDecode(body);
+      return decoded is Map<String, dynamic> ? decoded : <String, dynamic>{};
+    } catch (_) {
+      return <String, dynamic>{};
+    }
+  }
+
+  List<dynamic> _decodeList(String body) {
+    if (body.isEmpty) return <dynamic>[];
+    try {
+      final decoded = jsonDecode(body);
+      return decoded is List<dynamic> ? decoded : <dynamic>[];
+    } catch (_) {
+      return <dynamic>[];
+    }
+  }
+
+  String _errorMessage(Map<String, dynamic> body, int status) {
+    final detail = body['detail'] ?? body['message'] ?? body['error'];
+    if (detail is String && detail.isNotEmpty) return detail;
+    return 'Server error ($status). Please try again later.';
+  }
+
   Future<StudentRegistrationResponse> registerStudent(
       StudentRegistrationRequest request,
       ) async {
@@ -159,14 +185,15 @@ class AuthService {
         const Duration(seconds: 30),
       );
 
-      final body = response.body.isNotEmpty
-          ? jsonDecode(response.body) as Map<String, dynamic>
-          : <String, dynamic>{};
+      final body = _decodeMap(response.body);
 
       if (response.statusCode == 200) {
         return body;
       }
-      return {'error': body['detail'] ?? 'Failed to load dashboard', 'status': response.statusCode};
+      return {
+        'error': _errorMessage(body, response.statusCode),
+        'status': response.statusCode,
+      };
     } on TimeoutException {
       return {'error': 'Server took too long to respond.', 'status': 408};
     } catch (e) {
@@ -200,14 +227,15 @@ class AuthService {
       debugPrint('BrowseGigs Response Status: ${response.statusCode}');
       debugPrint('BrowseGigs Response Body: ${response.body}');
 
-      final body = response.body.isNotEmpty
-          ? jsonDecode(response.body) as List<dynamic>
-          : <dynamic>[];
+      final body = _decodeList(response.body);
 
       if (response.statusCode == 200) {
         return {'gigs': body};
       }
-      return {'error': 'Failed to load gigs (${response.statusCode})', 'status': response.statusCode};
+      return {
+        'error': _errorMessage(_decodeMap(response.body), response.statusCode),
+        'status': response.statusCode,
+      };
     } on TimeoutException {
       return {'error': 'Server took too long to respond.', 'status': 408};
     } catch (e) {
@@ -225,14 +253,15 @@ class AuthService {
         const Duration(seconds: 30),
       );
 
-      final body = response.body.isNotEmpty
-          ? jsonDecode(response.body) as Map<String, dynamic>
-          : <String, dynamic>{};
+      final body = _decodeMap(response.body);
 
       if (response.statusCode == 200) {
         return body;
       }
-      return {'error': 'Failed to load work', 'status': response.statusCode};
+      return {
+        'error': _errorMessage(body, response.statusCode),
+        'status': response.statusCode,
+      };
     } on TimeoutException {
       return {'error': 'Server took too long to respond.', 'status': 408};
     } catch (e) {
@@ -249,14 +278,15 @@ class AuthService {
         const Duration(seconds: 30),
       );
 
-      final body = response.body.isNotEmpty
-          ? jsonDecode(response.body) as Map<String, dynamic>
-          : <String, dynamic>{};
+      final body = _decodeMap(response.body);
 
       if (response.statusCode == 200) {
         return body;
       }
-      return {'error': 'Failed to load passport', 'status': response.statusCode};
+      return {
+        'error': _errorMessage(body, response.statusCode),
+        'status': response.statusCode,
+      };
     } on TimeoutException {
       return {'error': 'Server took too long to respond.', 'status': 408};
     } catch (e) {
@@ -273,14 +303,15 @@ class AuthService {
         const Duration(seconds: 30),
       );
 
-      final body = response.body.isNotEmpty
-          ? jsonDecode(response.body) as Map<String, dynamic>
-          : <String, dynamic>{};
+      final body = _decodeMap(response.body);
 
       if (response.statusCode == 200) {
         return body;
       }
-      return {'error': 'Failed to load profile', 'status': response.statusCode};
+      return {
+        'error': _errorMessage(body, response.statusCode),
+        'status': response.statusCode,
+      };
     } on TimeoutException {
       return {'error': 'Server took too long to respond.', 'status': 408};
     } catch (e) {
@@ -301,14 +332,15 @@ class AuthService {
       )
           .timeout(const Duration(seconds: 30));
 
-      final body = response.body.isNotEmpty
-          ? jsonDecode(response.body) as Map<String, dynamic>
-          : <String, dynamic>{};
+      final body = _decodeMap(response.body);
 
       if (response.statusCode == 200) {
         return body;
       }
-      return {'error': body['detail'] ?? 'Failed to update profile', 'status': response.statusCode};
+      return {
+        'error': _errorMessage(body, response.statusCode),
+        'status': response.statusCode,
+      };
     } on TimeoutException {
       return {'error': 'Server took too long to respond.', 'status': 408};
     } catch (e) {
