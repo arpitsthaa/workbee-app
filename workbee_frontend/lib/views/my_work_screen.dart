@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:workbee_frontend/services/auth_service.dart';
+import 'package:workbee_frontend/services/user_session_service.dart';
 import 'package:workbee_frontend/models/api_models.dart';
 
 class MyWorkScreen extends StatefulWidget {
@@ -50,6 +51,48 @@ class _MyWorkScreenState extends State<MyWorkScreen> {
 
   Future<void> _refreshWork() async {
     await _loadWork();
+  }
+
+  Future<void> _withdrawApplication(GigApplication app) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Withdraw Application?'),
+        content: Text('Are you sure you want to withdraw your application for "${app.gigTitle}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Withdraw'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final result = await _authService.withdrawApplication(app.id);
+
+    if (!mounted) return;
+
+    if (result.containsKey('error')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['error'] as String? ?? 'Failed to withdraw'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    } else {
+      await UserSessionService().markWithdrawn(app.gig);
+      _loadWork();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Application withdrawn')),
+      );
+    }
   }
 
   List<GigApplication> get _applications => _work?.applications ?? [];
@@ -136,6 +179,7 @@ class _MyWorkScreenState extends State<MyWorkScreen> {
                           )
                         else
                           ..._applications.map((app) {
+                            final canWithdraw = app.status.toUpperCase() == 'PENDING' || app.status.toUpperCase() == 'SHORTLISTED';
                             return Column(
                               children: [
                                 _SimpleItemCard(
@@ -146,6 +190,13 @@ class _MyWorkScreenState extends State<MyWorkScreen> {
                                   badgeBg: _badgeColor(app.status),
                                   badgeColor: const Color(0xFF1E293B),
                                   onTap: () => _showApplicationDetails(app),
+                                  trailingAction: canWithdraw
+                                      ? IconButton(
+                                          icon: const Icon(Icons.delete_outline, size: 20, color: Color(0xFFEF4444)),
+                                          onPressed: () => _withdrawApplication(app),
+                                          tooltip: 'Withdraw application',
+                                        )
+                                      : null,
                                 ),
                                 const SizedBox(height: 12),
                               ],
@@ -585,6 +636,7 @@ class _SimpleItemCard extends StatelessWidget {
   final Color badgeBg;
   final Color badgeColor;
   final VoidCallback? onTap;
+  final Widget? trailingAction;
 
   const _SimpleItemCard({
     required this.title,
@@ -593,6 +645,7 @@ class _SimpleItemCard extends StatelessWidget {
     required this.badgeBg,
     required this.badgeColor,
     this.onTap,
+    this.trailingAction,
   });
 
   @override
@@ -649,6 +702,10 @@ class _SimpleItemCard extends StatelessWidget {
                 ),
               ),
             ),
+            if (trailingAction != null) ...[
+              const SizedBox(width: 8),
+              trailingAction!,
+            ],
           ],
         ),
       ),

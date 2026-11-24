@@ -17,6 +17,7 @@ class UserSessionService extends ChangeNotifier {
   static const String _bioKey = 'user_bio';
   static const String _skillsKey = 'user_skills';
   static const String _portfolioUrlKey = 'user_portfolio_url';
+  static const String _appliedGigIdsKey = 'applied_gig_ids';
 
   String? _userName;
   String? _userId;
@@ -28,6 +29,7 @@ class UserSessionService extends ChangeNotifier {
   String? _bio;
   List<String> _skills = [];
   String? _portfolioUrl;
+  Set<int> _appliedGigIds = {};
   bool _initialized = false;
 
   String? get userName => _userName;
@@ -40,6 +42,7 @@ class UserSessionService extends ChangeNotifier {
   String? get bio => _bio;
   List<String> get skills => _skills;
   String? get portfolioUrl => _portfolioUrl;
+  Set<int> get appliedGigIds => _appliedGigIds;
   bool get isInitialized => _initialized;
 
   Future<void> initialize() async {
@@ -62,7 +65,34 @@ class UserSessionService extends ChangeNotifier {
       }
     }
     _portfolioUrl = prefs.getString(_portfolioUrlKey);
+    final appliedIdsJson = prefs.getString(_appliedGigIdsKey);
+    if (appliedIdsJson != null && appliedIdsJson.isNotEmpty) {
+      try {
+        final list = List<int>.from(jsonDecode(appliedIdsJson));
+        _appliedGigIds = list.toSet();
+      } catch (_) {
+        _appliedGigIds = {};
+      }
+    }
     _initialized = true;
+    notifyListeners();
+  }
+
+  bool isApplied(int gigId) {
+    return _appliedGigIds.contains(gigId);
+  }
+
+  Future<void> markApplied(int gigId) async {
+    _appliedGigIds.add(gigId);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_appliedGigIdsKey, jsonEncode(_appliedGigIds.toList()));
+    notifyListeners();
+  }
+
+  Future<void> markWithdrawn(int gigId) async {
+    _appliedGigIds.remove(gigId);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_appliedGigIdsKey, jsonEncode(_appliedGigIds.toList()));
     notifyListeners();
   }
 
@@ -167,6 +197,7 @@ class UserSessionService extends ChangeNotifier {
     _bio = null;
     _skills = [];
     _portfolioUrl = null;
+    _appliedGigIds = {};
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_userNameKey);
     await prefs.remove(_userIdKey);
@@ -178,6 +209,7 @@ class UserSessionService extends ChangeNotifier {
     await prefs.remove(_bioKey);
     await prefs.remove(_skillsKey);
     await prefs.remove(_portfolioUrlKey);
+    await prefs.remove(_appliedGigIdsKey);
     notifyListeners();
   }
 }

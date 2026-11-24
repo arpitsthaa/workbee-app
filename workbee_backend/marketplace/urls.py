@@ -16,6 +16,7 @@ from .views import (
     StudentWorkView,
     SubmitProjectWorkView,
     UpdateApplicationStatusView,
+    WithdrawApplicationView,
 )
 
 student_patterns = [
@@ -26,6 +27,7 @@ student_patterns = [
     path("gigs/", BrowseGigsView.as_view(), name="gigs"),
     path("gigs/<int:pk>/", GigDetailView.as_view(), name="gig-detail"),
     path("gigs/<int:pk>/apply/", ApplyForGigView.as_view(), name="apply-gig"),
+    path("applications/<int:pk>/withdraw/", WithdrawApplicationView.as_view(), name="withdraw-application"),
     path("projects/<int:pk>/submit/", SubmitProjectWorkView.as_view(), name="submit-work"),
 ]
 

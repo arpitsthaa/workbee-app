@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:workbee_frontend/services/auth_service.dart';
+import 'package:workbee_frontend/services/user_session_service.dart';
 import 'package:workbee_frontend/models/api_models.dart';
 import 'package:workbee_frontend/widgets/gig_post_card.dart';
-import 'package:workbee_frontend/widgets/student_dashboard_widgets.dart';
 
 class BrowseGigsScreen extends StatefulWidget {
   const BrowseGigsScreen({super.key});
@@ -38,12 +38,39 @@ class _BrowseGigsScreenState extends State<BrowseGigsScreen> {
 
   late Future<List<Gig>> _gigsFuture;
   late StreamSubscription _gigSubscription;
+  final Set<int> _applyingGigIds = {};
 
   @override
   void initState() {
     super.initState();
     _gigsFuture = _fetchGigs();
     _gigSubscription = AuthService.onGigCreated.listen((_) => _reload());
+  }
+
+  Future<void> _handleApply(int gigId) async {
+    if (_applyingGigIds.contains(gigId)) return;
+
+    setState(() => _applyingGigIds.add(gigId));
+
+    final result = await _authService.applyForGig(gigId);
+
+    if (!mounted) return;
+
+    if (result.containsKey('error')) {
+      setState(() => _applyingGigIds.remove(gigId));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['error'] as String? ?? 'Failed to apply'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    } else {
+      await UserSessionService().markApplied(gigId);
+      _reload(); // Refresh to get updated hasApplied from API
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Applied successfully!')),
+      );
+    }
   }
 
   @override
@@ -555,6 +582,8 @@ child: CustomScrollView(
                                     formattedBudget: _formatNpr(gig.budgetNpr),
                                     softBlueBg: softBlueBg,
                                     onDetailsTap: () => _showGigDetails(gig),
+                                    onApplyTap: () => _handleApply(gig.id),
+                                    isApplying: _applyingGigIds.contains(gig.id),
                                   ),
                                 );
                               },

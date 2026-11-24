@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:workbee_frontend/models/api_models.dart';
+import 'package:workbee_frontend/services/user_session_service.dart';
 
 class GigPostCard extends StatelessWidget {
   final Gig gig;
   final String formattedBudget;
   final Color softBlueBg;
   final VoidCallback onDetailsTap;
+  final VoidCallback? onApplyTap;
+  final bool isApplying;
 
   const GigPostCard({
     super.key,
@@ -13,19 +16,24 @@ class GigPostCard extends StatelessWidget {
     required this.formattedBudget,
     required this.softBlueBg,
     required this.onDetailsTap,
+    this.onApplyTap,
+    this.isApplying = false,
   });
+
+  bool get _isApplied => gig.hasApplied || UserSessionService().isApplied(gig.id);
 
   @override
   Widget build(BuildContext context) {
     const primaryBlue = Color(0xFF1D61E7);
     const mutedText = Color(0xFF64748B);
+    const borderColor = Color(0xFFE2E8F0);
 
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -105,42 +113,139 @@ class GigPostCard extends StatelessWidget {
                   color: mutedText,
                 ),
               ),
-              InkWell(
-                onTap: onDetailsTap,
-                borderRadius: BorderRadius.circular(10),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: softBlueBg,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  InkWell(
+                    onTap: onDetailsTap,
                     borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Details',
-                        style: TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w700,
-                          color: primaryBlue,
-                        ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
                       ),
-                      SizedBox(width: 4),
-                      Icon(
-                        Icons.arrow_forward,
-                        size: 15,
-                        color: primaryBlue,
+                      decoration: BoxDecoration(
+                        color: softBlueBg,
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                    ],
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Details',
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w700,
+                              color: primaryBlue,
+                            ),
+                          ),
+                          SizedBox(width: 4),
+                          Icon(
+                            Icons.arrow_forward,
+                            size: 15,
+                            color: primaryBlue,
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 8),
+                  _buildApplyButton(),
+                ],
               ),
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildApplyButton() {
+    const primaryBlue = Color(0xFF1D61E7);
+    const borderColor = Color(0xFFE2E8F0);
+
+    if (_isApplied) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: borderColor),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.check, size: 15, color: primaryBlue),
+            const SizedBox(width: 4),
+            Text(
+              'Applied',
+              style: TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w700,
+                color: primaryBlue,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (isApplying) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: primaryBlue.withValues(alpha: 0.7),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 15,
+              height: 15,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            ),
+            SizedBox(width: 6),
+            Text(
+              'Applying...',
+              style: TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return InkWell(
+      onTap: onApplyTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: primaryBlue,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.send, size: 15, color: Colors.white),
+            SizedBox(width: 4),
+            Text(
+              'Apply',
+              style: TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
