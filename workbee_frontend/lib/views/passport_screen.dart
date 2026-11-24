@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:workbee_frontend/services/auth_service.dart';
+import 'package:workbee_frontend/services/user_session_service.dart';
 import 'package:workbee_frontend/models/api_models.dart';
 
 class PassportScreen extends StatefulWidget {
@@ -67,162 +68,167 @@ class _PassportScreenState extends State<PassportScreen> {
       );
     }
 
-    final fullName = _passport?.fullName ?? 'Student';
-    final collegeUniversity = _passport?.collegeUniversity ?? '';
-    final program = _passport?.program ?? '';
-    final verifiedProjects = _passport?.verifiedProjectsCount ?? 0;
-    final avgRating = _passport?.averageRating ?? 0.0;
-    final completedProjects = _passport?.completedProjects ?? [];
+    return ListenableBuilder(
+      listenable: UserSessionService(),
+      builder: (context, _) {
+        final fullName = UserSessionService().userName ?? _passport?.fullName ?? 'Student';
+        final collegeUniversity = _passport?.collegeUniversity ?? '';
+        final program = _passport?.program ?? '';
+        final verifiedProjects = _passport?.verifiedProjectsCount ?? 0;
+        final avgRating = _passport?.averageRating ?? 0.0;
+        final completedProjects = _passport?.completedProjects ?? [];
 
-    return SafeArea(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
-          child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+        return SafeArea(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: const BoxDecoration(
-                          color: softBlueBg,
-                          shape: BoxShape.circle,
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          fullName.isNotEmpty ? fullName[0].toUpperCase() : 'A',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: primaryBlue,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      Row(
                         children: [
-                          Text(
-                            fullName,
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: darkText,
+                          Container(
+                            width: 52,
+                            height: 52,
+                            decoration: const BoxDecoration(
+                              color: softBlueBg,
+                              shape: BoxShape.circle,
                             ),
-                          ),
-                          SizedBox(height: 2),
-                          Text(
-                            '$collegeUniversity · $program',
-                            style: TextStyle(
-                              fontSize: 13.5,
-                              color: mutedText,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: softBlueBg,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '$verifiedProjects verified projects',
-                              style: TextStyle(
-                                fontSize: 16,
+                            alignment: Alignment.center,
+                            child: Text(
+                              fullName.isNotEmpty ? fullName[0].toUpperCase() : 'A',
+                              style: const TextStyle(
+                                fontSize: 18,
                                 fontWeight: FontWeight.w800,
                                 color: primaryBlue,
                               ),
                             ),
-                            SizedBox(height: 4),
-                            Text(
-                              'Completed & business-approved',
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                color: mutedText,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              avgRating.toStringAsFixed(1),
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w800,
-                                color: darkText,
-                              ),
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              'Avg. rating',
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                color: mutedText,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'Completed projects',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                      color: darkText,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  if (completedProjects.isEmpty)
-                    const Text(
-                      'No verified projects yet. Complete gigs to build your passport.',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: mutedText,
-                      ),
-                    )
-                  else
-                    ...completedProjects.map((review) {
-                      return Column(
-                        children: [
-                          _VerifiedProjectCard(
-                            title: review.gigTitle,
-                            businessAndLocation:
-                                '${review.businessName} · ${review.businessLocation}',
-                            roleAndSkills:
-                                '${review.roleTitle} · ${review.skills.join(', ')}',
-                            dateText: 'Completed ${review.completedAt ?? review.createdAt}',
-                            ratingText: '${review.rating.toStringAsFixed(1)}/5',
-                            feedback: review.reviewComment,
-                            borderColor: borderColor,
                           ),
-                          const SizedBox(height: 14),
+                          const SizedBox(width: 14),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                fullName,
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  color: darkText,
+                                ),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                '$collegeUniversity · $program',
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  color: mutedText,
+                                ),
+                              ),
+                            ],
+                          ),
                         ],
-                      );
-                    }).toList(),
-                ],
+                      ),
+                      const SizedBox(height: 18),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: softBlueBg,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '$verifiedProjects verified projects',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                    color: primaryBlue,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Completed & business-approved',
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    color: mutedText,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  avgRating.toStringAsFixed(1),
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
+                                    color: darkText,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Avg. rating',
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    color: mutedText,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Completed projects',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          color: darkText,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      if (completedProjects.isEmpty)
+                        const Text(
+                          'No verified projects yet. Complete gigs to build your passport.',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: mutedText,
+                          ),
+                        )
+                      else
+                        ...completedProjects.map((review) {
+                          return Column(
+                            children: [
+                              _VerifiedProjectCard(
+                                title: review.gigTitle,
+                                businessAndLocation:
+                                    '${review.businessName} · ${review.businessLocation}',
+                                roleAndSkills:
+                                    '${review.roleTitle} · ${review.skills.join(', ')}',
+                                dateText: 'Completed ${review.completedAt ?? review.createdAt}',
+                                ratingText: '${review.rating.toStringAsFixed(1)}/5',
+                                feedback: review.reviewComment,
+                                borderColor: borderColor,
+                              ),
+                              const SizedBox(height: 14),
+                            ],
+                          );
+                        }).toList(),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ),
-        );
+            );
+      },
+    );
   }
 }
 

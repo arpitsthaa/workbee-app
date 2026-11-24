@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
+import '../services/user_session_service.dart';
 
 class LoginController extends ChangeNotifier {
   final emailController = TextEditingController();
@@ -51,6 +52,12 @@ class LoginController extends ChangeNotifier {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('auth_token', currentUser!.token);
         await prefs.setString('user_role', currentUser!.role);
+
+        await UserSessionService().setUser(
+          name: currentUser!.fullName,
+          id: currentUser!.id,
+          role: currentUser!.role,
+        );
 
         isLoading = false;
         notifyListeners();
