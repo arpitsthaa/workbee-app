@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:workbee_frontend/services/auth_service.dart';
+import 'package:workbee_frontend/services/user_session_service.dart';
 import 'package:workbee_frontend/models/api_models.dart';
 import 'package:workbee_frontend/views/login_screen.dart';
 
@@ -93,6 +94,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       );
     } else {
+      await UserSessionService().updateName(_nameController.text.trim());
       setState(() => _isEditing = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profile saved')),
@@ -100,7 +102,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  void _handleLogout() {
+  void _handleLogout() async {
+    await UserSessionService().clear();
+    if (!mounted) return;
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (context) => const LoginScreen()),
@@ -212,89 +216,99 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ],
                     ),
                   ] else ...[
-                    Row(
-                      children: [
-                        Container(
-                          width: 56,
-                          height: 56,
-                          decoration: const BoxDecoration(
-                            color: softBlueBg,
-                            shape: BoxShape.circle,
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            profile.fullName.isNotEmpty
-                                ? profile.fullName[0].toUpperCase()
-                                : 'A',
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                              color: primaryBlue,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                    ListenableBuilder(
+                      listenable: UserSessionService(),
+                      builder: (context, _) {
+                        final displayName = UserSessionService().userName ?? profile.fullName;
+                        return Column(
                           children: [
                             Row(
                               children: [
-                                Text(
-                                  profile.fullName,
-                                  style: const TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w700,
-                                    color: darkText,
+                                Container(
+                                  width: 56,
+                                  height: 56,
+                                  decoration: const BoxDecoration(
+                                    color: softBlueBg,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    displayName.isNotEmpty
+                                        ? displayName[0].toUpperCase()
+                                        : 'A',
+                                    style: const TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w800,
+                                      color: primaryBlue,
+                                    ),
                                   ),
                                 ),
-                                if (profile.isVerified) ...[
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: softBlueBg,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
+                                const SizedBox(width: 14),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
                                       children: [
-                                        const Icon(Icons.verified, size: 12, color: primaryBlue),
-                                        const SizedBox(width: 4),
-                                        const Text(
-                                          'Verified',
-                                          style: TextStyle(
-                                            fontSize: 11,
+                                        Text(
+                                          displayName,
+                                          style: const TextStyle(
+                                            fontSize: 20,
                                             fontWeight: FontWeight.w700,
-                                            color: primaryBlue,
+                                            color: darkText,
                                           ),
                                         ),
+                                        if (profile.isVerified) ...[
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: softBlueBg,
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Icon(Icons.verified, size: 12, color: primaryBlue),
+                                                const SizedBox(width: 4),
+                                                const Text(
+                                                  'Verified',
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: primaryBlue,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
                                       ],
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      profile.location ?? '',
+                                      style: const TextStyle(
+                                        fontSize: 13.5,
+                                        color: mutedText,
+                                      ),
+                                    ),
+                                    if (profile.email.isNotEmpty) ...[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        profile.email,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          color: mutedText,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
                               ],
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              profile.location ?? '',
-                              style: const TextStyle(
-                                fontSize: 13.5,
-                                color: mutedText,
-                              ),
-                            ),
-                            if (profile.email.isNotEmpty) ...[
-                              const SizedBox(height: 2),
-                              Text(
-                                profile.email,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  color: mutedText,
-                                ),
-                              ),
-                            ],
                           ],
-                        ),
-                      ],
+                        );
+                      },
                     ),
                     const SizedBox(height: 18),
                     Container(

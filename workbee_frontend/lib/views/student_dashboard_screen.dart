@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:workbee_frontend/services/auth_service.dart';
+import 'package:workbee_frontend/services/user_session_service.dart';
 import 'package:workbee_frontend/models/api_models.dart';
 import 'package:workbee_frontend/widgets/student_dashboard_widgets.dart';
 import 'package:workbee_frontend/views/browse_gigs_screen.dart';
@@ -158,7 +159,6 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     const mutedText = Color(0xFF64748B);
     const borderColor = Color(0xFFE2E8F0);
 
-    final studentName = _dashboard?.fullName ?? 'Student';
     final profileCompletion = _dashboard?.profileCompletion ?? 0;
     final isVerified = _dashboard?.isVerified ?? false;
     final recommendedGigs = _dashboard?.recommendedGigs ?? <Gig>[];
@@ -191,36 +191,42 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _isLoading
-                        ? GreetingSkeleton()
-                        : RichText(
-                            text: TextSpan(
-                              text: 'Hi, ',
-                              style: const TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.w800,
-                                color: darkText,
-                              ),
-                              children: [
-                                TextSpan(
-                                  text: studentName,
+                    ListenableBuilder(
+                      listenable: UserSessionService(),
+                      builder: (context, _) {
+                        final studentName = UserSessionService().userName ?? 'Student';
+                        return _isLoading
+                            ? GreetingSkeleton()
+                            : RichText(
+                                text: TextSpan(
+                                  text: 'Hi, ',
                                   style: const TextStyle(
                                     fontSize: 28,
                                     fontWeight: FontWeight.w800,
                                     color: darkText,
                                   ),
+                                  children: [
+                                    TextSpan(
+                                      text: studentName,
+                                      style: const TextStyle(
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.w800,
+                                        color: darkText,
+                                      ),
+                                    ),
+                                    const TextSpan(
+                                      text: '!',
+                                      style: TextStyle(
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.w800,
+                                        color: darkText,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const TextSpan(
-                                  text: '!',
-                                  style: TextStyle(
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.w800,
-                                    color: darkText,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                              );
+                      },
+                    ),
                     const SizedBox(height: 4),
                     const Text(
                       'Your next opportunity starts here.',

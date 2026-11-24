@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:workbee_frontend/services/user_session_service.dart';
 
 class GigCard extends StatelessWidget {
   final String title;
@@ -179,55 +180,61 @@ class StudentAppBar extends StatelessWidget {
     const darkText = Color(0xFF0F172A);
     const mutedText = Color(0xFF64748B);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      child: Row(
-        children: [
-          Row(
+    return ListenableBuilder(
+      listenable: UserSessionService(),
+      builder: (context, _) {
+        final studentName = UserSessionService().userName ?? '';
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          child: Row(
             children: [
-              Image.asset(
-                'assets/workbee_logo.png',
-                width: 44,
-                height: 44,
-                fit: BoxFit.contain,
-              ),
-              const SizedBox(width: 12),
-              const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
                 children: [
-                  Text(
-                    'WorkBee',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      color: darkText,
-                      height: 1.1,
-                    ),
+                  Image.asset(
+                    'assets/workbee_logo.png',
+                    width: 44,
+                    height: 44,
+                    fit: BoxFit.contain,
                   ),
-                  Text(
-                    'Bee Busy Be Paid',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: mutedText,
-                    ),
+                  const SizedBox(width: 12),
+                  const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'WorkBee',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: darkText,
+                          height: 1.1,
+                        ),
+                      ),
+                      Text(
+                        'Bee Busy Be Paid',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: mutedText,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
+              const Spacer(),
+              IconButton(
+                onPressed: onAvatarTap,
+                icon: DashboardAvatar(
+                  studentName: studentName,
+                  isVerified: false,
+                ),
+                splashRadius: 24,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
             ],
           ),
-          const Spacer(),
-          IconButton(
-            onPressed: onAvatarTap,
-            icon: const DashboardAvatar(
-              studentName: 'S',
-              isVerified: false,
-            ),
-            splashRadius: 24,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

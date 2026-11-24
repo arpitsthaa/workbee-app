@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/business_registration_model.dart';
 import '../models/student_registration_model.dart';
+import '../services/user_session_service.dart';
 
 class AuthService {
   static const String _baseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'https://workbee-app.onrender.com');
@@ -346,5 +347,12 @@ class AuthService {
     } catch (e) {
       return {'error': 'Connection error: $e', 'status': 0};
     }
+  }
+
+  Future<void> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('auth_token');
+    await prefs.remove('user_role');
+    await UserSessionService().clear();
   }
 }
