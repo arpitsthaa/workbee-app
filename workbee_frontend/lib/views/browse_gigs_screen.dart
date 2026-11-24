@@ -189,6 +189,7 @@ class _BrowseGigsScreenState extends State<BrowseGigsScreen> {
       builder: (_) => _GigDetailsSheet(
         gig: gig,
         onApplied: _reload,
+        onAppliedNavigate: widget.onAppliedNavigate,
       ),
     );
   }
@@ -507,8 +508,9 @@ String _formatNpr(int amount) {
 class _GigDetailsSheet extends StatefulWidget {
   final Gig gig;
   final VoidCallback? onApplied;
+  final VoidCallback? onAppliedNavigate;
 
-  const _GigDetailsSheet({required this.gig, this.onApplied});
+  const _GigDetailsSheet({required this.gig, this.onApplied, this.onAppliedNavigate});
 
   @override
   State<_GigDetailsSheet> createState() => _GigDetailsSheetState();
@@ -557,6 +559,7 @@ class _GigDetailsSheetState extends State<_GigDetailsSheet> {
     Navigator.pop(context);
     AuthService.notifyGigCreated();
     widget.onApplied?.call();
+    widget.onAppliedNavigate?.call();
   }
 
   @override

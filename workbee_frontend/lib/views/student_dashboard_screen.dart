@@ -20,8 +20,17 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   final AuthService _authService = AuthService();
   final GlobalKey<MyWorkScreenState> _myWorkKey = GlobalKey();
 
-  DashboardResponse? _dashboard;
-  bool _isLoading = true;
+  // Per-section dashboard data (loaded in parallel split calls)
+  Map<String, dynamic>? _profile;
+  List<Gig> _recommendedGigs = <Gig>[];
+  Map<String, dynamic> _appsSummary = <String, dynamic>{};
+  Map<String, dynamic> _projectsSummary = <String, dynamic>{};
+  Map<String, dynamic> _careerPassport = <String, dynamic>{};
+
+  // Per-section loading state
+  bool _profileLoading = true;
+  bool _gigsLoading = true;
+  bool _summaryLoading = true;
   String? _error;
 
   @override
@@ -32,19 +41,82 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   }
 
   Future<void> _loadDashboard() async {
-    final result = await _authService.getStudentDashboard();
+    await Future.wait([
+      _fetchProfile(),
+      _fetchGigs(),
+      _fetchSummary(),
+    ]);
+  }
+
+  Future<void> _fetchProfile() async {
+    final result = await _authService.getDashboardProfile();
     if (!mounted) return;
     if (result.containsKey('error')) {
-      setState(() {
-        _error = result['error'] as String?;
-        _isLoading = false;
-      });
+      setState(() => _profileLoading = false);
     } else {
       setState(() {
-        _dashboard = DashboardResponse.fromJson(result);
-        _isLoading = false;
+        _profile = result;
+        _profileLoading = false;
       });
     }
+  }
+
+  Future<void> _fetchGigs() async {
+    final result = await _authService.getDashboardGigs();
+    if (!mounted) return;
+    if (result.containsKey('error')) {
+      final fallback = await _authService.getStudentDashboard();
+      if (!mounted) return;
+      if (fallback.containsKey('error')) {
+        setState(() => _gigsLoading = false);
+        return;
+      }
+      final list = (fallback['recommended_gigs'] as List<dynamic>?)
+          ?.map((g) => Gig.fromJson(g as Map<String, dynamic>))
+          .toList() ?? <Gig>[];
+      setState(() {
+        _recommendedGigs = list;
+        _gigsLoading = false;
+      });
+    } else {
+      final list = (result['recommended_gigs'] as List<dynamic>?)
+          ?.map((g) => Gig.fromJson(g as Map<String, dynamic>))
+          .toList() ?? <Gig>[];
+      setState(() {
+        _recommendedGigs = list;
+        _gigsLoading = false;
+      });
+    }
+  }
+
+  Future<void> _fetchSummary() async {
+    final result = await _authService.getDashboardSummary();
+    if (!mounted) return;
+    if (result.containsKey('error')) {
+      setState(() => _summaryLoading = false);
+    } else {
+      setState(() {
+        _appsSummary = result['applications_summary'] ?? <String, dynamic>{};
+        _projectsSummary = result['projects_summary'] ?? <String, dynamic>{};
+        _careerPassport = result['career_passport'] ?? <String, dynamic>{};
+        _summaryLoading = false;
+      });
+    }
+  }
+
+  void _refreshDashboard() async {
+    setState(() {
+      _profile = null;
+      _recommendedGigs = <Gig>[];
+      _appsSummary = <String, dynamic>{};
+      _projectsSummary = <String, dynamic>{};
+      _careerPassport = <String, dynamic>{};
+      _profileLoading = true;
+      _gigsLoading = true;
+      _summaryLoading = true;
+      _error = null;
+    });
+    await _loadDashboard();
   }
 
   String _formatNpr(int amount) {
@@ -67,7 +139,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   }
 
   List<Widget> _buildLatestGigWidgets(List<Gig> recommendedGigs) {
-    if (_isLoading) {
+    if (_gigsLoading) {
       return [GigCardSkeletons()];
     }
     return recommendedGigs.map((gig) {
@@ -99,7 +171,12 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         children: [
           _buildHomeBody(),
           _ScreenWithAppBar(
-            body: BrowseGigsScreen(onAppliedNavigate: () => _onTabTapped(2)),
+            body: BrowseGigsScreen(
+              onAppliedNavigate: () {
+                _onTabTapped(2);
+                _myWorkKey.currentState?.refresh();
+              },
+            ),
             onAvatarTap: _onAvatarTapped,
           ),
           _ScreenWithAppBar(
@@ -163,11 +240,11 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     const mutedText = Color(0xFF64748B);
     const borderColor = Color(0xFFE2E8F0);
 
-    final profileCompletion = _dashboard?.profileCompletion ?? 0;
-    final isVerified = _dashboard?.isVerified ?? false;
-    final recommendedGigs = _dashboard?.recommendedGigs ?? <Gig>[];
-    final appsSummary = _dashboard?.applicationsSummary ?? <String, dynamic>{};
-    final projectsSummary = _dashboard?.projectsSummary ?? <String, dynamic>{};
+    final profileCompletion = _profile?['profile_completion'] ?? 0;
+    final isVerified = _profile?['is_verified'] ?? false;
+    final recommendedGigs = _recommendedGigs;
+    final appsSummary = _appsSummary;
+    final projectsSummary = _projectsSummary;
 
     if (_error != null) {
       return Center(
@@ -199,36 +276,34 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       listenable: UserSessionService(),
                       builder: (context, _) {
                         final studentName = UserSessionService().userName ?? 'Student';
-                        return _isLoading
-                            ? GreetingSkeleton()
-                            : RichText(
-                                text: TextSpan(
-                                  text: 'Hi, ',
-                                  style: const TextStyle(
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.w800,
-                                    color: darkText,
-                                  ),
-                                  children: [
-                                    TextSpan(
-                                      text: studentName,
-                                      style: const TextStyle(
-                                        fontSize: 28,
-                                        fontWeight: FontWeight.w800,
-                                        color: darkText,
-                                      ),
-                                    ),
-                                    const TextSpan(
-                                      text: '!',
-                                      style: TextStyle(
-                                        fontSize: 28,
-                                        fontWeight: FontWeight.w800,
-                                        color: darkText,
-                                      ),
-                                    ),
-                                  ],
+                        return RichText(
+                          text: TextSpan(
+                            text: 'Hi, ',
+                            style: const TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w800,
+                              color: darkText,
+                            ),
+                            children: [
+                              TextSpan(
+                                text: studentName,
+                                style: const TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w800,
+                                  color: darkText,
                                 ),
-                              );
+                              ),
+                              const TextSpan(
+                                text: '!',
+                                style: TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w800,
+                                  color: darkText,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
                       },
                     ),
                     const SizedBox(height: 4),
@@ -240,7 +315,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    _isLoading
+                    _profileLoading
                         ? VerifiedBadgeSkeleton()
                         : Container(
                             padding: const EdgeInsets.symmetric(
@@ -272,7 +347,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                             ),
                           ),
                     const SizedBox(height: 20),
-                    _isLoading
+                    _profileLoading
                         ? ProfileCompletionSkeleton()
                         : Container(
                             width: double.infinity,
@@ -367,7 +442,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                     const SizedBox(height: 14),
                     ..._buildLatestGigWidgets(recommendedGigs.take(3).toList()),
                     const SizedBox(height: 18),
-                    _isLoading
+                    _summaryLoading
                         ? StatCardSkeletons()
                         : Row(
                             children: [
@@ -395,66 +470,64 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                             ],
                           ),
                     const SizedBox(height: 16),
-                    _isLoading
-                        ? PassportCardSkeleton()
-                        : InkWell(
-                            onTap: () => _onTabTapped(3),
+                    InkWell(
+                        onTap: () => _onTabTapped(3),
+                        borderRadius: BorderRadius.circular(14),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: softBlueBg,
                             borderRadius: BorderRadius.circular(14),
-                            child: Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: softBlueBg,
-                                borderRadius: BorderRadius.circular(14),
-                                border:
-                                    Border.all(color: primaryBlue, width: 1.5),
+                            border:
+                                Border.all(color: primaryBlue, width: 1.5),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(
+                                Icons.verified_outlined,
+                                color: primaryBlue,
+                                size: 24,
                               ),
-                              child: const Row(
-                                children: [
-                                  Icon(
-                                    Icons.verified_outlined,
-                                    color: primaryBlue,
-                                    size: 24,
-                                  ),
-                                  SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                              SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
                                       children: [
-                                        Row(
-                                          children: [
-                                            Text(
-                                              'Career Passport',
-                                              style: TextStyle(
-                                                fontSize: 15,
-                                                fontWeight: FontWeight.w700,
-                                                color: primaryBlue,
-                                              ),
-                                            ),
-                                            SizedBox(width: 4),
-                                            Icon(
-                                              Icons.arrow_forward,
-                                              size: 16,
-                                              color: primaryBlue,
-                                            ),
-                                          ],
-                                        ),
-                                        SizedBox(height: 4),
                                         Text(
-                                          'Verified projects · Avg rating',
+                                          'Career Passport',
                                           style: TextStyle(
-                                            fontSize: 12.5,
-                                            color: mutedText,
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w700,
+                                            color: primaryBlue,
                                           ),
+                                        ),
+                                        SizedBox(width: 4),
+                                        Icon(
+                                          Icons.arrow_forward,
+                                          size: 16,
+                                          color: primaryBlue,
                                         ),
                                       ],
                                     ),
-                                  ),
-                                ],
+                                    SizedBox(height: 4),
+                                    Text(
+                                      'Verified projects · Avg rating',
+                                      style: TextStyle(
+                                        fontSize: 12.5,
+                                        color: mutedText,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
+                            ],
                           ),
+                        ),
+                      ),
                   ],
                 ),
               ),

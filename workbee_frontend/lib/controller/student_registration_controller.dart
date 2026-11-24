@@ -71,9 +71,10 @@ class StudentRegistrationController extends ChangeNotifier {
     final response = await _authService.registerStudent(request);
 
     if (response.success && response.token != null) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('auth_token', response.token!);
+      // Hold token in memory only for this session; do not persist to prefs
+      AuthService.setCachedToken(response.token!);
       if (response.userData != null) {
+        final prefs = await SharedPreferences.getInstance();
         await prefs.setString('user_data', jsonEncode(response.userData));
       }
     } else if (!response.success) {

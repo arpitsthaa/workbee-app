@@ -51,7 +51,6 @@ class LoginController extends ChangeNotifier {
         currentUser = UserModel.fromJson(data);
 
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('auth_token', currentUser!.token);
         await prefs.setString('user_role', currentUser!.role);
 
         await UserSessionService().setUser(
@@ -59,6 +58,9 @@ class LoginController extends ChangeNotifier {
           id: currentUser!.id,
           role: currentUser!.role,
         );
+
+        // Hold token in memory only for this session; do not persist to prefs
+        AuthService.setCachedToken(currentUser!.token);
 
         isLoading = false;
         notifyListeners();

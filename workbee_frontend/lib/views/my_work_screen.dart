@@ -16,10 +16,12 @@ class MyWorkScreenState extends State<MyWorkScreen> {
   final TextEditingController _noteController = TextEditingController();
 
   int _activeTab = 0;
-  bool _isLoading = true;
+  bool _applicationsLoading = true;
+  bool _projectsLoading = true;
   int? _withdrawingAppId;
   String? _error;
-  WorkResponse? _work;
+  List<GigApplication> _applications = <GigApplication>[];
+  List<Project> _projects = <Project>[];
 
   @override
   void initState() {
@@ -35,22 +37,40 @@ class MyWorkScreenState extends State<MyWorkScreen> {
   }
 
   Future<void> _loadWork() async {
-    final result = await _authService.getStudentWork();
+    final result = await _authService.loadWorkFast();
+
     if (!mounted) return;
+
     if (result.containsKey('error')) {
       setState(() {
         _error = result['error'] as String?;
-        _isLoading = false;
+        _applicationsLoading = false;
+        _projectsLoading = false;
       });
-    } else {
-      setState(() {
-        _work = WorkResponse.fromJson(result as Map<String, dynamic>);
-        _isLoading = false;
-      });
+      return;
     }
+
+    setState(() {
+      _applications = (result['applications'] as List<dynamic>?)
+              ?.map((a) => GigApplication.fromJson(a as Map<String, dynamic>))
+              .toList() ??
+          <GigApplication>[];
+      _projects = (result['projects'] as List<dynamic>?)
+              ?.map((p) => Project.fromJson(p as Map<String, dynamic>))
+              .toList() ?? <Project>[];
+      _applicationsLoading = false;
+      _projectsLoading = false;
+    });
   }
 
   Future<void> _refreshWork() async {
+    setState(() {
+      _applications = <GigApplication>[];
+      _projects = <Project>[];
+      _applicationsLoading = true;
+      _projectsLoading = true;
+      _error = null;
+    });
     await _loadWork();
   }
 
@@ -108,9 +128,6 @@ class MyWorkScreenState extends State<MyWorkScreen> {
     }
   }
 
-  List<GigApplication> get _applications => _work?.applications ?? [];
-  List<Project> get _projects => _work?.projects ?? [];
-
   String _formatNpr(int amount) {
     final str = amount.toString();
     if (str.length <= 3) return 'NPR $str';
@@ -129,7 +146,7 @@ class MyWorkScreenState extends State<MyWorkScreen> {
     const inputFill = Color(0xFFF8FAFC);
 
     return SafeArea(
-      child: _isLoading
+      child: (_applicationsLoading && _projectsLoading)
           ? const Center(child: CircularProgressIndicator())
           : Column(
         children: [
