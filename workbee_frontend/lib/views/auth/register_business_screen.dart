@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import '../models/business_registration_model.dart';
-import '../services/auth_service.dart';
+import 'package:workbee_frontend/constants/app_colors.dart';
+import 'package:workbee_frontend/widgets/primary_button.dart';
+import '../../models/business_registration_model.dart';
+import '../../services/auth_service.dart';
 
 class BusinessRegistrationScreen extends StatefulWidget {
   const BusinessRegistrationScreen({super.key});
@@ -115,9 +117,6 @@ class _BusinessRegistrationScreenState
 
   @override
   Widget build(BuildContext context) {
-    const primaryBlue = Color(0xFF1D61E7);
-    const darkText = Color(0xFF1E293B);
-    const subtitleText = Color(0xFF64748B);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -136,7 +135,7 @@ class _BusinessRegistrationScreenState
                         width: 46,
                         height: 46,
                         decoration: BoxDecoration(
-                          color: primaryBlue,
+                          color: AppColors.primaryBlue,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(
@@ -151,7 +150,7 @@ class _BusinessRegistrationScreenState
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.w800,
-                          color: darkText,
+                          color: AppColors.labelDark,
                         ),
                       ),
                     ],
@@ -163,7 +162,7 @@ class _BusinessRegistrationScreenState
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
-                      color: darkText,
+                      color: AppColors.labelDark,
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -223,7 +222,7 @@ class _BusinessRegistrationScreenState
                         _obscurePassword
                             ? Icons.visibility_off_outlined
                             : Icons.visibility_outlined,
-                        color: subtitleText,
+                        color: AppColors.mutedText,
                       ),
                       onPressed: () {
                         setState(() => _obscurePassword = !_obscurePassword);
@@ -242,7 +241,7 @@ class _BusinessRegistrationScreenState
                         _obscureConfirmPassword
                             ? Icons.visibility_off_outlined
                             : Icons.visibility_outlined,
-                        color: subtitleText,
+                        color: AppColors.mutedText,
                       ),
                       onPressed: () {
                         setState(() {
@@ -253,38 +252,10 @@ class _BusinessRegistrationScreenState
                   ),
                   const SizedBox(height: 28),
 
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _handleCreateAccount,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryBlue,
-                        foregroundColor: Colors.white,
-                        disabledBackgroundColor:
-                        primaryBlue.withValues(alpha: 0.6),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: _isLoading
-                          ? const SizedBox(
-                        height: 22,
-                        width: 22,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2.5,
-                        ),
-                      )
-                          : const Text(
-                        'Create Business Account',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
+                  PrimaryButton(
+                    text: 'Create Business Account',
+                    onPressed: _handleCreateAccount,
+                    isLoading: _isLoading,
                   ),
                   const SizedBox(height: 20),
 
@@ -293,7 +264,7 @@ class _BusinessRegistrationScreenState
                     children: [
                       const Text(
                         'Already have an account? ',
-                        style: TextStyle(fontSize: 14, color: subtitleText),
+                        style: TextStyle(fontSize: 14, color: AppColors.mutedText),
                       ),
                       GestureDetector(
                         onTap: _isLoading ? null : () => Navigator.pop(context),
@@ -302,7 +273,7 @@ class _BusinessRegistrationScreenState
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
-                            color: primaryBlue,
+                            color: AppColors.primaryBlue,
                           ),
                         ),
                       ),
@@ -345,7 +316,7 @@ class _FormFieldItem extends StatelessWidget {
           style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF1E293B),
+            color: AppColors.labelDark,
           ),
         ),
         const SizedBox(height: 8),
@@ -355,9 +326,9 @@ class _FormFieldItem extends StatelessWidget {
           keyboardType: keyboardType,
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+            hintStyle: const TextStyle(color: AppColors.hintText),
             filled: true,
-            fillColor: const Color(0xFFF8FAFC),
+            fillColor: AppColors.inputFill,
             suffixIcon: suffixIcon,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
@@ -365,12 +336,12 @@ class _FormFieldItem extends StatelessWidget {
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              borderSide: const BorderSide(color: AppColors.borderColor),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(
-                color: Color(0xFF1D61E7),
+                color: AppColors.primaryBlue,
                 width: 1.5,
               ),
             ),

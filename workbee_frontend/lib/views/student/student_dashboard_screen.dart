@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:workbee_frontend/constants/app_colors.dart';
+import 'package:workbee_frontend/format_utils.dart';
 import 'package:workbee_frontend/services/auth_service.dart';
 import 'package:workbee_frontend/services/user_session_service.dart';
 import 'package:workbee_frontend/models/api_models.dart';
-import 'package:workbee_frontend/widgets/student_dashboard_widgets.dart';
-import 'package:workbee_frontend/views/browse_gigs_screen.dart';
-import 'package:workbee_frontend/views/my_work_screen.dart';
-import 'package:workbee_frontend/views/passport_screen.dart';
-import 'package:workbee_frontend/views/profile_screen.dart';
+import 'package:workbee_frontend/widgets/gig_card.dart';
+import 'package:workbee_frontend/widgets/stat_card.dart';
+import 'package:workbee_frontend/widgets/student_app_bar.dart';
+import 'package:workbee_frontend/widgets/dashboard_skeletons.dart';
+import 'package:workbee_frontend/views/student/browse_gigs_screen.dart';
+import 'package:workbee_frontend/views/student/my_work_screen.dart';
+import 'package:workbee_frontend/views/student/passport_screen.dart';
+import 'package:workbee_frontend/views/student/profile_screen.dart';
 
 class StudentDashboardScreen extends StatefulWidget {
   const StudentDashboardScreen({super.key});
@@ -119,14 +124,6 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     await _loadDashboard();
   }
 
-  String _formatNpr(int amount) {
-    final str = amount.toString();
-    if (str.length <= 3) return 'NPR $str';
-    final prefix = str.substring(0, str.length - 3);
-    final suffix = str.substring(str.length - 3);
-    return 'NPR $prefix,$suffix';
-  }
-
   void _onTabTapped(int index) {
     setState(() => _selectedIndex = index);
     if (index == 2) {
@@ -148,7 +145,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           GigCard(
             title: gig.title,
             subtitle: '${gig.businessName} · ${gig.location}',
-            payText: _formatNpr(gig.budgetNpr),
+            payText: formatNpr(gig.budgetNpr),
             metaText: '${gig.durationDays} days · ${gig.deadline}',
             highlightMeta: false,
             onTap: () => _onTabTapped(1),
@@ -161,9 +158,6 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const primaryBlue = Color(0xFF1D61E7);
-    const mutedText = Color(0xFF64748B);
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: IndexedStack(
@@ -197,8 +191,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         currentIndex: _selectedIndex,
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,
-        selectedItemColor: primaryBlue,
-        unselectedItemColor: mutedText,
+        selectedItemColor: AppColors.primaryBlue,
+        unselectedItemColor: AppColors.mutedText,
         selectedFontSize: 12,
         unselectedFontSize: 12,
         onTap: _onTabTapped,
@@ -233,12 +227,6 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   }
 
   Widget _buildHomeBody() {
-    const primaryBlue = Color(0xFF1D61E7);
-    const softBlueBg = Color(0xFFEFF6FF);
-    const darkText = Color(0xFF0F172A);
-    const mutedText = Color(0xFF64748B);
-    const borderColor = Color(0xFFE2E8F0);
-
     final isVerified = _profile?['is_verified'] ?? false;
     final recommendedGigs = _recommendedGigs;
     final appsSummary = _appsSummary;
@@ -280,7 +268,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                             style: const TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.w800,
-                              color: darkText,
+                              color: AppColors.darkText,
                             ),
                             children: [
                               TextSpan(
@@ -288,7 +276,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                                 style: const TextStyle(
                                   fontSize: 28,
                                   fontWeight: FontWeight.w800,
-                                  color: darkText,
+                                  color: AppColors.darkText,
                                 ),
                               ),
                               const TextSpan(
@@ -296,7 +284,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                                 style: TextStyle(
                                   fontSize: 28,
                                   fontWeight: FontWeight.w800,
-                                  color: darkText,
+                                  color: AppColors.darkText,
                                 ),
                               ),
                             ],
@@ -309,7 +297,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       'Your next opportunity starts here.',
                       style: TextStyle(
                         fontSize: 14,
-                        color: mutedText,
+                        color: AppColors.mutedText,
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -321,7 +309,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                               vertical: 5,
                             ),
                             decoration: BoxDecoration(
-                              color: softBlueBg,
+                              color: AppColors.softBlueBg,
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Row(
@@ -330,7 +318,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                                 const Icon(
                                   Icons.check,
                                   size: 14,
-                                  color: primaryBlue,
+                                  color: AppColors.primaryBlue,
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
@@ -338,7 +326,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
-                                    color: isVerified ? primaryBlue : mutedText,
+                                    color: isVerified ? AppColors.primaryBlue : AppColors.mutedText,
                                   ),
                                 ),
                               ],
@@ -353,7 +341,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
-                            color: darkText,
+                            color: AppColors.darkText,
                           ),
                         ),
                         GestureDetector(
@@ -365,14 +353,14 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
-                                  color: primaryBlue,
+                                  color: AppColors.primaryBlue,
                                 ),
                               ),
                               SizedBox(width: 4),
                               Icon(
                                 Icons.arrow_forward,
                                 size: 16,
-                                color: primaryBlue,
+                                color: AppColors.primaryBlue,
                               ),
                             ],
                           ),
@@ -392,7 +380,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                                       '${appsSummary['total'] ?? 0} applications',
                                   subtitleText:
                                       '${appsSummary['pending'] ?? 0} pending · ${appsSummary['shortlisted'] ?? 0} shortlisted',
-                                  borderColor: borderColor,
+                                  borderColor: AppColors.borderColor,
                                   onTap: () => _onTabTapped(2),
                                 ),
                               ),
@@ -403,7 +391,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                                       '${projectsSummary['total'] ?? 0} projects',
                                   subtitleText:
                                       '${projectsSummary['active'] ?? 0} active · ${projectsSummary['approved'] ?? 0} approved',
-                                  borderColor: borderColor,
+                                  borderColor: AppColors.borderColor,
                                   onTap: () => _onTabTapped(2),
                                 ),
                               ),
@@ -417,16 +405,16 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                           width: double.infinity,
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: softBlueBg,
+                            color: AppColors.softBlueBg,
                             borderRadius: BorderRadius.circular(14),
                             border:
-                                Border.all(color: primaryBlue, width: 1.5),
+                                Border.all(color: AppColors.primaryBlue, width: 1.5),
                           ),
                           child: const Row(
                             children: [
                               Icon(
                                 Icons.verified_outlined,
-                                color: primaryBlue,
+                                color: AppColors.primaryBlue,
                                 size: 24,
                               ),
                               SizedBox(width: 12),
@@ -442,14 +430,14 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                                           style: TextStyle(
                                             fontSize: 15,
                                             fontWeight: FontWeight.w700,
-                                            color: primaryBlue,
+                                            color: AppColors.primaryBlue,
                                           ),
                                         ),
                                         SizedBox(width: 4),
                                         Icon(
                                           Icons.arrow_forward,
                                           size: 16,
-                                          color: primaryBlue,
+                                          color: AppColors.primaryBlue,
                                         ),
                                       ],
                                     ),
@@ -458,7 +446,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                                       'Verified projects · Avg rating',
                                       style: TextStyle(
                                         fontSize: 12.5,
-                                        color: mutedText,
+                                        color: AppColors.mutedText,
                                       ),
                                     ),
                                   ],

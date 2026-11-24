@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:workbee_frontend/constants/app_colors.dart';
+import 'package:workbee_frontend/format_utils.dart';
 import 'package:workbee_frontend/services/auth_service.dart';
 import 'package:workbee_frontend/services/user_session_service.dart';
 import 'package:workbee_frontend/models/api_models.dart';
+import 'package:workbee_frontend/widgets/segment_tab.dart';
+import 'package:workbee_frontend/widgets/simple_item_card.dart';
+import 'package:workbee_frontend/widgets/profile_info_row.dart';
 
 class MyWorkScreen extends StatefulWidget {
   const MyWorkScreen({super.key});
@@ -122,29 +127,14 @@ class MyWorkScreenState extends State<MyWorkScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Application withdrawn'),
-          backgroundColor: Color(0xFF10B981),
+          backgroundColor: AppColors.successGreen,
         ),
       );
     }
   }
 
-  String _formatNpr(int amount) {
-    final str = amount.toString();
-    if (str.length <= 3) return 'NPR $str';
-    final prefix = str.substring(0, str.length - 3);
-    final suffix = str.substring(str.length - 3);
-    return 'NPR $prefix,$suffix';
-  }
-
   @override
   Widget build(BuildContext context) {
-    const primaryBlue = Color(0xFF1D61E7);
-    const softBlueBg = Color(0xFFEFF6FF);
-    const darkText = Color(0xFF0F172A);
-    const mutedText = Color(0xFF64748B);
-    const borderColor = Color(0xFFE2E8F0);
-    const inputFill = Color(0xFFF8FAFC);
-
     return SafeArea(
       child: (_applicationsLoading && _projectsLoading)
           ? const Center(child: CircularProgressIndicator())
@@ -154,7 +144,7 @@ class MyWorkScreenState extends State<MyWorkScreen> {
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
             child: Container(
               decoration: BoxDecoration(
-                color: inputFill,
+                color: AppColors.inputFill,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: ListenableBuilder(
@@ -163,7 +153,7 @@ class MyWorkScreenState extends State<MyWorkScreen> {
                   return Row(
                     children: [
                       Expanded(
-                        child: _SegmentTab(
+                        child: SegmentTab(
                           label: 'Applications (${UserSessionService().appliedGigIds.length})',
                           selected: _activeTab == 0,
                           onTap: () {
@@ -173,7 +163,7 @@ class MyWorkScreenState extends State<MyWorkScreen> {
                         ),
                       ),
                       Expanded(
-                        child: _SegmentTab(
+                        child: SegmentTab(
                           label: 'Projects (${_projects.length})',
                           selected: _activeTab == 1,
                           onTap: () {
@@ -204,7 +194,7 @@ class MyWorkScreenState extends State<MyWorkScreen> {
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
-                            color: darkText,
+                            color: AppColors.darkText,
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -223,7 +213,7 @@ class MyWorkScreenState extends State<MyWorkScreen> {
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w700,
-                                  color: darkText,
+                                  color: AppColors.darkText,
                                 ),
                               ),
                               const SizedBox(height: 6),
@@ -231,7 +221,7 @@ class MyWorkScreenState extends State<MyWorkScreen> {
                                 'Browse gigs and apply to get started.',
                                 style: TextStyle(
                                   fontSize: 14,
-                                  color: mutedText,
+                                  color: AppColors.mutedText,
                                 ),
                               ),
                             ],
@@ -241,7 +231,7 @@ class MyWorkScreenState extends State<MyWorkScreen> {
                             final canWithdraw = app.status.toUpperCase() == 'PENDING' || app.status.toUpperCase() == 'SHORTLISTED';
                             return Column(
                               children: [
-                                _SimpleItemCard(
+                                SimpleItemCard(
                                   title: app.gigTitle,
                                   subtitle:
                                   '${app.businessName} · Applied ${_formatDate(app.appliedAt)}',
@@ -257,12 +247,12 @@ class MyWorkScreenState extends State<MyWorkScreen> {
                                               child: CircularProgressIndicator(
                                                 strokeWidth: 2,
                                                 valueColor: AlwaysStoppedAnimation<Color>(
-                                                  Color(0xFFEF4444),
+                                                  AppColors.errorRed,
                                                 ),
                                               ),
                                             )
                                           : IconButton(
-                                              icon: const Icon(Icons.delete_outline, size: 20, color: Color(0xFFEF4444)),
+                                              icon: const Icon(Icons.delete_outline, size: 20, color: AppColors.errorRed),
                                               onPressed: () => _withdrawApplication(app),
                                               tooltip: 'Withdraw application',
                                             )
@@ -278,7 +268,7 @@ class MyWorkScreenState extends State<MyWorkScreen> {
                             'No projects yet. Get shortlisted for a gig to start working!',
                             style: TextStyle(
                               fontSize: 14,
-                              color: mutedText,
+                              color: AppColors.mutedText,
                             ),
                           )
                         else ...[
@@ -287,7 +277,7 @@ class MyWorkScreenState extends State<MyWorkScreen> {
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
-                              color: darkText,
+                              color: AppColors.darkText,
                             ),
                           ),
                           const SizedBox(height: 12),
@@ -298,7 +288,7 @@ class MyWorkScreenState extends State<MyWorkScreen> {
                                   width: double.infinity,
                                   padding: const EdgeInsets.all(16),
                                   decoration: BoxDecoration(
-                                    color: softBlueBg,
+                                    color: AppColors.softBlueBg,
                                     borderRadius: BorderRadius.circular(14),
                                     border: Border.all(color: const Color(0xFFBFDBFE)),
                                   ),
@@ -314,7 +304,7 @@ class MyWorkScreenState extends State<MyWorkScreen> {
                                               style: TextStyle(
                                                 fontSize: 16,
                                                 fontWeight: FontWeight.w700,
-                                                color: darkText,
+                                                color: AppColors.darkText,
                                               ),
                                             ),
                                           ),
@@ -323,7 +313,7 @@ class MyWorkScreenState extends State<MyWorkScreen> {
                                             style: TextStyle(
                                               fontSize: 13,
                                               fontWeight: FontWeight.w600,
-                                              color: primaryBlue,
+                                              color: AppColors.primaryBlue,
                                             ),
                                           ),
                                         ],
@@ -333,16 +323,16 @@ class MyWorkScreenState extends State<MyWorkScreen> {
                                         '${project.businessName} · Due ${project.deadline}',
                                         style: TextStyle(
                                           fontSize: 13,
-                                          color: mutedText,
+                                          color: AppColors.mutedText,
                                         ),
                                       ),
                                       const SizedBox(height: 10),
                                       Text(
-                                        '${_formatNpr(project.budgetNpr)} · ${project.deliverables.join(', ')}',
+                                        '${formatNpr(project.budgetNpr)} · ${project.deliverables.join(', ')}',
                                         style: TextStyle(
                                           fontSize: 13.5,
                                           fontWeight: FontWeight.w600,
-                                          color: primaryBlue,
+                                          color: AppColors.primaryBlue,
                                         ),
                                       ),
                                       if (project.submissionLink.isNotEmpty) ...[
@@ -351,7 +341,7 @@ class MyWorkScreenState extends State<MyWorkScreen> {
                                           'Submitted: ${project.submissionLink}',
                                           style: TextStyle(
                                             fontSize: 13,
-                                            color: mutedText,
+                                            color: AppColors.mutedText,
                                           ),
                                         ),
                                       ],
@@ -368,39 +358,39 @@ class MyWorkScreenState extends State<MyWorkScreen> {
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
-                              color: darkText,
+                              color: AppColors.darkText,
                             ),
                           ),
                           const SizedBox(height: 4),
                           const Text(
                             'Paste your delivery link below.',
-                            style: TextStyle(fontSize: 13, color: mutedText),
+                            style: TextStyle(fontSize: 13, color: AppColors.mutedText),
                           ),
                           const SizedBox(height: 12),
                           TextField(
                             controller: _linkController,
                             decoration: InputDecoration(
                               hintText: 'Paste Canva or Google Drive link',
-                              hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                              hintStyle: const TextStyle(color: AppColors.hintText),
                               prefixIcon: const Icon(
                                 Icons.link,
-                                color: mutedText,
+                                color: AppColors.mutedText,
                                 size: 20,
                               ),
                               filled: true,
-                              fillColor: inputFill,
+                              fillColor: AppColors.inputFill,
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 14,
                                 vertical: 14,
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: borderColor),
+                                borderSide: const BorderSide(color: AppColors.borderColor),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: const BorderSide(
-                                  color: primaryBlue,
+                                  color: AppColors.primaryBlue,
                                   width: 1.5,
                                 ),
                               ),
@@ -412,21 +402,21 @@ class MyWorkScreenState extends State<MyWorkScreen> {
                             maxLines: 2,
                             decoration: InputDecoration(
                               hintText: 'Add a short note (optional)',
-                              hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                              hintStyle: const TextStyle(color: AppColors.hintText),
                               filled: true,
-                              fillColor: inputFill,
+                              fillColor: AppColors.inputFill,
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 14,
                                 vertical: 12,
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: borderColor),
+                                borderSide: const BorderSide(color: AppColors.borderColor),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: const BorderSide(
-                                  color: primaryBlue,
+                                  color: AppColors.primaryBlue,
                                   width: 1.5,
                                 ),
                               ),
@@ -439,7 +429,7 @@ class MyWorkScreenState extends State<MyWorkScreen> {
                             child: ElevatedButton(
                               onPressed: _handleSubmitWork,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: primaryBlue,
+                                backgroundColor: AppColors.primaryBlue,
                                 foregroundColor: Colors.white,
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
@@ -468,20 +458,20 @@ class MyWorkScreenState extends State<MyWorkScreen> {
     );
   }
 
-  Color _badgeColor(String status) {
-    switch (status.toUpperCase()) {
-      case 'PENDING':
-        return const Color(0xFFFEF3C7);
-      case 'SHORTLISTED':
-        return const Color(0xFFEFF6FF);
-      case 'ACCEPTED':
-        return const Color(0xFFD1FAE5);
-      case 'REJECTED':
-        return const Color(0xFFFEE2E2);
-      default:
-        return const Color(0xFFE2E8F0);
-    }
+Color _badgeColor(String status) {
+  switch (status.toUpperCase()) {
+    case 'PENDING':
+      return AppColors.badgePending;
+    case 'SHORTLISTED':
+      return AppColors.badgeShortlisted;
+    case 'ACCEPTED':
+      return AppColors.badgeAccepted;
+    case 'REJECTED':
+      return AppColors.badgeRejected;
+    default:
+      return AppColors.borderColor;
   }
+}
 
   String _formatDate(String? dateStr) {
     if (dateStr == null || dateStr.isEmpty) return 'recently';
@@ -508,10 +498,6 @@ class MyWorkScreenState extends State<MyWorkScreen> {
   }
 
   void _showApplicationDetails(GigApplication app) {
-    const darkText = Color(0xFF0F172A);
-    const mutedText = Color(0xFF64748B);
-    const borderColor = Color(0xFFE2E8F0);
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -533,7 +519,7 @@ class MyWorkScreenState extends State<MyWorkScreen> {
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: mutedText,
+                      color: AppColors.mutedText,
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -542,7 +528,7 @@ class MyWorkScreenState extends State<MyWorkScreen> {
                     style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
-                      color: darkText,
+                      color: AppColors.darkText,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -553,14 +539,14 @@ class MyWorkScreenState extends State<MyWorkScreen> {
                         decoration: BoxDecoration(
                           color: _badgeColor(app.status),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: borderColor),
+                          border: Border.all(color: AppColors.borderColor),
                         ),
                         child: Text(
                           app.status.toUpperCase(),
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF1E293B),
+                            color: AppColors.labelDark,
                           ),
                         ),
                       ),
@@ -569,7 +555,7 @@ class MyWorkScreenState extends State<MyWorkScreen> {
                         'Applied ${_formatDate(app.appliedAt)}',
                         style: const TextStyle(
                           fontSize: 13,
-                          color: mutedText,
+                          color: AppColors.mutedText,
                         ),
                       ),
                     ],
@@ -581,7 +567,7 @@ class MyWorkScreenState extends State<MyWorkScreen> {
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: darkText,
+                        color: AppColors.darkText,
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -590,7 +576,7 @@ class MyWorkScreenState extends State<MyWorkScreen> {
                       style: const TextStyle(
                         fontSize: 14,
                         height: 1.5,
-                        color: Color(0xFF334155),
+                        color: AppColors.labelRegister,
                       ),
                     ),
                   ],
@@ -600,15 +586,15 @@ class MyWorkScreenState extends State<MyWorkScreen> {
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
-                      color: darkText,
+                      color: AppColors.darkText,
                     ),
                   ),
                   const SizedBox(height: 8),
-                  _ProfileInfoRow(label: 'Name', value: app.studentName),
-                  _ProfileInfoRow(label: 'College', value: app.studentCollege),
-                  _ProfileInfoRow(label: 'Skills', value: app.studentSkills.join(', ')),
-                  _ProfileInfoRow(label: 'Rating', value: app.studentRating.toString()),
-                  _ProfileInfoRow(
+                  ProfileInfoRow(label: 'Name', value: app.studentName),
+                  ProfileInfoRow(label: 'College', value: app.studentCollege),
+                  ProfileInfoRow(label: 'Skills', value: app.studentSkills.join(', ')),
+                  ProfileInfoRow(label: 'Rating', value: app.studentRating.toString()),
+                  ProfileInfoRow(
                     label: 'Verified Projects',
                     value: app.verifiedProjectsCount.toString(),
                   ),
@@ -618,176 +604,6 @@ class MyWorkScreenState extends State<MyWorkScreen> {
           ),
         );
       },
-    );
-  }
-}
-
-class _ProfileInfoRow extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _ProfileInfoRow({
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const mutedText = Color(0xFF64748B);
-    const darkText = Color(0xFF0F172A);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontSize: 13.5,
-                fontWeight: FontWeight.w600,
-                color: mutedText,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontSize: 13.5,
-                color: darkText,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SegmentTab extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _SegmentTab({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: selected ? const Color(0xFFEFF6FF) : Colors.transparent,
-          borderRadius: BorderRadius.circular(9),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13.5,
-            fontWeight: FontWeight.w700,
-            color: selected ? const Color(0xFF1D61E7) : const Color(0xFF64748B),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SimpleItemCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final String badgeText;
-  final Color badgeBg;
-  final Color badgeColor;
-  final VoidCallback? onTap;
-  final Widget? trailingAction;
-
-  const _SimpleItemCard({
-    required this.title,
-    required this.subtitle,
-    required this.badgeText,
-    required this.badgeBg,
-    required this.badgeColor,
-    this.onTap,
-    this.trailingAction,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x0D000000),
-              blurRadius: 8,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF0F172A),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 12.5,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: badgeBg,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                badgeText,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: badgeColor,
-                ),
-              ),
-            ),
-            if (trailingAction != null) ...[
-              const SizedBox(width: 8),
-              trailingAction!,
-            ],
-          ],
-        ),
-      ),
     );
   }
 }

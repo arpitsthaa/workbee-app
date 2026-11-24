@@ -513,31 +513,6 @@ class AuthService {
 
   // ---- Fast parallel loaders with monolithic fallback ----
 
-  Future<Map<String, dynamic>> loadDashboardFast() async {
-    final results = await Future.wait([
-      getDashboardProfile(),
-      getDashboardGigs(),
-      getDashboardSummary(),
-    ]);
-
-    final any404 = results.any((r) => r.containsKey('error') && r['status'] == 404);
-
-    if (any404) {
-      // Fall back to monolithic dashboard endpoint
-      return getStudentDashboard();
-    }
-
-    return {
-      'full_name': results[0]['full_name'] ?? 'Student',
-      'is_verified': results[0]['is_verified'] ?? false,
-      'profile_completion': results[0]['profile_completion'] ?? 0,
-      'recommended_gigs': results[1]['recommended_gigs'] ?? [],
-      'applications_summary': results[2]['applications_summary'] ?? {},
-      'projects_summary': results[2]['projects_summary'] ?? {},
-      'career_passport': results[2]['career_passport'] ?? {},
-    };
-  }
-
   Future<Map<String, dynamic>> loadWorkFast() async {
     final results = await Future.wait([
       getWorkApplications(),
