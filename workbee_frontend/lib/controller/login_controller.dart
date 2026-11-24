@@ -60,29 +60,14 @@ class LoginController extends ChangeNotifier {
           role: currentUser!.role,
         );
 
-        // Fetch full profile and populate session service
-        if (currentUser!.role == 'student') {
-          final authService = AuthService();
-          final profileResult = await authService.getStudentProfile();
-          if (!profileResult.containsKey('error')) {
-            final profileData = profileResult as Map<String, dynamic>;
-            await UserSessionService().setFullProfile(
-              name: currentUser!.fullName,
-              id: currentUser!.id,
-              role: currentUser!.role,
-              location: profileData['location'] as String?,
-              collegeUniversity: profileData['college_university'] as String?,
-              program: profileData['program'] as String?,
-              semester: profileData['semester'] as String?,
-              bio: profileData['bio'] as String?,
-              skills: (profileData['skills'] as List<dynamic>?)?.map((e) => e.toString()).toList(),
-              portfolioUrl: profileData['portfolio_url'] as String?,
-            );
-          }
-        }
-
         isLoading = false;
         notifyListeners();
+
+        // Enrich session profile in the background (non-blocking for UI)
+        if (currentUser!.role == 'student') {
+          _enrichStudentProfile(currentUser!);
+        }
+
         return true;
       } else {
         errorMessage = data['detail'] ?? data['error'] ?? 'Invalid email or password';
@@ -95,6 +80,30 @@ class LoginController extends ChangeNotifier {
       isLoading = false;
       notifyListeners();
       return false;
+    }
+  }
+
+  Future<void> _enrichStudentProfile(UserModel user) async {
+    try {
+      final authService = AuthService();
+      final profileResult = await authService.getStudentProfile();
+      if (profileResult.containsKey('error')) return;
+
+      final profileData = profileResult as Map<String, dynamic>;
+      await UserSessionService().setFullProfile(
+        name: user.fullName,
+        id: user.id,
+        role: user.role,
+        location: profileData['location'] as String?,
+        collegeUniversity: profileData['college_university'] as String?,
+        program: profileData['program'] as String?,
+        semester: profileData['semester'] as String?,
+        bio: profileData['bio'] as String?,
+        skills: (profileData['skills'] as List<dynamic>?)?.map((e) => e.toString()).toList(),
+        portfolioUrl: profileData['portfolio_url'] as String?,
+      );
+    } catch (_) {
+      // best-effort profile enrichment; ignore failures
     }
   }
 

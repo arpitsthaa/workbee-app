@@ -14,6 +14,8 @@ class AuthService {
   static Stream<void> get onGigCreated => _gigCreatedController.stream;
   static void notifyGigCreated() => _gigCreatedController.add(null);
 
+  static String? _cachedToken;
+
   Future<void> warmUp() async {
     try {
       await http.get(Uri.parse('$_baseUrl/api/health/'))
@@ -24,12 +26,19 @@ class AuthService {
   }
 
   Future<Map<String, String>> _authHeaders() async {
+    if (_cachedToken != null) {
+      return {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Token $_cachedToken',
+      };
+    }
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token');
+    _cachedToken = prefs.getString('auth_token');
     return {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      if (token != null) 'Authorization': 'Token $token',
+      if (_cachedToken != null) 'Authorization': 'Token $_cachedToken',
     };
   }
 
@@ -350,6 +359,7 @@ class AuthService {
   }
 
   Future<void> logout() async {
+    _cachedToken = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
     await prefs.remove('user_role');

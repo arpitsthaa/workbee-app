@@ -17,6 +17,7 @@ class MyWorkScreenState extends State<MyWorkScreen> {
 
   int _activeTab = 0;
   bool _isLoading = true;
+  int? _withdrawingAppId;
   String? _error;
   WorkResponse? _work;
 
@@ -79,9 +80,13 @@ class MyWorkScreenState extends State<MyWorkScreen> {
 
     if (confirmed != true) return;
 
+    setState(() => _withdrawingAppId = app.id);
+
     final result = await _authService.withdrawApplication(app.id);
 
     if (!mounted) return;
+
+    setState(() => _withdrawingAppId = null);
 
     if (result.containsKey('error')) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -91,10 +96,14 @@ class MyWorkScreenState extends State<MyWorkScreen> {
         ),
       );
     } else {
-      await UserSessionService().markWithdrawn(app.gig);
-      _loadWork();
+      UserSessionService().markWithdrawn(app.gig);
+      await _loadWork();
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Application withdrawn')),
+        const SnackBar(
+          content: Text('Application withdrawn'),
+          backgroundColor: Color(0xFF10B981),
+        ),
       );
     }
   }
@@ -126,43 +135,41 @@ class MyWorkScreenState extends State<MyWorkScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: inputFill,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: borderColor),
-                ),
-                child: ListenableBuilder(
-                  listenable: UserSessionService(),
-                  builder: (context, _) {
-                    return Row(
-                      children: [
-                        Expanded(
-                          child: _SegmentTab(
-                            label: 'Applications (${UserSessionService().appliedGigIds.length})',
-                            selected: _activeTab == 0,
-                            onTap: () {
-                              setState(() => _activeTab = 0);
-                              _loadWork();
-                            },
-                          ),
-                        ),
-                        Expanded(
-                          child: _SegmentTab(
-                            label: 'Projects (${_projects.length})',
-                            selected: _activeTab == 1,
-                            onTap: () {
-                              setState(() => _activeTab = 1);
-                              _loadWork();
-                            },
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
+            child: Container(
+              decoration: BoxDecoration(
+                color: inputFill,
+                borderRadius: BorderRadius.circular(12),
               ),
+              child: ListenableBuilder(
+                listenable: UserSessionService(),
+                builder: (context, _) {
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: _SegmentTab(
+                          label: 'Applications (${UserSessionService().appliedGigIds.length})',
+                          selected: _activeTab == 0,
+                          onTap: () {
+                            setState(() => _activeTab = 0);
+                            _loadWork();
+                          },
+                        ),
+                      ),
+                      Expanded(
+                        child: _SegmentTab(
+                          label: 'Projects (${_projects.length})',
+                          selected: _activeTab == 1,
+                          onTap: () {
+                            setState(() => _activeTab = 1);
+                            _loadWork();
+                          },
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
           ),
           Expanded(
             child: ConstrainedBox(
@@ -185,12 +192,32 @@ class MyWorkScreenState extends State<MyWorkScreen> {
                         ),
                         const SizedBox(height: 12),
                         if (_applications.isEmpty)
-                          const Text(
-                            'No applications yet. Browse gigs and apply!',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: mutedText,
-                            ),
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.assignment_outlined,
+                                size: 48,
+                                color: Color(0xFFCBD5E1),
+                              ),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'No applications yet.',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: darkText,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Browse gigs and apply to get started.',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: mutedText,
+                                ),
+                              ),
+                            ],
                           )
                         else
                           ..._applications.map((app) {
@@ -206,11 +233,22 @@ class MyWorkScreenState extends State<MyWorkScreen> {
                                   badgeColor: const Color(0xFF1E293B),
                                   onTap: () => _showApplicationDetails(app),
                                   trailingAction: canWithdraw
-                                      ? IconButton(
-                                          icon: const Icon(Icons.delete_outline, size: 20, color: Color(0xFFEF4444)),
-                                          onPressed: () => _withdrawApplication(app),
-                                          tooltip: 'Withdraw application',
-                                        )
+                                      ? _withdrawingAppId == app.id
+                                          ? const SizedBox(
+                                              width: 20,
+                                              height: 20,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                valueColor: AlwaysStoppedAnimation<Color>(
+                                                  Color(0xFFEF4444),
+                                                ),
+                                              ),
+                                            )
+                                          : IconButton(
+                                              icon: const Icon(Icons.delete_outline, size: 20, color: Color(0xFFEF4444)),
+                                              onPressed: () => _withdrawApplication(app),
+                                              tooltip: 'Withdraw application',
+                                            )
                                       : null,
                                 ),
                                 const SizedBox(height: 12),
@@ -466,97 +504,99 @@ class MyWorkScreenState extends State<MyWorkScreen> {
       ),
       builder: (context) {
         return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  app.businessName,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: mutedText,
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    app.businessName,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: mutedText,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  app.gigTitle,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    color: darkText,
+                  const SizedBox(height: 6),
+                  Text(
+                    app.gigTitle,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: darkText,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: _badgeColor(app.status),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: borderColor),
-                      ),
-                      child: Text(
-                        app.status.toUpperCase(),
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF1E293B),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: _badgeColor(app.status),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: borderColor),
+                        ),
+                        child: Text(
+                          app.status.toUpperCase(),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF1E293B),
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Applied ${_formatDate(app.appliedAt)}',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: mutedText,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (app.coverMessage.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Cover Message',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: darkText,
+                      ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(height: 6),
                     Text(
-                      'Applied ${_formatDate(app.appliedAt)}',
+                      app.coverMessage,
                       style: const TextStyle(
-                        fontSize: 13,
-                        color: mutedText,
+                        fontSize: 14,
+                        height: 1.5,
+                        color: Color(0xFF334155),
                       ),
                     ),
                   ],
-                ),
-                if (app.coverMessage.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   const Text(
-                    'Cover Message',
+                    'Your Profile',
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                       color: darkText,
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    app.coverMessage,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      height: 1.5,
-                      color: Color(0xFF334155),
-                    ),
+                  const SizedBox(height: 8),
+                  _ProfileInfoRow(label: 'Name', value: app.studentName),
+                  _ProfileInfoRow(label: 'College', value: app.studentCollege),
+                  _ProfileInfoRow(label: 'Skills', value: app.studentSkills.join(', ')),
+                  _ProfileInfoRow(label: 'Rating', value: app.studentRating.toString()),
+                  _ProfileInfoRow(
+                    label: 'Verified Projects',
+                    value: app.verifiedProjectsCount.toString(),
                   ),
                 ],
-                const SizedBox(height: 16),
-                const Text(
-                  'Your Profile',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: darkText,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                _ProfileInfoRow(label: 'Name', value: app.studentName),
-                _ProfileInfoRow(label: 'College', value: app.studentCollege),
-                _ProfileInfoRow(label: 'Skills', value: app.studentSkills.join(', ')),
-                _ProfileInfoRow(label: 'Rating', value: app.studentRating.toString()),
-                _ProfileInfoRow(
-                  label: 'Verified Projects',
-                  value: app.verifiedProjectsCount.toString(),
-                ),
-              ],
+              ),
             ),
           ),
         );
@@ -675,6 +715,13 @@ class _SimpleItemCard extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: const Color(0xFFE2E8F0)),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0D000000),
+              blurRadius: 8,
+              offset: Offset(0, 2),
+            ),
+          ],
         ),
         child: Row(
           children: [
