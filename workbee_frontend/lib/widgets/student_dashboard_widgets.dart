@@ -134,64 +134,6 @@ class StatCard extends StatelessWidget {
   }
 }
 
-class DashboardHeader extends StatelessWidget {
-  final String studentName;
-  final bool isVerified;
-  final bool isLoading;
-
-  const DashboardHeader({
-    super.key,
-    required this.studentName,
-    required this.isVerified,
-    required this.isLoading,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const darkText = Color(0xFF0F172A);
-    const mutedText = Color(0xFF64748B);
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Row(
-          children: [
-            Image.asset(
-              'assets/workbee_logo.png',
-              width: 44,
-              height: 44,
-              fit: BoxFit.contain,
-            ),
-            const SizedBox(width: 12),
-            const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'WorkBee',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    color: darkText,
-                    height: 1.1,
-                  ),
-                ),
-                Text(
-                  'Bee Busy Be Paid',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: mutedText,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        isLoading ? const AvatarSkeleton() : DashboardAvatar(studentName: studentName, isVerified: isVerified),
-      ],
-    );
-  }
-}
-
 class DashboardAvatar extends StatelessWidget {
   final String studentName;
   final bool isVerified;
@@ -222,6 +164,69 @@ class DashboardAvatar extends StatelessWidget {
           fontWeight: FontWeight.w700,
           fontSize: 14,
         ),
+      ),
+    );
+  }
+}
+
+class StudentAppBar extends StatelessWidget {
+  final VoidCallback onAvatarTap;
+
+  const StudentAppBar({super.key, required this.onAvatarTap});
+
+  @override
+  Widget build(BuildContext context) {
+    const darkText = Color(0xFF0F172A);
+    const mutedText = Color(0xFF64748B);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      child: Row(
+        children: [
+          Row(
+            children: [
+              Image.asset(
+                'assets/workbee_logo.png',
+                width: 44,
+                height: 44,
+                fit: BoxFit.contain,
+              ),
+              const SizedBox(width: 12),
+              const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'WorkBee',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: darkText,
+                      height: 1.1,
+                    ),
+                  ),
+                  Text(
+                    'Bee Busy Be Paid',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: mutedText,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const Spacer(),
+          IconButton(
+            onPressed: onAvatarTap,
+            icon: const DashboardAvatar(
+              studentName: 'S',
+              isVerified: false,
+            ),
+            splashRadius: 24,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+        ],
       ),
     );
   }

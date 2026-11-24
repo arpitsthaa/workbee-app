@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:workbee_frontend/services/auth_service.dart';
 import 'package:workbee_frontend/models/api_models.dart';
 import 'package:workbee_frontend/widgets/gig_post_card.dart';
+import 'package:workbee_frontend/widgets/student_dashboard_widgets.dart';
 
 class BrowseGigsScreen extends StatefulWidget {
   const BrowseGigsScreen({super.key});
@@ -347,31 +348,14 @@ class _BrowseGigsScreenState extends State<BrowseGigsScreen> {
             return Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 480),
-                child: CustomScrollView(
+child: CustomScrollView(
                   slivers: [
                     SliverToBoxAdapter(
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Browse gigs',
-                              style: TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.w800,
-                                color: darkText,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            const Text(
-                              'Small projects. Real experience.',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: mutedText,
-                              ),
-                            ),
-                            const SizedBox(height: 18),
                             TextField(
                               controller: _searchController,
                               onChanged: (value) {

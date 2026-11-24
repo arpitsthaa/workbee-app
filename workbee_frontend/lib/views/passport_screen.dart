@@ -82,23 +82,6 @@ class _PassportScreenState extends State<PassportScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Career Passport',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      color: darkText,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Your work. Your verified experience.',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: mutedText,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
                   Row(
                     children: [
                       Container(
