@@ -236,11 +236,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     const primaryBlue = Color(0xFF1D61E7);
     const softBlueBg = Color(0xFFEFF6FF);
     const darkText = Color(0xFF0F172A);
-    const bodyText = Color(0xFF1E293B);
     const mutedText = Color(0xFF64748B);
     const borderColor = Color(0xFFE2E8F0);
 
-    final profileCompletion = _profile?['profile_completion'] ?? 0;
     final isVerified = _profile?['is_verified'] ?? false;
     final recommendedGigs = _recommendedGigs;
     final appsSummary = _appsSummary;
@@ -341,64 +339,6 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
                                     color: isVerified ? primaryBlue : mutedText,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                    const SizedBox(height: 20),
-                    _profileLoading
-                        ? ProfileCompletionSkeleton()
-                        : Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: softBlueBg,
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'Profile $profileCompletion% complete',
-                                      style: const TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w700,
-                                        color: bodyText,
-                                      ),
-                                    ),
-                                    GestureDetector(
-                                      onTap: () => _onTabTapped(4),
-                                      child: const Text(
-                                        'Edit',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          color: primaryBlue,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 10),
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: LinearProgressIndicator(
-                                    value: profileCompletion / 100,
-                                    minHeight: 6,
-                                    backgroundColor: const Color(0xFFDBEAFE),
-                                    valueColor: AlwaysStoppedAnimation<Color>(primaryBlue),
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                const Text(
-                                  'Complete your profile to stand out.',
-                                  style: TextStyle(
-                                    fontSize: 12.5,
-                                    color: mutedText,
                                   ),
                                 ),
                               ],
