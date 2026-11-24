@@ -434,3 +434,27 @@ class RateStudentProjectView(APIView):
             },
             status=status.HTTP_201_CREATED,
         )
+
+
+class WithdrawApplicationView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request, pk):
+        application = get_object_or_404(GigApplication, pk=pk, student=request.user)
+
+        if application.status not in ["PENDING", "SHORTLISTED"]:
+            return Response(
+                {"message": f"Cannot withdraw application with status '{application.status}'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        gig_id = application.gig_id
+        application.delete()
+
+        return Response(
+            {
+                "message": "Application withdrawn successfully.",
+                "gig_id": gig_id,
+            },
+            status=status.HTTP_200_OK,
+        )

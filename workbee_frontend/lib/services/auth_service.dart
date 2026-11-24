@@ -355,4 +355,61 @@ class AuthService {
     await prefs.remove('user_role');
     await UserSessionService().clear();
   }
+
+  Future<Map<String, dynamic>> applyForGig(int gigId, {String? coverMessage}) async {
+    final url = Uri.parse('$_baseUrl/api/student/gigs/$gigId/apply/');
+    final headers = await _authHeaders();
+
+    try {
+      final response = await http
+          .post(
+        url,
+        headers: headers,
+        body: jsonEncode({'cover_message': coverMessage ?? ''}),
+      )
+          .timeout(const Duration(seconds: 30));
+
+      final body = _decodeMap(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return body;
+      }
+      return {
+        'error': _errorMessage(body, response.statusCode),
+        'status': response.statusCode,
+      };
+    } on TimeoutException {
+      return {'error': 'Server took too long to respond.', 'status': 408};
+    } catch (e) {
+      return {'error': 'Connection error: $e', 'status': 0};
+    }
+  }
+
+  Future<Map<String, dynamic>> withdrawApplication(int applicationId) async {
+    final url = Uri.parse('$_baseUrl/api/student/applications/$applicationId/withdraw/');
+    final headers = await _authHeaders();
+
+    try {
+      final response = await http
+          .delete(
+        url,
+        headers: headers,
+      )
+          .timeout(const Duration(seconds: 30));
+
+      final body = _decodeMap(response.body);
+
+      if (response.statusCode == 200) {
+        return body;
+      }
+      return {
+        'error': _errorMessage(body, response.statusCode),
+        'status': response.statusCode,
+      };
+    } on TimeoutException {
+      return {'error': 'Server took too long to respond.', 'status': 408};
+    } catch (e) {
+      return {'error': 'Connection error: $e', 'status': 0};
+    }
+  }
 }

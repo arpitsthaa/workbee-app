@@ -19,13 +19,14 @@ class GigPostCard extends StatelessWidget {
   Widget build(BuildContext context) {
     const primaryBlue = Color(0xFF1D61E7);
     const mutedText = Color(0xFF64748B);
+    const borderColor = Color(0xFFE2E8F0);
 
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -95,51 +96,51 @@ class GigPostCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                gig.isRemote ? 'Remote-friendly' : 'On-site',
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: mutedText,
-                ),
-              ),
-              InkWell(
-                onTap: onDetailsTap,
-                borderRadius: BorderRadius.circular(10),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    gig.isRemote ? 'Remote-friendly' : 'On-site',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: mutedText,
+                    ),
                   ),
-                  decoration: BoxDecoration(
-                    color: softBlueBg,
+                  InkWell(
+                    onTap: onDetailsTap,
                     borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Details',
-                        style: TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w700,
-                          color: primaryBlue,
-                        ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
                       ),
-                      SizedBox(width: 4),
-                      Icon(
-                        Icons.arrow_forward,
-                        size: 15,
-                        color: primaryBlue,
+                      decoration: BoxDecoration(
+                        color: softBlueBg,
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                    ],
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Details',
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w700,
+                              color: primaryBlue,
+                            ),
+                          ),
+                          SizedBox(width: 4),
+                          Icon(
+                            Icons.arrow_forward,
+                            size: 15,
+                            color: primaryBlue,
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
         ],
       ),
     );

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
+import '../services/auth_service.dart';
 import '../services/user_session_service.dart';
 
 class LoginController extends ChangeNotifier {
@@ -58,6 +59,27 @@ class LoginController extends ChangeNotifier {
           id: currentUser!.id,
           role: currentUser!.role,
         );
+
+        // Fetch full profile and populate session service
+        if (currentUser!.role == 'student') {
+          final authService = AuthService();
+          final profileResult = await authService.getStudentProfile();
+          if (!profileResult.containsKey('error')) {
+            final profileData = profileResult as Map<String, dynamic>;
+            await UserSessionService().setFullProfile(
+              name: currentUser!.fullName,
+              id: currentUser!.id,
+              role: currentUser!.role,
+              location: profileData['location'] as String?,
+              collegeUniversity: profileData['college_university'] as String?,
+              program: profileData['program'] as String?,
+              semester: profileData['semester'] as String?,
+              bio: profileData['bio'] as String?,
+              skills: (profileData['skills'] as List<dynamic>?)?.map((e) => e.toString()).toList(),
+              portfolioUrl: profileData['portfolio_url'] as String?,
+            );
+          }
+        }
 
         isLoading = false;
         notifyListeners();

@@ -102,7 +102,7 @@ class GigApplication(models.Model):
         on_delete=models.CASCADE,
         related_name="gig_applications",
     )
-    cover_message = models.TextField()
+    cover_message = models.TextField(blank=True, default='')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="PENDING")
     applied_at = models.DateTimeField(auto_now_add=True)
 
