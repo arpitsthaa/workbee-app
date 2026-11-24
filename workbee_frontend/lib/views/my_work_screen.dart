@@ -73,313 +73,278 @@ class _MyWorkScreenState extends State<MyWorkScreen> {
     const inputFill = Color(0xFFF8FAFC);
 
     return SafeArea(
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : NestedScrollView(
-                headerSliverBuilder: (context, innerBoxIsScrolled) {
-                  return [
-                    SliverAppBar(
-                      pinned: true,
-                      floating: false,
-                      expandedHeight: 160,
-                      backgroundColor: Colors.white,
-                      elevation: innerBoxIsScrolled ? 1 : 0,
-                      shadowColor: borderColor,
-                      surfaceTintColor: Colors.white,
-                      automaticallyImplyLeading: false,
-                      flexibleSpace: FlexibleSpaceBar(
-                        background: Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              const Text(
-                                'My work',
-                                style: TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.w800,
-                                  color: darkText,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              const Text(
-                                'Follow your progress. Keep work moving.',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: mutedText,
-                                ),
-                              ),
-                              const SizedBox(height: 18),
-                              Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  color: inputFill,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: borderColor),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: _SegmentTab(
-                                        label: 'Applications (${_applications.length})',
-                                        selected: _activeTab == 0,
-                                        onTap: () => setState(() => _activeTab = 0),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: _SegmentTab(
-                                        label: 'Projects (${_projects.length})',
-                                        selected: _activeTab == 1,
-                                        onTap: () => setState(() => _activeTab = 1),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
+      child: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: inputFill,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: borderColor),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _SegmentTab(
+                      label: 'Applications (${_applications.length})',
+                      selected: _activeTab == 0,
+                      onTap: () => setState(() => _activeTab = 0),
+                    ),
+                  ),
+                  Expanded(
+                    child: _SegmentTab(
+                      label: 'Projects (${_projects.length})',
+                      selected: _activeTab == 1,
+                      onTap: () => setState(() => _activeTab = 1),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Expanded(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: RefreshIndicator(
+                onRefresh: _refreshWork,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 22, 20, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (_activeTab == 0) ...[
+                        const Text(
+                          'Application updates',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: darkText,
                           ),
                         ),
-                      ),
-                    ),
-                  ];
-                },
-                body: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 480),
-                  child: RefreshIndicator(
-                    onRefresh: _refreshWork,
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(20, 22, 20, 24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (_activeTab == 0) ...[
-                            const Text(
-                              'Application updates',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: darkText,
-                              ),
+                        const SizedBox(height: 12),
+                        if (_applications.isEmpty)
+                          const Text(
+                            'No applications yet. Browse gigs and apply!',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: mutedText,
                             ),
-                            const SizedBox(height: 12),
-                            if (_applications.isEmpty)
-                              const Text(
-                                'No applications yet. Browse gigs and apply!',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: mutedText,
+                          )
+                        else
+                          ..._applications.map((app) {
+                            return Column(
+                              children: [
+                                _SimpleItemCard(
+                                  title: app.gigTitle,
+                                  subtitle:
+                                  '${app.businessName} · Applied ${_formatDate(app.appliedAt)}',
+                                  badgeText: app.status.toUpperCase(),
+                                  badgeBg: _badgeColor(app.status),
+                                  badgeColor: const Color(0xFF1E293B),
+                                  onTap: () => _showApplicationDetails(app),
                                 ),
-                              )
-                            else
-                              ..._applications.map((app) {
-                                return Column(
-                                  children: [
-                                    _SimpleItemCard(
-                                      title: app.gigTitle,
-                                      subtitle:
-                                          '${app.businessName} · Applied ${_formatDate(app.appliedAt)}',
-                                      badgeText: app.status.toUpperCase(),
-                                      badgeBg: _badgeColor(app.status),
-                                      badgeColor: const Color(0xFF1E293B),
-                                      onTap: () => _showApplicationDetails(app),
-                                    ),
-                                    const SizedBox(height: 12),
-                                  ],
-                                );
-                              }).toList(),
-                          ] else ...[
-                            if (_projects.isEmpty)
-                              const Text(
-                                'No projects yet. Get shortlisted for a gig to start working!',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: mutedText,
-                                ),
-                              )
-                            else ...[
-                              const Text(
-                                'Active projects',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: darkText,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              ..._projects.map((project) {
-                                return Column(
-                                  children: [
-                                    Container(
-                                      width: double.infinity,
-                                      padding: const EdgeInsets.all(16),
-                                      decoration: BoxDecoration(
-                                        color: softBlueBg,
-                                        borderRadius: BorderRadius.circular(14),
-                                        border: Border.all(color: const Color(0xFFBFDBFE)),
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                const SizedBox(height: 12),
+                              ],
+                            );
+                          }).toList(),
+                      ] else ...[
+                        if (_projects.isEmpty)
+                          const Text(
+                            'No projects yet. Get shortlisted for a gig to start working!',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: mutedText,
+                            ),
+                          )
+                        else ...[
+                          const Text(
+                            'Active projects',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: darkText,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          ..._projects.map((project) {
+                            return Column(
+                              children: [
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: softBlueBg,
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(color: const Color(0xFFBFDBFE)),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
-                                          Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  project.gigTitle,
-                                                  style: TextStyle(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.w700,
-                                                    color: darkText,
-                                                  ),
-                                                ),
+                                          Expanded(
+                                            child: Text(
+                                              project.gigTitle,
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w700,
+                                                color: darkText,
                                               ),
-                                              Text(
-                                                project.status.replaceAll('_', ' ').toUpperCase(),
-                                                style: TextStyle(
-                                                  fontSize: 13,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: primaryBlue,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 6),
-                                          Text(
-                                            '${project.businessName} · Due ${project.deadline}',
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              color: mutedText,
                                             ),
                                           ),
-                                          const SizedBox(height: 10),
                                           Text(
-                                            '${_formatNpr(project.budgetNpr)} · ${project.deliverables.join(', ')}',
+                                            project.status.replaceAll('_', ' ').toUpperCase(),
                                             style: TextStyle(
-                                              fontSize: 13.5,
+                                              fontSize: 13,
                                               fontWeight: FontWeight.w600,
                                               color: primaryBlue,
                                             ),
                                           ),
-                                          if (project.submissionLink.isNotEmpty) ...[
-                                            const SizedBox(height: 10),
-                                            Text(
-                                              'Submitted: ${project.submissionLink}',
-                                              style: TextStyle(
-                                                fontSize: 13,
-                                                color: mutedText,
-                                              ),
-                                            ),
-                                          ],
                                         ],
                                       ),
-                                    ),
-                                    const SizedBox(height: 14),
-                                  ],
-                                );
-                              }).toList(),
-                              const SizedBox(height: 22),
-                              const Text(
-                                'Submit work',
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        '${project.businessName} · Due ${project.deadline}',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: mutedText,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Text(
+                                        '${_formatNpr(project.budgetNpr)} · ${project.deliverables.join(', ')}',
+                                        style: TextStyle(
+                                          fontSize: 13.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: primaryBlue,
+                                        ),
+                                      ),
+                                      if (project.submissionLink.isNotEmpty) ...[
+                                        const SizedBox(height: 10),
+                                        Text(
+                                          'Submitted: ${project.submissionLink}',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: mutedText,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+                              ],
+                            );
+                          }).toList(),
+                          const SizedBox(height: 22),
+                          const Text(
+                            'Submit work',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: darkText,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Paste your delivery link below.',
+                            style: TextStyle(fontSize: 13, color: mutedText),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _linkController,
+                            decoration: InputDecoration(
+                              hintText: 'Paste Canva or Google Drive link',
+                              hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                              prefixIcon: const Icon(
+                                Icons.link,
+                                color: mutedText,
+                                size: 20,
+                              ),
+                              filled: true,
+                              fillColor: inputFill,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 14,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(color: borderColor),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: primaryBlue,
+                                  width: 1.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _noteController,
+                            maxLines: 2,
+                            decoration: InputDecoration(
+                              hintText: 'Add a short note (optional)',
+                              hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                              filled: true,
+                              fillColor: inputFill,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 12,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(color: borderColor),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: primaryBlue,
+                                  width: 1.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 48,
+                            child: ElevatedButton(
+                              onPressed: _handleSubmitWork,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: primaryBlue,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: const Text(
+                                'Submit for approval',
                                 style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: darkText,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
-                              const SizedBox(height: 4),
-                              const Text(
-                                'Paste your delivery link below.',
-                                style: TextStyle(fontSize: 13, color: mutedText),
-                              ),
-                              const SizedBox(height: 12),
-                              TextField(
-                                controller: _linkController,
-                                decoration: InputDecoration(
-                                  hintText: 'Paste Canva or Google Drive link',
-                                  hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
-                                  prefixIcon: const Icon(
-                                    Icons.link,
-                                    color: mutedText,
-                                    size: 20,
-                                  ),
-                                  filled: true,
-                                  fillColor: inputFill,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 14,
-                                    vertical: 14,
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: const BorderSide(color: borderColor),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: const BorderSide(
-                                      color: primaryBlue,
-                                      width: 1.5,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              TextField(
-                                controller: _noteController,
-                                maxLines: 2,
-                                decoration: InputDecoration(
-                                  hintText: 'Add a short note (optional)',
-                                  hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
-                                  filled: true,
-                                  fillColor: inputFill,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 14,
-                                    vertical: 12,
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: const BorderSide(color: borderColor),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: const BorderSide(
-                                      color: primaryBlue,
-                                      width: 1.5,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              SizedBox(
-                                width: double.infinity,
-                                height: 48,
-                                child: ElevatedButton(
-                                  onPressed: _handleSubmitWork,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: primaryBlue,
-                                    foregroundColor: Colors.white,
-                                    elevation: 0,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                  child: const Text(
-                                    'Submit for approval',
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
+                            ),
+                          ),
                         ],
-                      ),
-                    ),
+                      ],
+                    ],
                   ),
                 ),
               ),
-      );
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Color _badgeColor(String status) {
@@ -636,57 +601,57 @@ class _SimpleItemCard extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
       child: Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF0F172A),
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF0F172A),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    color: Color(0xFF64748B),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      color: Color(0xFF64748B),
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: badgeBg,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              badgeText,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: badgeColor,
+                ],
               ),
             ),
-          ),
-        ],
+            const SizedBox(width: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: badgeBg,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                badgeText,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: badgeColor,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
   }
 }

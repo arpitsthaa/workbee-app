@@ -57,6 +57,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     setState(() => _selectedIndex = index);
   }
 
+  void _onAvatarTapped() {
+    _onTabTapped(4);
+  }
+
   List<Widget> _buildLatestGigWidgets(List<Gig> recommendedGigs) {
     if (_isLoading) {
       return [GigCardSkeletons()];
@@ -89,10 +93,22 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         index: _selectedIndex,
         children: [
           _buildHomeBody(),
-          const BrowseGigsScreen(),
-          const MyWorkScreen(),
-          const PassportScreen(),
-          const ProfileScreen(),
+          _ScreenWithAppBar(
+            body: const BrowseGigsScreen(),
+            onAvatarTap: _onAvatarTapped,
+          ),
+          _ScreenWithAppBar(
+            body: const MyWorkScreen(),
+            onAvatarTap: _onAvatarTapped,
+          ),
+          _ScreenWithAppBar(
+            body: const PassportScreen(),
+            onAvatarTap: _onAvatarTapped,
+          ),
+          _ScreenWithAppBar(
+            body: const ProfileScreen(),
+            onAvatarTap: _onAvatarTapped,
+          ),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -165,14 +181,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     return SafeArea(
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            child: DashboardHeader(
-              studentName: studentName,
-              isVerified: isVerified,
-              isLoading: _isLoading,
-            ),
-          ),
+          StudentAppBar(onAvatarTap: _onAvatarTapped),
           const SizedBox(height: 24),
           Expanded(
             child: ConstrainedBox(
@@ -441,6 +450,29 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ScreenWithAppBar extends StatelessWidget {
+  final Widget body;
+  final VoidCallback onAvatarTap;
+
+  const _ScreenWithAppBar({
+    required this.body,
+    required this.onAvatarTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      bottom: false,
+      child: Column(
+        children: [
+          StudentAppBar(onAvatarTap: onAvatarTap),
+          Expanded(child: body),
         ],
       ),
     );

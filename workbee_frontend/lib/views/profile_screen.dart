@@ -143,25 +143,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 480),
           child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'My profile',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      color: darkText,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Your skills. Your student identity.',
-                    style: TextStyle(fontSize: 14, color: mutedText),
-                  ),
-                  const SizedBox(height: 20),
-
                   if (_isEditing) ...[
                     TextField(
                       controller: _nameController,
