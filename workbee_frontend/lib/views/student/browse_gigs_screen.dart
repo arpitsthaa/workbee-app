@@ -1,9 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:workbee_frontend/constants/app_colors.dart';
+import 'package:workbee_frontend/format_utils.dart';
 import 'package:workbee_frontend/services/auth_service.dart';
 import 'package:workbee_frontend/services/user_session_service.dart';
 import 'package:workbee_frontend/models/api_models.dart';
 import 'package:workbee_frontend/widgets/gig_post_card.dart';
+import 'package:workbee_frontend/widgets/filter_chip_button.dart';
 
 class BrowseGigsScreen extends StatefulWidget {
   final VoidCallback? onAppliedNavigate;
@@ -143,7 +146,7 @@ class _BrowseGigsScreenState extends State<BrowseGigsScreen> {
                   style: const TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF0F172A),
+                    color: AppColors.darkText,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -157,12 +160,12 @@ class _BrowseGigsScreenState extends State<BrowseGigsScreen> {
                         fontWeight:
                             isSelected ? FontWeight.w700 : FontWeight.w500,
                         color: isSelected
-                            ? const Color(0xFF1D61E7)
-                            : const Color(0xFF1E293B),
+                            ? AppColors.primaryBlue
+                            : AppColors.labelDark,
                       ),
                     ),
                     trailing: isSelected
-                        ? const Icon(Icons.check, color: Color(0xFF1D61E7))
+                        ? const Icon(Icons.check, color: AppColors.primaryBlue)
                         : null,
                     onTap: () {
                       onSelected(option);
@@ -196,13 +199,6 @@ class _BrowseGigsScreenState extends State<BrowseGigsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const primaryBlue = Color(0xFF1D61E7);
-    const softBlueBg = Color(0xFFEFF6FF);
-    const darkText = Color(0xFF0F172A);
-    const mutedText = Color(0xFF64748B);
-    const borderColor = Color(0xFFE2E8F0);
-    const errorColor = Color(0xFFEF4444);
-
     return SafeArea(
       child: RefreshIndicator(
         onRefresh: () async {
@@ -236,12 +232,12 @@ child: CustomScrollView(
                               decoration: InputDecoration(
                                 hintText: 'Search gigs or businesses',
                                 hintStyle: const TextStyle(
-                                  color: Color(0xFF94A3B8),
+                                  color: AppColors.hintText,
                                   fontSize: 14.5,
                                 ),
                                 prefixIcon: const Icon(
                                   Icons.search,
-                                  color: mutedText,
+                                  color: AppColors.mutedText,
                                   size: 22,
                                 ),
                                 suffixIcon: _searchQuery.isNotEmpty
@@ -254,19 +250,19 @@ child: CustomScrollView(
                                       )
                                     : null,
                                 filled: true,
-                                fillColor: const Color(0xFFF8FAFC),
+                                fillColor: AppColors.inputFill,
                                 contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 16,
                                   vertical: 14,
                                 ),
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(color: borderColor),
+                                  borderSide: const BorderSide(color: AppColors.borderColor),
                                 ),
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                   borderSide: const BorderSide(
-                                    color: primaryBlue,
+                                    color: AppColors.primaryBlue,
                                     width: 1.5,
                                   ),
                                 ),
@@ -277,7 +273,7 @@ child: CustomScrollView(
                               scrollDirection: Axis.horizontal,
                               child: Row(
                                 children: [
-                                  _FilterChipButton(
+                                  FilterChipButton(
                                     label: _selectedCategory,
                                     isActive: _selectedCategory != 'All categories',
                                     onTap: () => _pickFilter(
@@ -291,7 +287,7 @@ child: CustomScrollView(
                                     ),
                                   ),
                                   const SizedBox(width: 10),
-                                  _FilterChipButton(
+                                  FilterChipButton(
                                     label: _selectedBudget,
                                     isActive: _selectedBudget != 'Any budget',
                                     onTap: () => _pickFilter(
@@ -322,11 +318,11 @@ child: CustomScrollView(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               const Icon(Icons.error_outline,
-                                  color: errorColor, size: 40),
+                                  color: AppColors.errorRed, size: 40),
                               const SizedBox(height: 8),
                               Text(
                                 snapshot.error.toString(),
-                                style: const TextStyle(color: errorColor),
+                                style: const TextStyle(color: AppColors.errorRed),
                                 textAlign: TextAlign.center,
                               ),
                               const SizedBox(height: 12),
@@ -348,7 +344,7 @@ child: CustomScrollView(
                                 '${gigs.length} ${gigs.length == 1 ? 'gig' : 'gigs'} for your skills',
                                 style: const TextStyle(
                                   fontSize: 13.5,
-                                  color: mutedText,
+                                  color: AppColors.mutedText,
                                 ),
                               ),
                               GestureDetector(
@@ -366,14 +362,14 @@ child: CustomScrollView(
                                       style: const TextStyle(
                                         fontSize: 13.5,
                                         fontWeight: FontWeight.w600,
-                                        color: primaryBlue,
+                                        color: AppColors.primaryBlue,
                                       ),
                                     ),
                                     const SizedBox(width: 4),
                                     const Icon(
                                       Icons.arrow_downward,
                                       size: 15,
-                                      color: primaryBlue,
+                                      color: AppColors.primaryBlue,
                                     ),
                                   ],
                                 ),
@@ -393,7 +389,7 @@ child: CustomScrollView(
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w700,
-                                    color: darkText,
+                                    color: AppColors.darkText,
                                   ),
                                 ),
                                 const SizedBox(height: 6),
@@ -424,8 +420,8 @@ child: CustomScrollView(
                                   padding: const EdgeInsets.only(bottom: 14),
                                   child: GigPostCard(
                                     gig: gig,
-                                    formattedBudget: _formatNpr(gig.budgetNpr),
-                                    softBlueBg: softBlueBg,
+                                    formattedBudget: formatNpr(gig.budgetNpr),
+                                    softBlueBg: AppColors.softBlueBg,
                                     onDetailsTap: () => _showGigDetails(gig),
                                   ),
                                 );
@@ -444,65 +440,6 @@ child: CustomScrollView(
       ),
     );
   }
-}
-
-class _FilterChipButton extends StatelessWidget {
-  final String label;
-  final bool isActive;
-  final VoidCallback onTap;
-
-  const _FilterChipButton({
-    required this.label,
-    required this.isActive,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const primaryBlue = Color(0xFF1D61E7);
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-        decoration: BoxDecoration(
-          color: isActive ? const Color(0xFFEFF6FF) : Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: isActive ? const Color(0xFFDBEAFE) : const Color(0xFFE2E8F0),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13.5,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-                color: isActive ? primaryBlue : const Color(0xFF64748B),
-              ),
-            ),
-            const SizedBox(width: 6),
-            Icon(
-              Icons.keyboard_arrow_down,
-              size: 18,
-              color: isActive ? primaryBlue : const Color(0xFF64748B),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-String _formatNpr(int amount) {
-  final str = amount.toString();
-  if (str.length <= 3) return 'NPR $str';
-  final prefix = str.substring(0, str.length - 3);
-  final suffix = str.substring(str.length - 3);
-  return 'NPR $prefix,$suffix';
 }
 
 class _GigDetailsSheet extends StatefulWidget {
@@ -564,8 +501,6 @@ class _GigDetailsSheetState extends State<_GigDetailsSheet> {
 
   @override
   Widget build(BuildContext context) {
-    const primaryBlue = Color(0xFF1D61E7);
-
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -578,7 +513,7 @@ class _GigDetailsSheetState extends State<_GigDetailsSheet> {
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF64748B),
+                color: AppColors.mutedText,
               ),
             ),
             const SizedBox(height: 6),
@@ -587,7 +522,7 @@ class _GigDetailsSheetState extends State<_GigDetailsSheet> {
               style: const TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
-                color: Color(0xFF0F172A),
+                color: AppColors.darkText,
               ),
             ),
             const SizedBox(height: 8),
@@ -603,18 +538,18 @@ class _GigDetailsSheetState extends State<_GigDetailsSheet> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  _formatNpr(widget.gig.budgetNpr),
+                  formatNpr(widget.gig.budgetNpr),
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
-                    color: primaryBlue,
+                    color: AppColors.primaryBlue,
                   ),
                 ),
                 Text(
                   '${widget.gig.durationDays} days · ${widget.gig.deadline}',
                   style: const TextStyle(
                     fontSize: 13.5,
-                    color: Color(0xFF64748B),
+                    color: AppColors.mutedText,
                   ),
                 ),
               ],
@@ -625,14 +560,14 @@ class _GigDetailsSheetState extends State<_GigDetailsSheet> {
                 const Icon(
                   Icons.location_on_outlined,
                   size: 16,
-                  color: Color(0xFF64748B),
+                  color: AppColors.mutedText,
                 ),
                 const SizedBox(width: 4),
                 Text(
                   '${widget.gig.location} · ${widget.gig.isRemote ? 'Remote-friendly' : 'On-site'}',
                   style: const TextStyle(
                     fontSize: 13.5,
-                    color: Color(0xFF64748B),
+                    color: AppColors.mutedText,
                   ),
                 ),
               ],
@@ -643,7 +578,7 @@ class _GigDetailsSheetState extends State<_GigDetailsSheet> {
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF0F172A),
+                color: AppColors.darkText,
               ),
             ),
             const SizedBox(height: 6),
@@ -652,7 +587,7 @@ class _GigDetailsSheetState extends State<_GigDetailsSheet> {
               style: TextStyle(
                 fontSize: 14,
                 height: 1.5,
-                color: Color(0xFF334155),
+                color: AppColors.labelRegister,
               ),
             ),
             const SizedBox(height: 24),
@@ -662,7 +597,7 @@ class _GigDetailsSheetState extends State<_GigDetailsSheet> {
               child: ElevatedButton(
                 onPressed: isApplying || hasApplied ? null : handleApply,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryBlue,
+                  backgroundColor: AppColors.primaryBlue,
                   foregroundColor: Colors.white,
                   elevation: 0,
                   shape: RoundedRectangleBorder(

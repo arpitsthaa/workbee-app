@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:workbee_frontend/constants/app_colors.dart';
 import 'package:workbee_frontend/services/auth_service.dart';
 import 'package:workbee_frontend/services/user_session_service.dart';
 import 'package:workbee_frontend/models/api_models.dart';
+import 'package:workbee_frontend/widgets/verified_project_card.dart';
 
 class PassportScreen extends StatefulWidget {
   const PassportScreen({super.key});
@@ -41,12 +43,6 @@ class _PassportScreenState extends State<PassportScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const primaryBlue = Color(0xFF1D61E7);
-    const softBlueBg = Color(0xFFEFF6FF);
-    const darkText = Color(0xFF0F172A);
-    const mutedText = Color(0xFF64748B);
-    const borderColor = Color(0xFFE2E8F0);
-
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -92,7 +88,7 @@ class _PassportScreenState extends State<PassportScreen> {
                             width: 52,
                             height: 52,
                             decoration: const BoxDecoration(
-                              color: softBlueBg,
+                              color: AppColors.softBlueBg,
                               shape: BoxShape.circle,
                             ),
                             alignment: Alignment.center,
@@ -101,7 +97,7 @@ class _PassportScreenState extends State<PassportScreen> {
                               style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w800,
-                                color: primaryBlue,
+                                color: AppColors.primaryBlue,
                               ),
                             ),
                           ),
@@ -114,7 +110,7 @@ class _PassportScreenState extends State<PassportScreen> {
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w700,
-                                  color: darkText,
+                                  color: AppColors.darkText,
                                 ),
                               ),
                               SizedBox(height: 2),
@@ -122,7 +118,7 @@ class _PassportScreenState extends State<PassportScreen> {
                                 '$collegeUniversity · $program',
                                 style: TextStyle(
                                   fontSize: 13.5,
-                                  color: mutedText,
+                                  color: AppColors.mutedText,
                                 ),
                               ),
                             ],
@@ -134,7 +130,7 @@ class _PassportScreenState extends State<PassportScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: softBlueBg,
+                          color: AppColors.softBlueBg,
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: Row(
@@ -148,7 +144,7 @@ class _PassportScreenState extends State<PassportScreen> {
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w800,
-                                    color: primaryBlue,
+                                    color: AppColors.primaryBlue,
                                   ),
                                 ),
                                 SizedBox(height: 4),
@@ -156,7 +152,7 @@ class _PassportScreenState extends State<PassportScreen> {
                                   'Completed & business-approved',
                                   style: TextStyle(
                                     fontSize: 12.5,
-                                    color: mutedText,
+                                    color: AppColors.mutedText,
                                   ),
                                 ),
                               ],
@@ -169,7 +165,7 @@ class _PassportScreenState extends State<PassportScreen> {
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.w800,
-                                    color: darkText,
+                                    color: AppColors.darkText,
                                   ),
                                 ),
                                 SizedBox(height: 4),
@@ -177,7 +173,7 @@ class _PassportScreenState extends State<PassportScreen> {
                                   'Avg. rating',
                                   style: TextStyle(
                                     fontSize: 12.5,
-                                    color: mutedText,
+                                    color: AppColors.mutedText,
                                   ),
                                 ),
                               ],
@@ -191,7 +187,7 @@ class _PassportScreenState extends State<PassportScreen> {
                         style: TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.w700,
-                          color: darkText,
+                          color: AppColors.darkText,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -200,14 +196,14 @@ class _PassportScreenState extends State<PassportScreen> {
                           'No verified projects yet. Complete gigs to build your passport.',
                           style: TextStyle(
                             fontSize: 14,
-                            color: mutedText,
+                            color: AppColors.mutedText,
                           ),
                         )
                       else
                         ...completedProjects.map((review) {
                           return Column(
                             children: [
-                              _VerifiedProjectCard(
+                              VerifiedProjectCard(
                                 title: review.gigTitle,
                                 businessAndLocation:
                                     '${review.businessName} · ${review.businessLocation}',
@@ -216,7 +212,7 @@ class _PassportScreenState extends State<PassportScreen> {
                                 dateText: 'Completed ${review.completedAt ?? review.createdAt}',
                                 ratingText: '${review.rating.toStringAsFixed(1)}/5',
                                 feedback: review.reviewComment,
-                                borderColor: borderColor,
+                                borderColor: AppColors.borderColor,
                               ),
                               const SizedBox(height: 14),
                             ],
@@ -228,140 +224,6 @@ class _PassportScreenState extends State<PassportScreen> {
               ),
             );
       },
-    );
-  }
-}
-
-class _VerifiedProjectCard extends StatelessWidget {
-  final String title;
-  final String businessAndLocation;
-  final String roleAndSkills;
-  final String dateText;
-  final String ratingText;
-  final String feedback;
-  final Color borderColor;
-
-  const _VerifiedProjectCard({
-    required this.title,
-    required this.businessAndLocation,
-    required this.roleAndSkills,
-    required this.dateText,
-    required this.ratingText,
-    required this.feedback,
-    required this.borderColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const primaryBlue = Color(0xFF1D61E7);
-    const softBlueBg = Color(0xFFEFF6FF);
-    const darkText = Color(0xFF0F172A);
-    const mutedText = Color(0xFF64748B);
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: borderColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: darkText,
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: softBlueBg,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.check, size: 14, color: primaryBlue),
-                    SizedBox(width: 4),
-                    Text(
-                      'Verified',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: primaryBlue,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            businessAndLocation,
-            style: const TextStyle(fontSize: 13.5, color: mutedText),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            roleAndSkills,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF334155),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  const Icon(
-                    Icons.star_rounded,
-                    size: 18,
-                    color: Color(0xFFF59E0B),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    ratingText,
-                    style: const TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w700,
-                      color: darkText,
-                    ),
-                  ),
-                ],
-              ),
-              Text(
-                dateText,
-                style: const TextStyle(fontSize: 12.5, color: mutedText),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(
-            feedback,
-            style: const TextStyle(
-              fontSize: 13,
-              height: 1.4,
-              fontStyle: FontStyle.italic,
-              color: mutedText,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

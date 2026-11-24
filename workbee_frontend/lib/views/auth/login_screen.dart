@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:workbee_frontend/constants/app_colors.dart';
 import 'package:workbee_frontend/controller/login_controller.dart';
-import 'package:workbee_frontend/views/register_student_screen.dart';
-import 'package:workbee_frontend/views/register_business_screen.dart';
-import 'package:workbee_frontend/views/student_dashboard_screen.dart';
+import 'package:workbee_frontend/widgets/primary_button.dart';
+import 'package:workbee_frontend/views/auth/register_student_screen.dart';
+import 'package:workbee_frontend/views/auth/register_business_screen.dart';
+import 'package:workbee_frontend/views/student/student_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -45,10 +47,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const primaryBlue = Color(0xFF1D61E7);
-    const darkText = Color(0xFF1E293B);
-    const subtitleText = Color(0xFF64748B);
-    const beeGold = Color(0xFFF59E0B);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -68,11 +66,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         width: 54,
                         height: 54,
                         decoration: BoxDecoration(
-                          color: primaryBlue,
+                          color: AppColors.primaryBlue,
                           borderRadius: BorderRadius.circular(15),
                           boxShadow: [
                             BoxShadow(
-                              color: primaryBlue.withOpacity(0.22),
+                              color: AppColors.primaryBlue.withOpacity(0.22),
                               blurRadius: 12,
                               offset: const Offset(0, 4),
                             ),
@@ -90,7 +88,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         style: TextStyle(
                           fontSize: 26,
                           fontWeight: FontWeight.w800,
-                          color: darkText,
+                          color: AppColors.labelDark,
                           letterSpacing: -0.5,
                         ),
                       ),
@@ -104,7 +102,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: TextStyle(
                       fontSize: 30,
                       fontWeight: FontWeight.bold,
-                      color: darkText,
+                      color: AppColors.labelDark,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -113,7 +111,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: TextStyle(
                       fontSize: 15,
                       height: 1.45,
-                      color: subtitleText,
+                      color: AppColors.mutedText,
                     ),
                   ),
                   const SizedBox(height: 32),
@@ -138,7 +136,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         _obscurePassword
                             ? Icons.visibility_off_outlined
                             : Icons.visibility_outlined,
-                        color: subtitleText,
+                        color: AppColors.mutedText,
                       ),
                       onPressed: () {
                         setState(() => _obscurePassword = !_obscurePassword);
@@ -154,7 +152,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: const Text(
                         'Forgot password?',
                         style: TextStyle(
-                          color: primaryBlue,
+                          color: AppColors.primaryBlue,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -166,37 +164,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   ListenableBuilder(
                     listenable: _controller,
                     builder: (context, _) {
-                      return SizedBox(
-                        width: double.infinity,
-                        height: 52,
-                        child: ElevatedButton(
-                          onPressed: _controller.isLoading ? null : _handleLogin,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: primaryBlue,
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            disabledBackgroundColor: primaryBlue.withValues(alpha: 0.6),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: _controller.isLoading
-                              ? const SizedBox(
-                                  width: 22,
-                                  height: 22,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2.5,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const Text(
-                                  'Log in',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                        ),
+                      return PrimaryButton(
+                        text: 'Log in',
+                        onPressed: _handleLogin,
+                        isLoading: _controller.isLoading,
                       );
                     },
                   ),
@@ -206,15 +177,15 @@ class _LoginScreenState extends State<LoginScreen> {
                   const Center(
                     child: Text(
                       'New to WorkBee? Register as:',
-                      style: TextStyle(fontSize: 14, color: subtitleText),
+                      style: TextStyle(fontSize: 14, color: AppColors.mutedText),
                     ),
                   ),
                   const SizedBox(height: 16),
 
                   _RegistrationButton(
                     title: 'Student Registration',
-                    borderColor: primaryBlue,
-                    accentColor: beeGold,
+                    borderColor: AppColors.primaryBlue,
+                    accentColor: AppColors.beeGold,
                     onTap: () {
                       Navigator.push(
                         context,
@@ -228,8 +199,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   _RegistrationButton(
                     title: 'Business Registration',
-                    borderColor: primaryBlue,
-                    accentColor: beeGold,
+                    borderColor: AppColors.primaryBlue,
+                    accentColor: AppColors.beeGold,
                     onTap: () {
                       Navigator.push(
                         context,
@@ -280,7 +251,7 @@ class _WorkBeeInput extends StatelessWidget {
           style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF1E293B),
+            color: AppColors.labelDark,
           ),
         ),
         const SizedBox(height: 8),
@@ -290,9 +261,9 @@ class _WorkBeeInput extends StatelessWidget {
           keyboardType: keyboardType,
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+            hintStyle: const TextStyle(color: AppColors.hintText),
             filled: true,
-            fillColor: const Color(0xFFF8FAFC),
+            fillColor: AppColors.inputFill,
             suffixIcon: suffixIcon,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
@@ -300,11 +271,11 @@ class _WorkBeeInput extends StatelessWidget {
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              borderSide: const BorderSide(color: AppColors.borderColor),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFF1D61E7), width: 1.5),
+              borderSide: const BorderSide(color: AppColors.primaryBlue, width: 1.5),
             ),
           ),
         ),

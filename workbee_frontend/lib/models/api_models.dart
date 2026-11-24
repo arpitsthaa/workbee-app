@@ -207,40 +207,6 @@ class ProjectReview {
   }
 }
 
-class DashboardResponse {
-  final String fullName;
-  final bool isVerified;
-  final int profileCompletion;
-  final List<Gig> recommendedGigs;
-  final Map<String, dynamic> applicationsSummary;
-  final Map<String, dynamic> projectsSummary;
-  final Map<String, dynamic> careerPassport;
-
-  DashboardResponse({
-    required this.fullName,
-    required this.isVerified,
-    required this.profileCompletion,
-    required this.recommendedGigs,
-    required this.applicationsSummary,
-    required this.projectsSummary,
-    required this.careerPassport,
-  });
-
-  factory DashboardResponse.fromJson(Map<String, dynamic> json) {
-    return DashboardResponse(
-      fullName: (json['full_name'] ?? 'Student') as String,
-      isVerified: json['is_verified'] ?? false,
-      profileCompletion: (json['profile_completion'] ?? 0) as int,
-      recommendedGigs: (json['recommended_gigs'] as List<dynamic>?)
-              ?.map((g) => Gig.fromJson(g as Map<String, dynamic>))
-              .toList() ?? [],
-      applicationsSummary: (json['applications_summary'] ?? {}) as Map<String, dynamic>,
-      projectsSummary: (json['projects_summary'] ?? {}) as Map<String, dynamic>,
-      careerPassport: (json['career_passport'] ?? {}) as Map<String, dynamic>,
-    );
-  }
-}
-
 class PassportResponse {
   final String fullName;
   final String? collegeUniversity;
@@ -315,27 +281,6 @@ class ProfileResponse {
       portfolioUrl: (json['portfolio_url'] ?? '') as String,
       isVerified: json['is_verified'] ?? false,
       profileCompletion: (json['profile_completion'] ?? 0) as int,
-    );
-  }
-}
-
-class WorkResponse {
-  final List<GigApplication> applications;
-  final List<Project> projects;
-
-  WorkResponse({
-    required this.applications,
-    required this.projects,
-  });
-
-  factory WorkResponse.fromJson(Map<String, dynamic> json) {
-    return WorkResponse(
-      applications: (json['applications'] as List<dynamic>?)
-              ?.map((a) => GigApplication.fromJson(a as Map<String, dynamic>))
-              .toList() ?? [],
-      projects: (json['projects'] as List<dynamic>?)
-              ?.map((p) => Project.fromJson(p as Map<String, dynamic>))
-              .toList() ?? [],
     );
   }
 }

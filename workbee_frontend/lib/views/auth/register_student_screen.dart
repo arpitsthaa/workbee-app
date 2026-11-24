@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../controller/student_registration_controller.dart';
+import 'package:workbee_frontend/constants/app_colors.dart';
+import '../../controller/student_registration_controller.dart';
 
 class StudentRegistrationScreen extends StatefulWidget {
   const StudentRegistrationScreen({super.key});
@@ -46,7 +47,7 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Registration and login successful!'),
-          backgroundColor: Color(0xFF16A34A),
+          backgroundColor: AppColors.successGreenDark,
           duration: Duration(seconds: 3),
         ),
       );
@@ -67,12 +68,12 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
     return InputDecoration(
       hintText: hintText,
       hintStyle: const TextStyle(
-        color: Color(0xFF94A3B8),
+        color: AppColors.hintText,
         fontSize: 15,
         fontWeight: FontWeight.w400,
       ),
       filled: true,
-      fillColor: const Color(0xFFF8FAFC),
+      fillColor: AppColors.inputFill,
       contentPadding: const EdgeInsets.symmetric(
         horizontal: 16,
         vertical: 16,
@@ -81,7 +82,7 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(
-          color: Color(0xFFE2E8F0),
+          color: AppColors.borderColor,
           width: 1,
         ),
       ),
@@ -101,7 +102,7 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
       child: Text(
         text,
         style: const TextStyle(
-          color: Color(0xFF334155),
+          color: AppColors.labelRegister,
           fontSize: 14,
           fontWeight: FontWeight.w600,
         ),
@@ -135,7 +136,7 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
                   const Text(
                     'WorkBee',
                     style: TextStyle(
-                      color: Color(0xFF1E293B),
+                      color: AppColors.labelDark,
                       fontSize: 22,
                       fontWeight: FontWeight.w700,
                       letterSpacing: -0.3,
@@ -147,7 +148,7 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
               const Text(
                 'Student Registration',
                 style: TextStyle(
-                  color: Color(0xFF0F172A),
+                  color: AppColors.darkText,
                   fontSize: 26,
                   fontWeight: FontWeight.w700,
                   letterSpacing: -0.5,
@@ -157,7 +158,7 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
               const Text(
                 'Bee Busy Be Paid',
                 style: TextStyle(
-                  color: Color(0xFF64748B),
+                  color: AppColors.mutedText,
                   fontSize: 14,
                   fontWeight: FontWeight.w400,
                 ),
@@ -195,7 +196,7 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
                       _obscurePassword
                           ? Icons.visibility_off_outlined
                           : Icons.visibility_outlined,
-                      color: const Color(0xFF64748B),
+                      color: AppColors.mutedText,
                       size: 20,
                     ),
                     onPressed: () {
@@ -263,7 +264,7 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
                   const Text(
                     'Already have an account? ',
                     style: TextStyle(
-                      color: Color(0xFF64748B),
+                      color: AppColors.mutedText,
                       fontSize: 14,
                     ),
                   ),
