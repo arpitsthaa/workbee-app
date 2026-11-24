@@ -7,10 +7,10 @@ class MyWorkScreen extends StatefulWidget {
   const MyWorkScreen({super.key});
 
   @override
-  State<MyWorkScreen> createState() => _MyWorkScreenState();
+  State<MyWorkScreen> createState() => MyWorkScreenState();
 }
 
-class _MyWorkScreenState extends State<MyWorkScreen> {
+class MyWorkScreenState extends State<MyWorkScreen> {
   final AuthService _authService = AuthService();
   final TextEditingController _linkController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
@@ -50,6 +50,10 @@ class _MyWorkScreenState extends State<MyWorkScreen> {
   }
 
   Future<void> _refreshWork() async {
+    await _loadWork();
+  }
+
+  Future<void> refresh() async {
     await _loadWork();
   }
 
@@ -122,32 +126,43 @@ class _MyWorkScreenState extends State<MyWorkScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: inputFill,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: borderColor),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: inputFill,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: borderColor),
+                ),
+                child: ListenableBuilder(
+                  listenable: UserSessionService(),
+                  builder: (context, _) {
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: _SegmentTab(
+                            label: 'Applications (${UserSessionService().appliedGigIds.length})',
+                            selected: _activeTab == 0,
+                            onTap: () {
+                              setState(() => _activeTab = 0);
+                              _loadWork();
+                            },
+                          ),
+                        ),
+                        Expanded(
+                          child: _SegmentTab(
+                            label: 'Projects (${_projects.length})',
+                            selected: _activeTab == 1,
+                            onTap: () {
+                              setState(() => _activeTab = 1);
+                              _loadWork();
+                            },
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _SegmentTab(
-                      label: 'Applications (${_applications.length})',
-                      selected: _activeTab == 0,
-                      onTap: () => setState(() => _activeTab = 0),
-                    ),
-                  ),
-                  Expanded(
-                    child: _SegmentTab(
-                      label: 'Projects (${_projects.length})',
-                      selected: _activeTab == 1,
-                      onTap: () => setState(() => _activeTab = 1),
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ),
           Expanded(
             child: ConstrainedBox(

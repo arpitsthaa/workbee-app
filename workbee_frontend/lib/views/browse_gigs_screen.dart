@@ -200,7 +200,7 @@ class _BrowseGigsScreenState extends State<BrowseGigsScreen> {
         return StatefulBuilder(
           builder: (context, setModalState) {
             bool isApplying = false;
-            bool hasApplied = false;
+            bool hasApplied = UserSessionService().isApplied(gig.id) || gig.hasApplied;
 
             Future<void> handleApply() async {
               setModalState(() => isApplying = true);

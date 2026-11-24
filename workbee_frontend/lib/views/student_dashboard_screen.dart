@@ -18,6 +18,7 @@ class StudentDashboardScreen extends StatefulWidget {
 class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   int _selectedIndex = 0;
   final AuthService _authService = AuthService();
+  final GlobalKey<MyWorkScreenState> _myWorkKey = GlobalKey();
 
   DashboardResponse? _dashboard;
   bool _isLoading = true;
@@ -56,6 +57,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
 
   void _onTabTapped(int index) {
     setState(() => _selectedIndex = index);
+    if (index == 2) {
+      _myWorkKey.currentState?.refresh();
+    }
   }
 
   void _onAvatarTapped() {
@@ -99,7 +103,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             onAvatarTap: _onAvatarTapped,
           ),
           _ScreenWithAppBar(
-            body: const MyWorkScreen(),
+            body: MyWorkScreen(key: _myWorkKey),
             onAvatarTap: _onAvatarTapped,
           ),
           _ScreenWithAppBar(
