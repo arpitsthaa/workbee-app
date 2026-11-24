@@ -14,6 +14,12 @@ class AuthService {
   static Stream<void> get onGigCreated => _gigCreatedController.stream;
   static void notifyGigCreated() => _gigCreatedController.add(null);
 
+  static String? _cachedToken;
+
+  static void setCachedToken(String? token) => _cachedToken = token;
+
+  static void clearCachedToken() => _cachedToken = null;
+
   Future<void> warmUp() async {
     try {
       await http.get(Uri.parse('$_baseUrl/api/health/'))
@@ -24,12 +30,19 @@ class AuthService {
   }
 
   Future<Map<String, String>> _authHeaders() async {
+    if (_cachedToken != null) {
+      return {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Token $_cachedToken',
+      };
+    }
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token');
+    _cachedToken = prefs.getString('auth_token');
     return {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      if (token != null) 'Authorization': 'Token $token',
+      if (_cachedToken != null) 'Authorization': 'Token $_cachedToken',
     };
   }
 
@@ -350,6 +363,7 @@ class AuthService {
   }
 
   Future<void> logout() async {
+    _cachedToken = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
     await prefs.remove('user_role');
@@ -411,5 +425,134 @@ class AuthService {
     } catch (e) {
       return {'error': 'Connection error: $e', 'status': 0};
     }
+  }
+
+  // ---- Split dashboard endpoints (parallel fetch) ----
+
+  Future<Map<String, dynamic>> getDashboardProfile() async {
+    final url = Uri.parse('$_baseUrl/api/student/dashboard/profile/');
+    final headers = await _authHeaders();
+    try {
+      final response = await http.get(url, headers: headers).timeout(
+        const Duration(seconds: 15),
+      );
+      if (response.statusCode == 200) return _decodeMap(response.body);
+      return {'error': _errorMessage(_decodeMap(response.body), response.statusCode), 'status': response.statusCode};
+    } on TimeoutException {
+      return {'error': 'Server took too long to respond.', 'status': 408};
+    } catch (e) {
+      return {'error': 'Connection error: $e', 'status': 0};
+    }
+  }
+
+  Future<Map<String, dynamic>> getDashboardGigs() async {
+    final url = Uri.parse('$_baseUrl/api/student/dashboard/gigs/');
+    final headers = await _authHeaders();
+    try {
+      final response = await http.get(url, headers: headers).timeout(
+        const Duration(seconds: 15),
+      );
+      if (response.statusCode == 200) return _decodeMap(response.body);
+      return {'error': _errorMessage(_decodeMap(response.body), response.statusCode), 'status': response.statusCode};
+    } on TimeoutException {
+      return {'error': 'Server took too long to respond.', 'status': 408};
+    } catch (e) {
+      return {'error': 'Connection error: $e', 'status': 0};
+    }
+  }
+
+  Future<Map<String, dynamic>> getDashboardSummary() async {
+    final url = Uri.parse('$_baseUrl/api/student/dashboard/summary/');
+    final headers = await _authHeaders();
+    try {
+      final response = await http.get(url, headers: headers).timeout(
+        const Duration(seconds: 15),
+      );
+      if (response.statusCode == 200) return _decodeMap(response.body);
+      return {'error': _errorMessage(_decodeMap(response.body), response.statusCode), 'status': response.statusCode};
+    } on TimeoutException {
+      return {'error': 'Server took too long to respond.', 'status': 408};
+    } catch (e) {
+      return {'error': 'Connection error: $e', 'status': 0};
+    }
+  }
+
+  // ---- Split work endpoints (parallel fetch) ----
+
+  Future<Map<String, dynamic>> getWorkApplications() async {
+    final url = Uri.parse('$_baseUrl/api/student/work/applications/');
+    final headers = await _authHeaders();
+    try {
+      final response = await http.get(url, headers: headers).timeout(
+        const Duration(seconds: 15),
+      );
+      if (response.statusCode == 200) return _decodeMap(response.body);
+      return {'error': _errorMessage(_decodeMap(response.body), response.statusCode), 'status': response.statusCode};
+    } on TimeoutException {
+      return {'error': 'Server took too long to respond.', 'status': 408};
+    } catch (e) {
+      return {'error': 'Connection error: $e', 'status': 0};
+    }
+  }
+
+  Future<Map<String, dynamic>> getWorkProjects() async {
+    final url = Uri.parse('$_baseUrl/api/student/work/projects/');
+    final headers = await _authHeaders();
+    try {
+      final response = await http.get(url, headers: headers).timeout(
+        const Duration(seconds: 15),
+      );
+      if (response.statusCode == 200) return _decodeMap(response.body);
+      return {'error': _errorMessage(_decodeMap(response.body), response.statusCode), 'status': response.statusCode};
+    } on TimeoutException {
+      return {'error': 'Server took too long to respond.', 'status': 408};
+    } catch (e) {
+      return {'error': 'Connection error: $e', 'status': 0};
+    }
+  }
+
+  // ---- Fast parallel loaders with monolithic fallback ----
+
+  Future<Map<String, dynamic>> loadDashboardFast() async {
+    final results = await Future.wait([
+      getDashboardProfile(),
+      getDashboardGigs(),
+      getDashboardSummary(),
+    ]);
+
+    final any404 = results.any((r) => r.containsKey('error') && r['status'] == 404);
+
+    if (any404) {
+      // Fall back to monolithic dashboard endpoint
+      return getStudentDashboard();
+    }
+
+    return {
+      'full_name': results[0]['full_name'] ?? 'Student',
+      'is_verified': results[0]['is_verified'] ?? false,
+      'profile_completion': results[0]['profile_completion'] ?? 0,
+      'recommended_gigs': results[1]['recommended_gigs'] ?? [],
+      'applications_summary': results[2]['applications_summary'] ?? {},
+      'projects_summary': results[2]['projects_summary'] ?? {},
+      'career_passport': results[2]['career_passport'] ?? {},
+    };
+  }
+
+  Future<Map<String, dynamic>> loadWorkFast() async {
+    final results = await Future.wait([
+      getWorkApplications(),
+      getWorkProjects(),
+    ]);
+
+    final any404 = results.any((r) => r.containsKey('error') && r['status'] == 404);
+
+    if (any404) {
+      return getStudentWork();
+    }
+
+    return {
+      'applications': results[0]['applications'] ?? [],
+      'projects': results[1]['projects'] ?? [],
+    };
   }
 }

@@ -118,14 +118,6 @@ class _BrowseGigsScreenState extends State<BrowseGigsScreen> {
     return results;
   }
 
-  String _formatNpr(int amount) {
-    final str = amount.toString();
-    if (str.length <= 3) return 'NPR $str';
-    final prefix = str.substring(0, str.length - 3);
-    final suffix = str.substring(str.length - 3);
-    return 'NPR $prefix,$suffix';
-  }
-
   void _pickFilter({
     required String title,
     required List<String> options,
@@ -187,8 +179,6 @@ class _BrowseGigsScreenState extends State<BrowseGigsScreen> {
   }
 
   void _showGigDetails(Gig gig) {
-    const primaryBlue = Color(0xFF1D61E7);
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -196,186 +186,11 @@ class _BrowseGigsScreenState extends State<BrowseGigsScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (sheetContext) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            bool isApplying = false;
-            bool hasApplied = UserSessionService().isApplied(gig.id) || gig.hasApplied;
-
-            Future<void> handleApply() async {
-              setModalState(() => isApplying = true);
-
-              final result =
-                  await _authService.applyForGig(gig.id, coverMessage: '');
-
-              if (!mounted || !context.mounted) return;
-
-              if (result.containsKey('error')) {
-                setModalState(() => isApplying = false);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      result['error'] as String? ?? 'Failed to apply',
-                    ),
-                    backgroundColor: Colors.redAccent,
-                  ),
-                );
-                return;
-              }
-
-              await UserSessionService().markApplied(gig.id);
-              if (!mounted || !context.mounted) return;
-
-              setModalState(() {
-                isApplying = false;
-                hasApplied = true;
-              });
-
-              await Future.delayed(const Duration(milliseconds: 800));
-              if (!mounted || !context.mounted) return;
-
-              Navigator.pop(context);
-              widget.onAppliedNavigate?.call();
-            }
-
-            return SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      gig.businessName,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF64748B),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      gig.title,
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF0F172A),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      gig.requiredSkills.join(' · '),
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF475569),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          _formatNpr(gig.budgetNpr),
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: primaryBlue,
-                          ),
-                        ),
-                        Text(
-                          '${gig.durationDays} days · ${gig.deadline}',
-                          style: const TextStyle(
-                            fontSize: 13.5,
-                            color: Color(0xFF64748B),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.location_on_outlined,
-                          size: 16,
-                          color: Color(0xFF64748B),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${gig.location} · ${gig.isRemote ? 'Remote-friendly' : 'On-site'}',
-                          style: const TextStyle(
-                            fontSize: 13.5,
-                            color: Color(0xFF64748B),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 18),
-                    const Text(
-                      'Project Description',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF0F172A),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      'Apply to see full project details and deliverables.',
-                      style: TextStyle(
-                        fontSize: 14,
-                        height: 1.5,
-                        color: Color(0xFF334155),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: isApplying || hasApplied ? null : handleApply,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryBlue,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: isApplying
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white,
-                                  ),
-                                ),
-                              )
-                            : hasApplied
-                                ? const Text(
-                                    'Applied',
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  )
-                                : const Text(
-                                    'Apply for this Gig',
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
+      builder: (_) => _GigDetailsSheet(
+        gig: gig,
+        onApplied: _reload,
+        onAppliedNavigate: widget.onAppliedNavigate,
+      ),
     );
   }
 
@@ -674,6 +489,213 @@ class _FilterChipButton extends StatelessWidget {
               Icons.keyboard_arrow_down,
               size: 18,
               color: isActive ? primaryBlue : const Color(0xFF64748B),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _formatNpr(int amount) {
+  final str = amount.toString();
+  if (str.length <= 3) return 'NPR $str';
+  final prefix = str.substring(0, str.length - 3);
+  final suffix = str.substring(str.length - 3);
+  return 'NPR $prefix,$suffix';
+}
+
+class _GigDetailsSheet extends StatefulWidget {
+  final Gig gig;
+  final VoidCallback? onApplied;
+  final VoidCallback? onAppliedNavigate;
+
+  const _GigDetailsSheet({required this.gig, this.onApplied, this.onAppliedNavigate});
+
+  @override
+  State<_GigDetailsSheet> createState() => _GigDetailsSheetState();
+}
+
+class _GigDetailsSheetState extends State<_GigDetailsSheet> {
+  bool isApplying = false;
+  bool hasApplied = false;
+
+  final AuthService _authService = AuthService();
+
+  @override
+  void initState() {
+    super.initState();
+    hasApplied = UserSessionService().isApplied(widget.gig.id) || widget.gig.hasApplied;
+  }
+
+  Future<void> handleApply() async {
+    setState(() => isApplying = true);
+
+    final result = await _authService.applyForGig(widget.gig.id, coverMessage: '');
+
+    if (!mounted) return;
+
+    if (result.containsKey('error')) {
+      setState(() => isApplying = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result['error'] as String? ?? 'Failed to apply',
+          ),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
+    UserSessionService().markApplied(widget.gig.id);
+    if (!mounted) return;
+
+    setState(() {
+      isApplying = false;
+      hasApplied = true;
+    });
+
+    Navigator.pop(context);
+    AuthService.notifyGigCreated();
+    widget.onApplied?.call();
+    widget.onAppliedNavigate?.call();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const primaryBlue = Color(0xFF1D61E7);
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.gig.businessName,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF64748B),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              widget.gig.title,
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF0F172A),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              widget.gig.requiredSkills.join(' · '),
+              style: const TextStyle(
+                fontSize: 14,
+                color: Color(0xFF475569),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  _formatNpr(widget.gig.budgetNpr),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: primaryBlue,
+                  ),
+                ),
+                Text(
+                  '${widget.gig.durationDays} days · ${widget.gig.deadline}',
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Icon(
+                  Icons.location_on_outlined,
+                  size: 16,
+                  color: Color(0xFF64748B),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '${widget.gig.location} · ${widget.gig.isRemote ? 'Remote-friendly' : 'On-site'}',
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            const Text(
+              'Project Description',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF0F172A),
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Apply to see full project details and deliverables.',
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.5,
+                color: Color(0xFF334155),
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: isApplying || hasApplied ? null : handleApply,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryBlue,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: isApplying
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
+                        ),
+                      )
+                    : hasApplied
+                        ? const Text(
+                            'Applied',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          )
+                        : const Text(
+                            'Apply for this Gig',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+              ),
             ),
           ],
         ),

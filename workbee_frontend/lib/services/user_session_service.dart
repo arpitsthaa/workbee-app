@@ -31,6 +31,13 @@ class UserSessionService extends ChangeNotifier {
   String? _portfolioUrl;
   Set<int> _appliedGigIds = {};
   bool _initialized = false;
+  static SharedPreferences? _prefs;
+
+  static Future<SharedPreferences> get _prefsInstance async {
+    if (_prefs != null) return _prefs!;
+    _prefs = await SharedPreferences.getInstance();
+    return _prefs!;
+  }
 
   String? get userName => _userName;
   String? get userId => _userId;
@@ -47,7 +54,7 @@ class UserSessionService extends ChangeNotifier {
 
   Future<void> initialize() async {
     if (_initialized) return;
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefsInstance;
     _userName = prefs.getString(_userNameKey);
     _userId = prefs.getString(_userIdKey);
     _userRole = prefs.getString(_userRoleKey);
@@ -84,14 +91,14 @@ class UserSessionService extends ChangeNotifier {
 
   Future<void> markApplied(int gigId) async {
     _appliedGigIds.add(gigId);
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefsInstance;
     await prefs.setString(_appliedGigIdsKey, jsonEncode(_appliedGigIds.toList()));
     notifyListeners();
   }
 
   Future<void> markWithdrawn(int gigId) async {
     _appliedGigIds.remove(gigId);
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefsInstance;
     await prefs.setString(_appliedGigIdsKey, jsonEncode(_appliedGigIds.toList()));
     notifyListeners();
   }
@@ -104,7 +111,7 @@ class UserSessionService extends ChangeNotifier {
     _userName = name;
     _userId = id;
     _userRole = role;
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefsInstance;
     await prefs.setString(_userNameKey, name);
     await prefs.setString(_userIdKey, id);
     await prefs.setString(_userRoleKey, role);
@@ -134,7 +141,7 @@ class UserSessionService extends ChangeNotifier {
     _skills = skills ?? [];
     _portfolioUrl = portfolioUrl;
 
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefsInstance;
     await prefs.setString(_userNameKey, name);
     await prefs.setString(_userIdKey, id);
     await prefs.setString(_userRoleKey, role);
@@ -150,7 +157,7 @@ class UserSessionService extends ChangeNotifier {
 
   Future<void> updateName(String newName) async {
     _userName = newName;
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefsInstance;
     await prefs.setString(_userNameKey, newName);
     notifyListeners();
   }
@@ -174,7 +181,7 @@ class UserSessionService extends ChangeNotifier {
     if (skills != null) _skills = skills;
     if (portfolioUrl != null) _portfolioUrl = portfolioUrl;
 
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefsInstance;
     if (name != null) await prefs.setString(_userNameKey, name);
     if (location != null) await prefs.setString(_locationKey, location);
     if (collegeUniversity != null) await prefs.setString(_collegeUniversityKey, collegeUniversity);
@@ -198,7 +205,7 @@ class UserSessionService extends ChangeNotifier {
     _skills = [];
     _portfolioUrl = null;
     _appliedGigIds = {};
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefsInstance;
     await prefs.remove(_userNameKey);
     await prefs.remove(_userIdKey);
     await prefs.remove(_userRoleKey);
@@ -210,6 +217,7 @@ class UserSessionService extends ChangeNotifier {
     await prefs.remove(_skillsKey);
     await prefs.remove(_portfolioUrlKey);
     await prefs.remove(_appliedGigIdsKey);
+    _prefs = null;
     notifyListeners();
   }
 }
