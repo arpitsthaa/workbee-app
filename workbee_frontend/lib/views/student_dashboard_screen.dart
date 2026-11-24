@@ -95,7 +95,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         children: [
           _buildHomeBody(),
           _ScreenWithAppBar(
-            body: const BrowseGigsScreen(),
+            body: BrowseGigsScreen(onAppliedNavigate: () => _onTabTapped(2)),
             onAvatarTap: _onAvatarTapped,
           ),
           _ScreenWithAppBar(
