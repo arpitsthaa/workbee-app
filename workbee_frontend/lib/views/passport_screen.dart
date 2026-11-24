@@ -72,8 +72,8 @@ class _PassportScreenState extends State<PassportScreen> {
       listenable: UserSessionService(),
       builder: (context, _) {
         final fullName = UserSessionService().userName ?? _passport?.fullName ?? 'Student';
-        final collegeUniversity = _passport?.collegeUniversity ?? '';
-        final program = _passport?.program ?? '';
+        final collegeUniversity = UserSessionService().collegeUniversity ?? _passport?.collegeUniversity ?? '';
+        final program = UserSessionService().program ?? _passport?.program ?? '';
         final verifiedProjects = _passport?.verifiedProjectsCount ?? 0;
         final avgRating = _passport?.averageRating ?? 0.0;
         final completedProjects = _passport?.completedProjects ?? [];

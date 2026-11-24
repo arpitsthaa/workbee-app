@@ -47,6 +47,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadProfile() async {
+    // First, populate from local session for instant display
+    final session = UserSessionService();
+    if (session.isInitialized) {
+      _nameController.text = session.userName ?? '';
+      _locationController.text = session.location ?? '';
+      _collegeController.text = session.collegeUniversity ?? '';
+      final program = session.program ?? '';
+      final semester = session.semester ?? '';
+      _courseController.text = (program.isNotEmpty && semester.isNotEmpty)
+          ? '$program · $semester'
+          : (program.isNotEmpty ? program : (semester.isNotEmpty ? semester : ''));
+      _aboutController.text = session.bio ?? '';
+      _skillsController.text = session.skills.join(', ');
+      _portfolioController.text = session.portfolioUrl ?? '';
+    }
+
+    // Then fetch fresh data from API
     final result = await _authService.getStudentProfile();
     if (!mounted) return;
     if (result.containsKey('error')) {
@@ -71,6 +88,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _saveProfile() async {
+    final portfolioUrl = _portfolioController.text.trim();
+    if (portfolioUrl.isNotEmpty && !_isValidUrl(portfolioUrl)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid URL (e.g., example.com or https://example.com)'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
     final data = {
       'full_name': _nameController.text.trim(),
       'location': _locationController.text.trim(),
@@ -81,7 +109,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           : '',
       'bio': _aboutController.text.trim(),
       'skills': _skillsController.text.trim().split(',').where((s) => s.trim().isNotEmpty).map((s) => s.trim()).toList(),
-      'portfolio_url': _portfolioController.text.trim(),
+      'portfolio_url': portfolioUrl,
     };
 
     final result = await _authService.updateStudentProfile(data);
@@ -94,12 +122,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       );
     } else {
-      await UserSessionService().updateName(_nameController.text.trim());
+      final skillsList = _skillsController.text.trim().split(',').where((s) => s.trim().isNotEmpty).map((s) => s.trim()).toList();
+      await UserSessionService().updateProfile(
+        name: _nameController.text.trim(),
+        location: _locationController.text.trim(),
+        collegeUniversity: _collegeController.text.trim(),
+        program: _courseController.text.trim().split(' · ').first,
+        semester: _courseController.text.trim().split(' · ').length > 1
+            ? _courseController.text.trim().split(' · ').last
+            : '',
+        bio: _aboutController.text.trim(),
+        skills: skillsList,
+        portfolioUrl: portfolioUrl,
+      );
       setState(() => _isEditing = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profile saved')),
       );
     }
+  }
+
+  bool _isValidUrl(String url) {
+    // Lenient URL validation: accepts http://, https://, or just domain.tld
+    final regex = RegExp(
+      r'^(https?://)?([\w-]+\.)+[\w-]+(/[\w-./?%&=]*)?$',
+      caseSensitive: false,
+    );
+    return regex.hasMatch(url);
   }
 
   void _handleLogout() async {
@@ -219,7 +268,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ListenableBuilder(
                       listenable: UserSessionService(),
                       builder: (context, _) {
-                        final displayName = UserSessionService().userName ?? profile.fullName;
+                        final session = UserSessionService();
+                        final displayName = session.userName ?? profile.fullName;
+                        final displayLocation = session.location ?? profile.location ?? '';
+                        final displayCollege = session.collegeUniversity ?? profile.collegeUniversity ?? '';
+                        final displayProgram = session.program ?? profile.program;
+                        final displaySemester = session.semester ?? profile.semester;
                         return Column(
                           children: [
                             Row(
@@ -286,7 +340,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      profile.location ?? '',
+                                      displayLocation,
                                       style: const TextStyle(
                                         fontSize: 13.5,
                                         color: mutedText,
@@ -322,21 +376,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            '${profile.collegeUniversity ?? ''}',
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: darkText,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${profile.program} · ${profile.semester}',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: mutedText,
-                            ),
+                          ListenableBuilder(
+                            listenable: UserSessionService(),
+                            builder: (context, _) {
+                              final session = UserSessionService();
+                              final displayCollege = session.collegeUniversity ?? profile.collegeUniversity ?? '';
+                              final displayProgram = session.program ?? profile.program;
+                              final displaySemester = session.semester ?? profile.semester;
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    displayCollege,
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                      color: darkText,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '$displayProgram · $displaySemester',
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: mutedText,
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
                           ),
                         ],
                       ),
@@ -397,9 +465,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    Text(
-                      profile.bio,
-                      style: const TextStyle(fontSize: 14, color: mutedText),
+                    ListenableBuilder(
+                      listenable: UserSessionService(),
+                      builder: (context, _) {
+                        final session = UserSessionService();
+                        final displayBio = session.bio ?? profile.bio;
+                        return Text(
+                          displayBio,
+                          style: const TextStyle(fontSize: 14, color: mutedText),
+                        );
+                      },
                     ),
                     const SizedBox(height: 18),
                     const Text(
@@ -411,24 +486,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: skillsList
-                          .map(
-                            (skill) => Chip(
-                          label: Text(
-                            skill,
-                            style: const TextStyle(
-                              color: primaryBlue,
-                              fontWeight: FontWeight.w600,
+                    ListenableBuilder(
+                      listenable: UserSessionService(),
+                      builder: (context, _) {
+                        final session = UserSessionService();
+                        final displaySkills = session.skills.isNotEmpty ? session.skills : skillsList;
+                        return Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: displaySkills
+                              .map(
+                                (skill) => Chip(
+                              label: Text(
+                                skill,
+                                style: const TextStyle(
+                                  color: primaryBlue,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              backgroundColor: softBlueBg,
+                              side: BorderSide.none,
                             ),
-                          ),
-                          backgroundColor: softBlueBg,
-                          side: BorderSide.none,
-                        ),
-                      )
-                          .toList(),
+                          )
+                              .toList(),
+                        );
+                      },
                     ),
                     const SizedBox(height: 18),
                     Container(
@@ -450,12 +532,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                           const SizedBox(height: 4),
-                          Text(
-                            profile.portfolioUrl,
-                            style: const TextStyle(
-                              fontSize: 13.5,
-                              color: primaryBlue,
-                            ),
+                          ListenableBuilder(
+                            listenable: UserSessionService(),
+                            builder: (context, _) {
+                              final session = UserSessionService();
+                              final displayPortfolio = session.portfolioUrl ?? profile.portfolioUrl;
+                              return Text(
+                                displayPortfolio,
+                                style: const TextStyle(
+                                  fontSize: 13.5,
+                                  color: primaryBlue,
+                                ),
+                              );
+                            },
                           ),
                         ],
                       ),
