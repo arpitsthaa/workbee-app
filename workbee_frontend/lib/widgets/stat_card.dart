@@ -17,9 +17,8 @@ class StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -28,10 +27,11 @@ class StatCard extends StatelessWidget {
           border: Border.all(color: borderColor),
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
               countText,
+              textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
@@ -41,6 +41,7 @@ class StatCard extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               subtitleText,
+              textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 12.5,
                 color: AppColors.mutedText,

@@ -366,7 +366,7 @@ class MyWorkScreenState extends State<MyWorkScreen> {
                     children: [
                       Expanded(
                         child: SegmentTab(
-                          label: 'Applications (${UserSessionService().appliedGigIds.length})',
+                          label: 'Applications',
                           selected: _activeTab == 0,
                           onTap: () {
                             setState(() => _activeTab = 0);
@@ -376,7 +376,7 @@ class MyWorkScreenState extends State<MyWorkScreen> {
                       ),
                       Expanded(
                         child: SegmentTab(
-                          label: 'Projects (${_projects.length})',
+                          label: 'Projects',
                           selected: _activeTab == 1,
                           onTap: () {
                             setState(() => _activeTab = 1);

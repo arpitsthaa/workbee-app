@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:workbee_frontend/models/api_models.dart';
 import 'package:workbee_frontend/services/auth_service.dart';
+import 'package:workbee_frontend/views/auth/login_screen.dart';
 import 'package:workbee_frontend/views/business/business_gigs_screen.dart';
 
 class BusinessDashboardScreen extends StatefulWidget {
@@ -29,6 +30,16 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
     if (parts.isEmpty || parts.first.isEmpty) return 'MJ';
     if (parts.length == 1) return parts.first[0].toUpperCase();
     return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
+  }
+
+  Future<void> _logout() async {
+    await AuthService().logout();
+    if (!mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
+      (route) => false,
+    );
   }
 
   Future<void> _loadDashboard() async {
@@ -258,6 +269,32 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
                           ],
                         ),
                       ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Logout Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 44,
+                    child: OutlinedButton.icon(
+                      onPressed: _logout,
+                      icon: const Icon(Icons.logout, size: 18, color: Colors.redAccent),
+                      label: const Text(
+                        'Logout',
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.redAccent,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.redAccent,
+                        side: const BorderSide(color: Colors.redAccent),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),

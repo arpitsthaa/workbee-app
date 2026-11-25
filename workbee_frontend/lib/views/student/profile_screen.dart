@@ -7,6 +7,7 @@ import 'package:workbee_frontend/views/auth/login_screen.dart';
 import 'package:workbee_frontend/widgets/app_message.dart';
 import 'package:workbee_frontend/widgets/loading_state.dart';
 import 'package:workbee_frontend/widgets/error_retry_state.dart';
+import 'package:workbee_frontend/widgets/student_profile_header.dart';
 
 /// The student profile screen.
 ///
@@ -380,93 +381,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         final session = UserSessionService();
         final displayName = session.userName ?? _profile!.fullName;
         final displayLocation = session.location ?? _profile!.location ?? '';
-        return Column(
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: const BoxDecoration(
-                    color: AppColors.softBlueBg,
-                    shape: BoxShape.circle,
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    displayName.isNotEmpty
-                        ? displayName[0].toUpperCase()
-                        : 'A',
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.primaryBlue,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          displayName,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.darkText,
-                          ),
-                        ),
-                        if (_profile!.isVerified) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppColors.softBlueBg,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.verified, size: 12, color: AppColors.primaryBlue),
-                                const SizedBox(width: 4),
-                                const Text(
-                                  'Verified',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.primaryBlue,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      displayLocation,
-                      style: const TextStyle(
-                        fontSize: 13.5,
-                        color: AppColors.mutedText,
-                      ),
-                    ),
-                    if (_profile!.email.isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        _profile!.email,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppColors.mutedText,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ],
-            ),
-          ],
+        return StudentProfileHeader(
+          displayName: displayName,
+          location: displayLocation,
+          email: _profile!.email,
+          isVerified: _profile!.isVerified,
         );
       },
     );

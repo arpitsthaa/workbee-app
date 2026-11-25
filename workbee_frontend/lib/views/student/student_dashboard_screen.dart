@@ -7,6 +7,7 @@ import 'package:workbee_frontend/models/api_models.dart';
 import 'package:workbee_frontend/widgets/gig_card.dart';
 import 'package:workbee_frontend/widgets/stat_card.dart';
 import 'package:workbee_frontend/widgets/student_app_bar.dart';
+import 'package:workbee_frontend/widgets/student_profile_header.dart';
 import 'package:workbee_frontend/widgets/dashboard_skeletons.dart';
 import 'package:workbee_frontend/views/student/browse_gigs_screen.dart';
 import 'package:workbee_frontend/views/student/my_work_screen.dart';
@@ -244,34 +245,21 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                     ListenableBuilder(
                       listenable: UserSessionService(),
                       builder: (context, _) {
-                        final studentName = UserSessionService().userName ?? 'Student';
-                        return RichText(
-                          text: TextSpan(
-                            text: 'Hi, ',
-                            style: const TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.darkText,
-                            ),
-                            children: [
-                              TextSpan(
-                                text: studentName,
-                                style: const TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.darkText,
-                                ),
-                              ),
-                              const TextSpan(
-                                text: '!',
-                                style: TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.darkText,
-                                ),
-                              ),
-                            ],
-                          ),
+                        final session = UserSessionService();
+                        final studentName = session.userName ?? 'Student';
+                        final college = session.collegeUniversity ?? '';
+                        final program = session.program ?? '';
+                        final loc = session.location ?? '';
+                        final collegeProgram = college.isNotEmpty
+                            ? '$college${program.isNotEmpty ? ' · $program' : ''}'
+                            : (program.isNotEmpty ? program : '');
+                        return StudentProfileHeader(
+                          displayName: studentName,
+                          collegeProgram: collegeProgram.isNotEmpty
+                              ? collegeProgram
+                              : null,
+                          location: loc.isNotEmpty ? loc : null,
+                          isVerified: isVerified,
                         );
                       },
                     ),
@@ -356,26 +344,33 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                     _summaryLoading
                         ? StatCardSkeletons()
                         : Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Expanded(
-                                child: StatCard(
-                                  countText:
-                                      '${appsSummary['total'] ?? 0} applications',
-                                  subtitleText:
-                                      '${appsSummary['pending'] ?? 0} pending · ${appsSummary['shortlisted'] ?? 0} shortlisted',
-                                  borderColor: AppColors.borderColor,
-                                  onTap: () => _onTabTapped(2),
+                                child: SizedBox(
+                                  height: 100,
+                                  child: StatCard(
+                                    countText:
+                                        '${appsSummary['total'] ?? 0} applications',
+                                    subtitleText:
+                                        '${appsSummary['pending'] ?? 0} pending · ${appsSummary['shortlisted'] ?? 0} shortlisted',
+                                    borderColor: AppColors.borderColor,
+                                    onTap: () => _onTabTapped(2),
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
-                                child: StatCard(
-                                  countText:
-                                      '${projectsSummary['total'] ?? 0} projects',
-                                  subtitleText:
-                                      '${projectsSummary['active'] ?? 0} active · ${projectsSummary['approved'] ?? 0} approved',
-                                  borderColor: AppColors.borderColor,
-                                  onTap: () => _onTabTapped(2),
+                                child: SizedBox(
+                                  height: 100,
+                                  child: StatCard(
+                                    countText:
+                                        '${projectsSummary['total'] ?? 0} projects',
+                                    subtitleText:
+                                        '${projectsSummary['active'] ?? 0} active · ${projectsSummary['approved'] ?? 0} approved',
+                                    borderColor: AppColors.borderColor,
+                                    onTap: () => _onTabTapped(2),
+                                  ),
                                 ),
                               ),
                             ],
