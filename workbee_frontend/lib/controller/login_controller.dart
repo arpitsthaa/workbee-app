@@ -15,7 +15,8 @@ class LoginController extends ChangeNotifier {
   String? errorMessage;
   UserModel? currentUser;
 
-  static const String _loginUrl = 'https://workbee-app.onrender.com/api/users/login/';
+  static const String _baseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'https://workbee-app.onrender.com');
+  static const String _loginUrl = '$_baseUrl/api/users/login/';
 
   void togglePassword() {
     obscurePassword = !obscurePassword;
@@ -91,7 +92,7 @@ class LoginController extends ChangeNotifier {
       final profileResult = await authService.getStudentProfile();
       if (profileResult.containsKey('error')) return;
 
-      final profileData = profileResult as Map<String, dynamic>;
+      final profileData = profileResult;
       await UserSessionService().setFullProfile(
         name: user.fullName,
         id: user.id,
@@ -101,7 +102,9 @@ class LoginController extends ChangeNotifier {
         program: profileData['program'] as String?,
         semester: profileData['semester'] as String?,
         bio: profileData['bio'] as String?,
-        skills: (profileData['skills'] as List<dynamic>?)?.map((e) => e.toString()).toList(),
+        skills: (profileData['skills'] is List ? profileData['skills'] as List : <dynamic>[])
+            .map((e) => e.toString())
+            .toList(),
         portfolioUrl: profileData['portfolio_url'] as String?,
       );
     } catch (_) {

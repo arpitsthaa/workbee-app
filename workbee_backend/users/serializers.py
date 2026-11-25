@@ -33,10 +33,11 @@ class StudentRegisterSerializer(serializers.ModelSerializer):
 class BusinessRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
     confirm_password = serializers.CharField(write_only=True, min_length=8)
+    location = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
     class Meta:
         model = User
-        fields = ["id", "email", "password", "confirm_password"]
+        fields = ["id", "email", "password", "confirm_password", "location"]
 
     def validate(self, attrs):
         if attrs["password"] != attrs["confirm_password"]:
@@ -49,6 +50,7 @@ class BusinessRegisterSerializer(serializers.ModelSerializer):
             email=validated_data["email"],
             password=validated_data["password"],
             role="business",
+            location=validated_data.get("location"),
         )
 
 

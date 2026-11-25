@@ -35,7 +35,7 @@ class _PassportScreenState extends State<PassportScreen> {
       });
     } else {
       setState(() {
-        _passport = PassportResponse.fromJson(result as Map<String, dynamic>);
+        _passport = PassportResponse.fromJson(result);
         _isLoading = false;
       });
     }
@@ -217,8 +217,8 @@ class _PassportScreenState extends State<PassportScreen> {
                               const SizedBox(height: 14),
                             ],
                           );
-                        }).toList(),
-                    ],
+                        }),
+        ],
                   ),
                 ),
               ),

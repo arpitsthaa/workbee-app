@@ -69,6 +69,24 @@ class AuthService {
   String _errorMessage(Map<String, dynamic> body, int status) {
     final detail = body['detail'] ?? body['message'] ?? body['error'];
     if (detail is String && detail.isNotEmpty) return detail;
+
+    // Django REST Framework field-level validation errors:
+    // {"field": ["error message"], "field2": ["error message"]}
+    if (body.isNotEmpty) {
+      final errors = <String>[];
+      body.forEach((key, value) {
+        if (key == 'detail' || key == 'message' || key == 'error') return;
+        if (value is List) {
+          for (final v in value) {
+            errors.add('$key: ${v.toString()}');
+          }
+        } else if (value is String) {
+          errors.add('$key: $value');
+        }
+      });
+      if (errors.isNotEmpty) return errors.join('; ');
+    }
+
     return 'Server error ($status). Please try again later.';
   }
 
@@ -529,5 +547,142 @@ class AuthService {
       'applications': results[0]['applications'] ?? [],
       'projects': results[1]['projects'] ?? [],
     };
+  }
+
+  // ---- Business dashboard & gigs ----
+
+  Future<Map<String, dynamic>> getBusinessDashboard() async {
+    final url = Uri.parse('$_baseUrl/api/business/dashboard/');
+    final headers = await _authHeaders();
+
+    try {
+      final response = await http.get(url, headers: headers).timeout(
+        const Duration(seconds: 30),
+      );
+
+      final body = _decodeMap(response.body);
+
+      if (response.statusCode == 200) {
+        return body;
+      }
+      return {
+        'error': _errorMessage(body, response.statusCode),
+        'status': response.statusCode,
+      };
+    } on TimeoutException {
+      return {'error': 'Server took too long to respond.', 'status': 408};
+    } catch (e) {
+      return {'error': 'Connection error: $e', 'status': 0};
+    }
+  }
+
+  Future<Map<String, dynamic>> getBusinessGigs() async {
+    final url = Uri.parse('$_baseUrl/api/business/gigs/');
+    final headers = await _authHeaders();
+
+    try {
+      final response = await http.get(url, headers: headers).timeout(
+        const Duration(seconds: 30),
+      );
+
+      final body = _decodeList(response.body);
+
+      if (response.statusCode == 200) {
+        return {'gigs': body};
+      }
+      return {
+        'error': _errorMessage(_decodeMap(response.body), response.statusCode),
+        'status': response.statusCode,
+      };
+    } on TimeoutException {
+      return {'error': 'Server took too long to respond.', 'status': 408};
+    } catch (e) {
+      return {'error': 'Connection error: $e', 'status': 0};
+    }
+  }
+
+  Future<Map<String, dynamic>> postBusinessGig(Map<String, dynamic> data) async {
+    final url = Uri.parse('$_baseUrl/api/business/gigs/');
+    final headers = await _authHeaders();
+
+    try {
+      final response = await http
+          .post(
+        url,
+        headers: headers,
+        body: jsonEncode(data),
+      )
+          .timeout(const Duration(seconds: 30));
+
+      final body = _decodeMap(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return body;
+      }
+      return {
+        'error': _errorMessage(body, response.statusCode),
+        'status': response.statusCode,
+      };
+    } on TimeoutException {
+      return {'error': 'Server took too long to respond.', 'status': 408};
+    } catch (e) {
+      return {'error': 'Connection error: $e', 'status': 0};
+    }
+  }
+
+  Future<Map<String, dynamic>> updateBusinessGig(
+      int gigId, Map<String, dynamic> data) async {
+    final url = Uri.parse('$_baseUrl/api/business/gigs/$gigId/');
+    final headers = await _authHeaders();
+
+    try {
+      final response = await http
+          .patch(
+        url,
+        headers: headers,
+        body: jsonEncode(data),
+      )
+          .timeout(const Duration(seconds: 30));
+
+      final body = _decodeMap(response.body);
+
+      if (response.statusCode == 200) {
+        return body;
+      }
+      return {
+        'error': _errorMessage(body, response.statusCode),
+        'status': response.statusCode,
+      };
+    } on TimeoutException {
+      return {'error': 'Server took too long to respond.', 'status': 408};
+    } catch (e) {
+      return {'error': 'Connection error: $e', 'status': 0};
+    }
+  }
+
+  Future<Map<String, dynamic>> deleteBusinessGig(int gigId) async {
+    final url = Uri.parse('$_baseUrl/api/business/gigs/$gigId/');
+    final headers = await _authHeaders();
+
+    try {
+      final response = await http.delete(
+        url,
+        headers: headers,
+      ).timeout(const Duration(seconds: 30));
+
+      final body = _decodeMap(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        return body;
+      }
+      return {
+        'error': _errorMessage(body, response.statusCode),
+        'status': response.statusCode,
+      };
+    } on TimeoutException {
+      return {'error': 'Server took too long to respond.', 'status': 408};
+    } catch (e) {
+      return {'error': 'Connection error: $e', 'status': 0};
+    }
   }
 }

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:workbee_frontend/models/api_models.dart';
+import 'package:workbee_frontend/services/auth_service.dart';
 import 'package:workbee_frontend/views/business/business_gigs_screen.dart';
 
 class BusinessDashboardScreen extends StatefulWidget {
@@ -18,6 +20,9 @@ class BusinessDashboardScreen extends StatefulWidget {
 
 class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
   int _selectedIndex = 0;
+  bool _isLoading = true;
+  String? _errorMessage;
+  BusinessDashboardResponse? _dashboard;
 
   String _getInitials(String name) {
     final parts = name.trim().split(RegExp(r'\s+'));
@@ -26,16 +31,59 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
     return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
   }
 
+  Future<void> _loadDashboard() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final result = await AuthService().getBusinessDashboard();
+
+      if (result.containsKey('error')) {
+        setState(() {
+          _errorMessage = result['error'] as String?;
+          _isLoading = false;
+        });
+        return;
+      }
+
+      final dashboard = BusinessDashboardResponse.fromJson(result);
+      setState(() {
+        _dashboard = dashboard;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Connection error: $e';
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDashboard();
+  }
+
   void _openGigsScreen() {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => BusinessGigsScreen(
-          businessName: widget.businessName,
-          location: widget.location,
+          businessName: _dashboard?.businessName ?? widget.businessName,
+          location: _dashboard?.location ?? widget.location,
         ),
       ),
     );
+  }
+
+  String _skillsAndRating(GigApplication app) {
+    final skills = app.studentSkills.isNotEmpty
+        ? app.studentSkills.join(' · ')
+        : 'No skills listed';
+    return '$skills · ★ ${app.studentRating.toStringAsFixed(1)}';
   }
 
   @override
@@ -45,6 +93,19 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
     const darkText = Color(0xFF0F172A);
     const mutedText = Color(0xFF64748B);
     const borderColor = Color(0xFFE2E8F0);
+
+    if (_isLoading) return _buildLoading(context);
+    if (_errorMessage != null) {
+      return _buildError(context, _errorMessage!);
+    }
+    final dashboard = _dashboard;
+    if (dashboard == null) {
+      return _buildLoading(context);
+    }
+
+    final displayName = dashboard.businessName;
+    final displayLocation = dashboard.location;
+    final recentApplications = dashboard.recentApplications;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -109,7 +170,7 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
                         ),
                         alignment: Alignment.center,
                         child: Text(
-                          _getInitials(widget.businessName),
+                          _getInitials(displayName),
                           style: const TextStyle(
                             color: primaryBlue,
                             fontWeight: FontWeight.w700,
@@ -123,7 +184,7 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
 
                   // Business Name & Subtitle
                   Text(
-                    widget.businessName,
+                    displayName,
                     style: const TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.w800,
@@ -170,7 +231,7 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              widget.location,
+                              displayLocation,
                               style: const TextStyle(
                                 fontSize: 13,
                                 color: mutedText,
@@ -201,12 +262,12 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // 2x2 Metric Grid
-                  const Row(
+                  // 2x2 Metric Grid (live from API)
+                  Row(
                     children: [
                       Expanded(
                         child: _MetricCard(
-                          count: '1',
+                          count: dashboard.activeGigs.toString(),
                           title: 'Active Gigs',
                           subtitle: 'Open for applications',
                           borderColor: borderColor,
@@ -215,7 +276,7 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
                       SizedBox(width: 12),
                       Expanded(
                         child: _MetricCard(
-                          count: '2',
+                          count: dashboard.newApplicants.toString(),
                           title: 'New Applicants',
                           subtitle: 'Ready to review',
                           borderColor: borderColor,
@@ -224,11 +285,11 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  const Row(
+                  Row(
                     children: [
                       Expanded(
                         child: _MetricCard(
-                          count: '1',
+                          count: dashboard.projectsInProgress.toString(),
                           title: 'Projects in Progress',
                           subtitle: 'Work awaiting review',
                           borderColor: borderColor,
@@ -237,7 +298,7 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
                       SizedBox(width: 12),
                       Expanded(
                         child: _MetricCard(
-                          count: '0',
+                          count: dashboard.completedProjects.toString(),
                           title: 'Completed Projects',
                           subtitle: 'After your approval',
                           borderColor: borderColor,
@@ -248,7 +309,7 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
                   const SizedBox(height: 22),
 
                   // Recent Applications Header
-                  const Row(
+                  Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
@@ -259,51 +320,68 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
                           color: darkText,
                         ),
                       ),
-                      Row(
-                        children: [
-                          Text(
-                            'View all',
-                            style: TextStyle(
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.w700,
+                      if (recentApplications.isNotEmpty)
+                        Row(
+                          children: [
+                            Text(
+                              'View all',
+                              style: TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w700,
+                                color: primaryBlue,
+                              ),
+                            ),
+                            SizedBox(width: 4),
+                            Icon(
+                              Icons.arrow_forward,
+                              size: 15,
                               color: primaryBlue,
                             ),
-                          ),
-                          SizedBox(width: 4),
-                          Icon(
-                            Icons.arrow_forward,
-                            size: 15,
-                            color: primaryBlue,
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
                     ],
                   ),
                   const SizedBox(height: 12),
 
-                  // Grouped Recent Applications Card
+                  // Grouped Recent Applications Card (live from API)
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: borderColor),
                     ),
-                    child: const Column(
-                      children: [
-                        _RecentApplicationRow(
-                          initials: 'AS',
-                          name: 'Aayusha Shrestha',
-                          skillsAndRating: 'Canva · Social media design · ★ 4.9',
-                          gigTitle: 'Restaurant Social Media Design',
-                        ),
-                        Divider(height: 1, color: borderColor),
-                        _RecentApplicationRow(
-                          initials: 'RA',
-                          name: 'Rohan Adhikari',
-                          skillsAndRating: 'Canva · Illustration · ★ 4.7',
-                          gigTitle: 'Restaurant Social Media Design',
-                        ),
-                      ],
+                    child: Column(
+                      children: recentApplications.isEmpty
+                          ? [
+                              Padding(
+                                padding: const EdgeInsets.all(20),
+                                child: Text(
+                                  'No recent applications.',
+                                  style: TextStyle(
+                                    color: mutedText,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            ]
+                          : recentApplications
+                              .asMap()
+                              .entries
+                              .expand((entry) {
+                                  final index = entry.key;
+                                  final app = entry.value;
+                                  return [
+                                    _RecentApplicationRow(
+                                      initials: _getInitials(app.studentName),
+                                      name: app.studentName,
+                                      skillsAndRating: _skillsAndRating(app),
+                                      gigTitle: app.gigTitle,
+                                    ),
+                                    if (index < recentApplications.length - 1)
+                                      Divider(height: 1, color: borderColor),
+                                  ];
+                                })
+                              .toList(),
                     ),
                   ),
                   const SizedBox(height: 18),
@@ -375,6 +453,175 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
                   ),
                 ],
               ),
+            ),
+          ),
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Container(
+          height: 68,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            border: Border(
+              top: BorderSide(color: Color(0xFFE2E8F0), width: 1),
+            ),
+          ),
+          child: Row(
+            children: [
+              _BottomNavItem(
+                icon: Icons.home_outlined,
+                activeIcon: Icons.home_rounded,
+                label: 'Home',
+                selected: _selectedIndex == 0,
+                onTap: () => setState(() => _selectedIndex = 0),
+              ),
+              _BottomNavItem(
+                icon: Icons.work_outline_rounded,
+                activeIcon: Icons.work_rounded,
+                label: 'Gigs',
+                selected: _selectedIndex == 1,
+                onTap: _openGigsScreen,
+              ),
+              _BottomNavItem(
+                icon: Icons.assignment_outlined,
+                activeIcon: Icons.assignment_rounded,
+                label: 'Projects',
+                selected: _selectedIndex == 2,
+                onTap: () => setState(() => _selectedIndex = 2),
+              ),
+              _BottomNavItem(
+                icon: Icons.person_outline_rounded,
+                activeIcon: Icons.person_rounded,
+                label: 'Profile',
+                selected: _selectedIndex == 3,
+                onTap: () => setState(() => _selectedIndex = 3),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoading(BuildContext context) {
+    const mutedText = Color(0xFF64748B);
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text(
+                  'Loading dashboard...',
+                  style: TextStyle(color: mutedText, fontSize: 14),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Container(
+          height: 68,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            border: Border(
+              top: BorderSide(color: Color(0xFFE2E8F0), width: 1),
+            ),
+          ),
+          child: Row(
+            children: [
+              _BottomNavItem(
+                icon: Icons.home_outlined,
+                activeIcon: Icons.home_rounded,
+                label: 'Home',
+                selected: _selectedIndex == 0,
+                onTap: () => setState(() => _selectedIndex = 0),
+              ),
+              _BottomNavItem(
+                icon: Icons.work_outline_rounded,
+                activeIcon: Icons.work_rounded,
+                label: 'Gigs',
+                selected: _selectedIndex == 1,
+                onTap: _openGigsScreen,
+              ),
+              _BottomNavItem(
+                icon: Icons.assignment_outlined,
+                activeIcon: Icons.assignment_rounded,
+                label: 'Projects',
+                selected: _selectedIndex == 2,
+                onTap: () => setState(() => _selectedIndex = 2),
+              ),
+              _BottomNavItem(
+                icon: Icons.person_outline_rounded,
+                activeIcon: Icons.person_rounded,
+                label: 'Profile',
+                selected: _selectedIndex == 3,
+                onTap: () => setState(() => _selectedIndex = 3),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildError(BuildContext context, String message) {
+    const primaryBlue = Color(0xFF1D61E7);
+    const mutedText = Color(0xFF64748B);
+    const darkText = Color(0xFF0F172A);
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline,
+                    color: Colors.redAccent, size: 48),
+                const SizedBox(height: 16),
+                Text(
+                  'Failed to load dashboard',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: darkText,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: mutedText, fontSize: 13),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    onPressed: _loadDashboard,
+                    icon: const Icon(Icons.refresh, size: 18),
+                    label: const Text('Try again'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryBlue,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
