@@ -12,12 +12,14 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunSQL(
-            "ALTER TABLE marketplace_gig ADD COLUMN IF NOT EXISTS deliverables jsonb NOT NULL DEFAULT '[]'::jsonb;",
-            "ALTER TABLE marketplace_gig DROP COLUMN IF EXISTS deliverables;",
+        migrations.AddField(
+            model_name="gig",
+            name="deliverables",
+            field=models.JSONField(default=list, blank=True),
         ),
-        migrations.RunSQL(
-            "ALTER TABLE marketplace_gig ADD COLUMN IF NOT EXISTS required_skills jsonb NOT NULL DEFAULT '[]'::jsonb;",
-            "ALTER TABLE marketplace_gig DROP COLUMN IF EXISTS required_skills;",
+        migrations.AddField(
+            model_name="gig",
+            name="required_skills",
+            field=models.JSONField(default=list, blank=True),
         ),
     ]

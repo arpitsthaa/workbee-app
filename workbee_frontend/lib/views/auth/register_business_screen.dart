@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workbee_frontend/constants/app_colors.dart';
 import 'package:workbee_frontend/widgets/primary_button.dart';
 import '../../models/business_registration_model.dart';
 import '../../services/auth_service.dart';
+import '../../services/user_session_service.dart';
+import '../../views/business/business_dashboard_screen.dart';
 
 class BusinessRegistrationScreen extends StatefulWidget {
   const BusinessRegistrationScreen({super.key});
@@ -108,8 +111,28 @@ class _BusinessRegistrationScreenState
     setState(() => _isLoading = false);
 
     if (response.success) {
+      // Save token and session so the user is logged in automatically
+      final token = response.data?['token'] as String?;
+      if (token != null && token.isNotEmpty) {
+        AuthService.setCachedToken(token);
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('auth_token', token);
+        await prefs.setString('user_role', 'business');
+        await UserSessionService().setUser(
+          name: response.data?['user']?['full_name'] ?? businessName,
+          id: response.data?['user']?['id']?.toString() ?? '',
+          role: 'business',
+        );
+      }
+
       _showMessage(response.message);
-      Navigator.pop(context);
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const BusinessDashboardScreen(),
+        ),
+      );
     } else {
       _showMessage(response.message, isError: true);
     }

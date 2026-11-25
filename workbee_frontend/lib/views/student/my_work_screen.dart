@@ -7,7 +7,15 @@ import 'package:workbee_frontend/models/api_models.dart';
 import 'package:workbee_frontend/widgets/segment_tab.dart';
 import 'package:workbee_frontend/widgets/simple_item_card.dart';
 import 'package:workbee_frontend/widgets/profile_info_row.dart';
+import 'package:workbee_frontend/widgets/empty_state.dart';
+import 'package:workbee_frontend/widgets/error_retry_state.dart';
+import 'package:workbee_frontend/widgets/loading_state.dart';
 
+/// The "My work" screen showing the student's applications and projects.
+///
+/// Has two tabs: Applications (gigs the student has applied to) and
+/// Projects (gigs the student is currently working on).
+/// Also includes a form to submit work for approval.
 class MyWorkScreen extends StatefulWidget {
   const MyWorkScreen({super.key});
 
@@ -16,15 +24,28 @@ class MyWorkScreen extends StatefulWidget {
 }
 
 class MyWorkScreenState extends State<MyWorkScreen> {
+  // Service used to fetch applications and projects from the API.
   final AuthService _authService = AuthService();
+
+  // Controllers for the "submit work" form.
   final TextEditingController _linkController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
 
+  // -------------------------------------------------------------------------
+  // UI STATE
+  // -------------------------------------------------------------------------
+  // 0 = Applications tab, 1 = Projects tab
   int _activeTab = 0;
+
   bool _applicationsLoading = true;
   bool _projectsLoading = true;
+
+  // ID of the application currently being withdrawn (shows a spinner).
   int? _withdrawingAppId;
+
   String? _error;
+
+  // Data from the API.
   List<GigApplication> _applications = <GigApplication>[];
   List<Project> _projects = <Project>[];
 
@@ -41,6 +62,11 @@ class MyWorkScreenState extends State<MyWorkScreen> {
     super.dispose();
   }
 
+  // =========================================================================
+  // DATA LOADING
+  // =========================================================================
+
+  /// Loads applications and projects in parallel using the fast endpoint.
   Future<void> _loadWork() async {
     final result = await _authService.loadWorkFast();
 
@@ -68,6 +94,7 @@ class MyWorkScreenState extends State<MyWorkScreen> {
     });
   }
 
+  /// Refreshes both lists (called by pull-to-refresh).
   Future<void> _refreshWork() async {
     setState(() {
       _applications = <GigApplication>[];
@@ -79,11 +106,18 @@ class MyWorkScreenState extends State<MyWorkScreen> {
     await _loadWork();
   }
 
+  /// Public refresh method (called from the dashboard when the tab opens).
   Future<void> refresh() async {
     await _loadWork();
   }
 
+  // =========================================================================
+  // WITHDRAW APPLICATION
+  // =========================================================================
+
+  /// Lets the user withdraw a pending/shortlisted application.
   Future<void> _withdrawApplication(GigApplication app) async {
+    // Ask for confirmation first.
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -105,8 +139,10 @@ class MyWorkScreenState extends State<MyWorkScreen> {
 
     if (confirmed != true) return;
 
+    // Show a loading spinner on the withdraw button.
     setState(() => _withdrawingAppId = app.id);
 
+    // Call the API to withdraw.
     final result = await _authService.withdrawApplication(app.id);
 
     if (!mounted) return;
@@ -121,6 +157,7 @@ class MyWorkScreenState extends State<MyWorkScreen> {
         ),
       );
     } else {
+      // Success: update local session and reload the list.
       UserSessionService().markWithdrawn(app.gig);
       await _loadWork();
       if (!mounted) return;
@@ -133,351 +170,33 @@ class MyWorkScreenState extends State<MyWorkScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: (_applicationsLoading && _projectsLoading)
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-            child: Container(
-              decoration: BoxDecoration(
-                color: AppColors.inputFill,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: ListenableBuilder(
-                listenable: UserSessionService(),
-                builder: (context, _) {
-                  return Row(
-                    children: [
-                      Expanded(
-                        child: SegmentTab(
-                          label: 'Applications (${UserSessionService().appliedGigIds.length})',
-                          selected: _activeTab == 0,
-                          onTap: () {
-                            setState(() => _activeTab = 0);
-                            _loadWork();
-                          },
-                        ),
-                      ),
-                      Expanded(
-                        child: SegmentTab(
-                          label: 'Projects (${_projects.length})',
-                          selected: _activeTab == 1,
-                          onTap: () {
-                            setState(() => _activeTab = 1);
-                            _loadWork();
-                          },
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ),
-          ),
-          Expanded(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
-              child: RefreshIndicator(
-                onRefresh: _refreshWork,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(20, 22, 20, 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (_activeTab == 0) ...[
-                        const Text(
-                          'Application updates',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.darkText,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        if (_applications.isEmpty)
-                          Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.assignment_outlined,
-                                size: 48,
-                                color: Color(0xFFCBD5E1),
-                              ),
-                              const SizedBox(height: 12),
-                              const Text(
-                                'No applications yet.',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.darkText,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                'Browse gigs and apply to get started.',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: AppColors.mutedText,
-                                ),
-                              ),
-                            ],
-                          )
-                        else
-                          ..._applications.map((app) {
-                            final canWithdraw = app.status.toUpperCase() == 'PENDING' || app.status.toUpperCase() == 'SHORTLISTED';
-                            return Column(
-                              children: [
-                                SimpleItemCard(
-                                  title: app.gigTitle,
-                                  subtitle:
-                                  '${app.businessName} · Applied ${_formatDate(app.appliedAt)}',
-                                  badgeText: app.status.toUpperCase(),
-                                  badgeBg: _badgeColor(app.status),
-                                  badgeColor: const Color(0xFF1E293B),
-                                  onTap: () => _showApplicationDetails(app),
-                                  trailingAction: canWithdraw
-                                      ? _withdrawingAppId == app.id
-                                          ? const SizedBox(
-                                              width: 20,
-                                              height: 20,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                                valueColor: AlwaysStoppedAnimation<Color>(
-                                                  AppColors.errorRed,
-                                                ),
-                                              ),
-                                            )
-                                          : IconButton(
-                                              icon: const Icon(Icons.delete_outline, size: 20, color: AppColors.errorRed),
-                                              onPressed: () => _withdrawApplication(app),
-                                              tooltip: 'Withdraw application',
-                                            )
-                                      : null,
-                                ),
-                                const SizedBox(height: 12),
-                              ],
-                            );
-                          }).toList(),
-                      ] else ...[
-                        if (_projects.isEmpty)
-                          const Text(
-                            'No projects yet. Get shortlisted for a gig to start working!',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: AppColors.mutedText,
-                            ),
-                          )
-                        else ...[
-                          const Text(
-                            'Active projects',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.darkText,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          ..._projects.map((project) {
-                            return Column(
-                              children: [
-                                Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.softBlueBg,
-                                    borderRadius: BorderRadius.circular(14),
-                                    border: Border.all(color: const Color(0xFFBFDBFE)),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              project.gigTitle,
-                                              style: TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.w700,
-                                                color: AppColors.darkText,
-                                              ),
-                                            ),
-                                          ),
-                                          Text(
-                                            project.status.replaceAll('_', ' ').toUpperCase(),
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w600,
-                                              color: AppColors.primaryBlue,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        '${project.businessName} · Due ${project.deadline}',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: AppColors.mutedText,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 10),
-                                      Text(
-                                        '${formatNpr(project.budgetNpr)} · ${project.deliverables.join(', ')}',
-                                        style: TextStyle(
-                                          fontSize: 13.5,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppColors.primaryBlue,
-                                        ),
-                                      ),
-                                      if (project.submissionLink.isNotEmpty) ...[
-                                        const SizedBox(height: 10),
-                                        Text(
-                                          'Submitted: ${project.submissionLink}',
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            color: AppColors.mutedText,
-                                          ),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 14),
-                              ],
-                            );
-                          }).toList(),
-                          const SizedBox(height: 22),
-                          const Text(
-                            'Submit work',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.darkText,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            'Paste your delivery link below.',
-                            style: TextStyle(fontSize: 13, color: AppColors.mutedText),
-                          ),
-                          const SizedBox(height: 12),
-                          TextField(
-                            controller: _linkController,
-                            decoration: InputDecoration(
-                              hintText: 'Paste Canva or Google Drive link',
-                              hintStyle: const TextStyle(color: AppColors.hintText),
-                              prefixIcon: const Icon(
-                                Icons.link,
-                                color: AppColors.mutedText,
-                                size: 20,
-                              ),
-                              filled: true,
-                              fillColor: AppColors.inputFill,
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 14,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: AppColors.borderColor),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: AppColors.primaryBlue,
-                                  width: 1.5,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          TextField(
-                            controller: _noteController,
-                            maxLines: 2,
-                            decoration: InputDecoration(
-                              hintText: 'Add a short note (optional)',
-                              hintStyle: const TextStyle(color: AppColors.hintText),
-                              filled: true,
-                              fillColor: AppColors.inputFill,
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 12,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: AppColors.borderColor),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: AppColors.primaryBlue,
-                                  width: 1.5,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          SizedBox(
-                            width: double.infinity,
-                            height: 48,
-                            child: ElevatedButton(
-                              onPressed: _handleSubmitWork,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primaryBlue,
-                                foregroundColor: Colors.white,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              child: const Text(
-                                'Submit for approval',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+  // =========================================================================
+  // HELPERS
+  // =========================================================================
+
+  /// Returns the badge background color based on application status.
+  Color _badgeColor(String status) {
+    switch (status.toUpperCase()) {
+      case 'PENDING':
+        return AppColors.badgePending;
+      case 'SHORTLISTED':
+        return AppColors.badgeShortlisted;
+      case 'ACCEPTED':
+        return AppColors.badgeAccepted;
+      case 'REJECTED':
+        return AppColors.badgeRejected;
+      default:
+        return AppColors.borderColor;
+    }
   }
 
-Color _badgeColor(String status) {
-  switch (status.toUpperCase()) {
-    case 'PENDING':
-      return AppColors.badgePending;
-    case 'SHORTLISTED':
-      return AppColors.badgeShortlisted;
-    case 'ACCEPTED':
-      return AppColors.badgeAccepted;
-    case 'REJECTED':
-      return AppColors.badgeRejected;
-    default:
-      return AppColors.borderColor;
-  }
-}
-
+  /// Formats a date string for display (or returns "recently" if empty).
   String _formatDate(String? dateStr) {
     if (dateStr == null || dateStr.isEmpty) return 'recently';
     return dateStr;
   }
 
+  /// Called when the user submits a delivery link for a project.
   void _handleSubmitWork() {
     final link = _linkController.text.trim();
     if (link.isEmpty) {
@@ -497,6 +216,7 @@ Color _badgeColor(String status) {
     );
   }
 
+  /// Shows the application details bottom sheet.
   void _showApplicationDetails(GigApplication app) {
     showModalBottomSheet(
       context: context,
@@ -604,6 +324,343 @@ Color _badgeColor(String status) {
           ),
         );
       },
+    );
+  }
+
+  // =========================================================================
+  // UI BUILD
+  // =========================================================================
+
+  @override
+  Widget build(BuildContext context) {
+    // Show loading spinner while both sections are loading.
+    if (_applicationsLoading && _projectsLoading) {
+      return const LoadingState();
+    }
+
+    // Show error state if loading failed.
+    if (_error != null) {
+      return ErrorRetryState(
+        error: _error!,
+        onRetry: _loadWork,
+      );
+    }
+
+    return SafeArea(
+      child: Column(
+        children: [
+          // -----------------------------------------------------------------
+          // SEGMENT TABS (Applications | Projects)
+          // -----------------------------------------------------------------
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.inputFill,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: ListenableBuilder(
+                listenable: UserSessionService(),
+                builder: (context, _) {
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: SegmentTab(
+                          label: 'Applications (${UserSessionService().appliedGigIds.length})',
+                          selected: _activeTab == 0,
+                          onTap: () {
+                            setState(() => _activeTab = 0);
+                            _loadWork();
+                          },
+                        ),
+                      ),
+                      Expanded(
+                        child: SegmentTab(
+                          label: 'Projects (${_projects.length})',
+                          selected: _activeTab == 1,
+                          onTap: () {
+                            setState(() => _activeTab = 1);
+                            _loadWork();
+                          },
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+
+          // -----------------------------------------------------------------
+          // TAB CONTENT
+          // -----------------------------------------------------------------
+          Expanded(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: RefreshIndicator(
+                onRefresh: _refreshWork,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 22, 20, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // =====================================================
+                      // APPLICATIONS TAB
+                      // =====================================================
+                      if (_activeTab == 0) ...[
+                        const Text(
+                          'Application updates',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.darkText,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        if (_applications.isEmpty)
+                          EmptyState(
+                            icon: Icons.assignment_outlined,
+                            title: 'No applications yet.',
+                            subtitle: 'Browse gigs and apply to get started.',
+                          )
+                        else
+                          ..._applications.map((app) {
+                            final canWithdraw = app.status.toUpperCase() == 'PENDING' ||
+                                app.status.toUpperCase() == 'SHORTLISTED';
+                            return Column(
+                              children: [
+                                SimpleItemCard(
+                                  title: app.gigTitle,
+                                  subtitle:
+                                      '${app.businessName} · Applied ${_formatDate(app.appliedAt)}',
+                                  badgeText: app.status.toUpperCase(),
+                                  badgeBg: _badgeColor(app.status),
+                                  badgeColor: const Color(0xFF1E293B),
+                                  onTap: () => _showApplicationDetails(app),
+                                  trailingAction: canWithdraw
+                                      ? _withdrawingAppId == app.id
+                                          ? const SizedBox(
+                                              width: 20,
+                                              height: 20,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                valueColor: AlwaysStoppedAnimation<Color>(
+                                                  AppColors.errorRed,
+                                                ),
+                                              ),
+                                            )
+                                          : IconButton(
+                                              icon: const Icon(Icons.delete_outline,
+                                                  size: 20, color: AppColors.errorRed),
+                                              onPressed: () => _withdrawApplication(app),
+                                              tooltip: 'Withdraw application',
+                                            )
+                                      : null,
+                                ),
+                                const SizedBox(height: 12),
+                              ],
+                            );
+                          }),
+                      ] else ...[
+                        // =====================================================
+                        // PROJECTS TAB
+                        // =====================================================
+                        if (_projects.isEmpty)
+                          const Text(
+                            'No projects yet. Get shortlisted for a gig to start working!',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: AppColors.mutedText,
+                            ),
+                          )
+                        else ...[
+                          const Text(
+                            'Active projects',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.darkText,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          ..._projects.map((project) {
+                            return Column(
+                              children: [
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.softBlueBg,
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(color: const Color(0xFFBFDBFE)),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              project.gigTitle,
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w700,
+                                                color: AppColors.darkText,
+                                              ),
+                                            ),
+                                          ),
+                                          Text(
+                                            project.status.replaceAll('_', ' ').toUpperCase(),
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              color: AppColors.primaryBlue,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        '${project.businessName} · Due ${project.deadline}',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: AppColors.mutedText,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Text(
+                                        '${formatNpr(project.budgetNpr)} · ${project.deliverables.join(', ')}',
+                                        style: TextStyle(
+                                          fontSize: 13.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.primaryBlue,
+                                        ),
+                                      ),
+                                      if (project.submissionLink.isNotEmpty) ...[
+                                        const SizedBox(height: 10),
+                                        Text(
+                                          'Submitted: ${project.submissionLink}',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: AppColors.mutedText,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+                              ],
+                            );
+                          }),
+                          const SizedBox(height: 22),
+
+                          // -----------------------------------------------------------------
+                          // SUBMIT WORK FORM
+                          // -----------------------------------------------------------------
+                          const Text(
+                            'Submit work',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.darkText,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Paste your delivery link below.',
+                            style: TextStyle(fontSize: 13, color: AppColors.mutedText),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _linkController,
+                            decoration: InputDecoration(
+                              hintText: 'Paste Canva or Google Drive link',
+                              hintStyle: const TextStyle(color: AppColors.hintText),
+                              prefixIcon: const Icon(
+                                Icons.link,
+                                color: AppColors.mutedText,
+                                size: 20,
+                              ),
+                              filled: true,
+                              fillColor: AppColors.inputFill,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 14,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(color: AppColors.borderColor),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: AppColors.primaryBlue,
+                                  width: 1.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _noteController,
+                            maxLines: 2,
+                            decoration: InputDecoration(
+                              hintText: 'Add a short note (optional)',
+                              hintStyle: const TextStyle(color: AppColors.hintText),
+                              filled: true,
+                              fillColor: AppColors.inputFill,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 12,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(color: AppColors.borderColor),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: AppColors.primaryBlue,
+                                  width: 1.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 48,
+                            child: ElevatedButton(
+                              onPressed: _handleSubmitWork,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primaryBlue,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: const Text(
+                                'Submit for approval',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

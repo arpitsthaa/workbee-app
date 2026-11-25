@@ -284,3 +284,42 @@ class ProfileResponse {
     );
   }
 }
+
+class BusinessDashboardResponse {
+  final String businessName;
+  final String location;
+  final bool isVerified;
+  final int activeGigs;
+  final int newApplicants;
+  final int projectsInProgress;
+  final int completedProjects;
+  final List<GigApplication> recentApplications;
+
+  BusinessDashboardResponse({
+    required this.businessName,
+    required this.location,
+    required this.isVerified,
+    required this.activeGigs,
+    required this.newApplicants,
+    required this.projectsInProgress,
+    required this.completedProjects,
+    required this.recentApplications,
+  });
+
+  factory BusinessDashboardResponse.fromJson(Map<String, dynamic> json) {
+    final stats = json['stats'] ?? {};
+    final recentApps = (json['recent_applications'] as List<dynamic>?)
+            ?.map((a) => GigApplication.fromJson(a as Map<String, dynamic>))
+            .toList() ?? [];
+    return BusinessDashboardResponse(
+      businessName: (json['business_name'] ?? '') as String,
+      location: (json['location'] ?? '') as String,
+      isVerified: json['is_verified'] ?? false,
+      activeGigs: (stats['active_gigs'] ?? 0) as int,
+      newApplicants: (stats['new_applicants'] ?? 0) as int,
+      projectsInProgress: (stats['projects_in_progress'] ?? 0) as int,
+      completedProjects: (stats['completed_projects'] ?? 0) as int,
+      recentApplications: recentApps,
+    );
+  }
+}

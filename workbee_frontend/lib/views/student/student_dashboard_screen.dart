@@ -30,7 +30,6 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   List<Gig> _recommendedGigs = <Gig>[];
   Map<String, dynamic> _appsSummary = <String, dynamic>{};
   Map<String, dynamic> _projectsSummary = <String, dynamic>{};
-  Map<String, dynamic> _careerPassport = <String, dynamic>{};
 
   // Per-section loading state
   bool _profileLoading = true;
@@ -103,25 +102,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
       setState(() {
         _appsSummary = result['applications_summary'] ?? <String, dynamic>{};
         _projectsSummary = result['projects_summary'] ?? <String, dynamic>{};
-        _careerPassport = result['career_passport'] ?? <String, dynamic>{};
         _summaryLoading = false;
       });
     }
-  }
-
-  void _refreshDashboard() async {
-    setState(() {
-      _profile = null;
-      _recommendedGigs = <Gig>[];
-      _appsSummary = <String, dynamic>{};
-      _projectsSummary = <String, dynamic>{};
-      _careerPassport = <String, dynamic>{};
-      _profileLoading = true;
-      _gigsLoading = true;
-      _summaryLoading = true;
-      _error = null;
-    });
-    await _loadDashboard();
   }
 
   void _onTabTapped(int index) {

@@ -10,8 +10,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunSQL(
-            "ALTER TABLE marketplace_gig ADD COLUMN IF NOT EXISTS required_skills jsonb NOT NULL DEFAULT '[]'::jsonb;",
-            "ALTER TABLE marketplace_gig DROP COLUMN IF EXISTS required_skills;",
-        ),
+        # required_skills and deliverables were added in 0002_add_gig_deliverables
+        # using database-agnostic AddField operations for SQLite compatibility.
     ]
