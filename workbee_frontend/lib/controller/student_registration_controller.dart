@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/student_registration_model.dart';
 import '../services/auth_service.dart';
+import '../services/user_session_service.dart';
 
 class StudentRegistrationController extends ChangeNotifier {
   final AuthService _authService;
@@ -71,12 +72,19 @@ class StudentRegistrationController extends ChangeNotifier {
     final response = await _authService.registerStudent(request);
 
     if (response.success && response.token != null) {
-      // Hold token in memory only for this session; do not persist to prefs
+      // Save token and session so the user is logged in automatically
       AuthService.setCachedToken(response.token!);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('auth_token', response.token!);
+      await prefs.setString('user_role', 'student');
       if (response.userData != null) {
-        final prefs = await SharedPreferences.getInstance();
         await prefs.setString('user_data', jsonEncode(response.userData));
       }
+      await UserSessionService().setUser(
+        name: response.userData?['full_name'] ?? fullName,
+        id: response.userData?['id']?.toString() ?? '',
+        role: 'student',
+      );
     } else if (!response.success) {
       _errorMessage = response.message;
     }

@@ -109,6 +109,22 @@ class _BusinessGigsScreenState extends State<BusinessGigsScreen> {
     return '${year.toString().padLeft(4, '0')}-${month.toString().padLeft(2, '0')}-${day.toString().padLeft(2, '0')}';
   }
 
+  // Open Flutter's built-in date picker to select the deadline date.
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null) {
+      setState(() {
+        _deadlineController.text =
+            '${picked.year.toString().padLeft(4, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+      });
+    }
+  }
+
   (Color bgColor, Color textColor) _statusStyle(String status) {
     switch (status.toUpperCase()) {
       case 'OPEN':
@@ -380,12 +396,61 @@ class _BusinessGigsScreenState extends State<BusinessGigsScreen> {
                   ),
                   const SizedBox(height: 10),
 
-                  // Deadline
-                  _LabeledBoxField(
-                    label: 'Deadline (YYYY-MM-DD)',
-                    controller: _deadlineController,
-                    fillColor: inputFill,
-                    borderColor: borderColor,
+                  // Deadline (nicer date picker UI)
+                  GestureDetector(
+                    onTap: () => _selectDate(context),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFCBD5E1)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.calendar_today,
+                            size: 18,
+                            color: Color(0xFF64748B),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Deadline',
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    color: Color(0xFF64748B),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _deadlineController.text.isEmpty
+                                      ? 'Select a date'
+                                      : _deadlineController.text,
+                                  style: TextStyle(
+                                    fontSize: 14.5,
+                                    color: _deadlineController.text.isEmpty
+                                        ? const Color(0xFF94A3B8)
+                                        : const Color(0xFF0F172A),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(
+                            Icons.arrow_drop_down,
+                            size: 20,
+                            color: Color(0xFF64748B),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 10),
 

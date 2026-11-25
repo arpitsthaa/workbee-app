@@ -59,9 +59,19 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
 
     def validate(self, attrs):
-        user = authenticate(email=attrs["email"], password=attrs["password"])
+        email = attrs["email"]
+        password = attrs["password"]
+
+        # Check if email exists first
+        user = User.objects.filter(email__iexact=email).first()
+        if not user:
+            raise serializers.ValidationError("Email not found. Please register.")
+
+        # Check password
+        user = authenticate(email=email, password=password)
         if not user:
             raise serializers.ValidationError("Invalid email or password.")
+
         attrs["user"] = user
         return attrs
 

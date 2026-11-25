@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:workbee_frontend/constants/app_colors.dart';
 import '../../controller/student_registration_controller.dart';
+import '../../views/student/student_dashboard_screen.dart';
 
 class StudentRegistrationScreen extends StatefulWidget {
   const StudentRegistrationScreen({super.key});
@@ -49,6 +50,13 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
           content: Text('Registration and login successful!'),
           backgroundColor: AppColors.successGreenDark,
           duration: Duration(seconds: 3),
+        ),
+      );
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const StudentDashboardScreen(),
         ),
       );
     } else if (_controller.errorMessage != null) {

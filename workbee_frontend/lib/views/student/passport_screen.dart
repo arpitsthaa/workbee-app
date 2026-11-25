@@ -4,6 +4,7 @@ import 'package:workbee_frontend/services/auth_service.dart';
 import 'package:workbee_frontend/services/user_session_service.dart';
 import 'package:workbee_frontend/models/api_models.dart';
 import 'package:workbee_frontend/widgets/verified_project_card.dart';
+import 'package:workbee_frontend/widgets/student_profile_header.dart';
 
 class PassportScreen extends StatefulWidget {
   const PassportScreen({super.key});
@@ -69,7 +70,6 @@ class _PassportScreenState extends State<PassportScreen> {
       builder: (context, _) {
         final fullName = UserSessionService().userName ?? _passport?.fullName ?? 'Student';
         final collegeUniversity = UserSessionService().collegeUniversity ?? _passport?.collegeUniversity ?? '';
-        final program = UserSessionService().program ?? _passport?.program ?? '';
         final verifiedProjects = _passport?.verifiedProjectsCount ?? 0;
         final avgRating = _passport?.averageRating ?? 0.0;
         final completedProjects = _passport?.completedProjects ?? [];
@@ -82,48 +82,13 @@ class _PassportScreenState extends State<PassportScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 52,
-                            height: 52,
-                            decoration: const BoxDecoration(
-                              color: AppColors.softBlueBg,
-                              shape: BoxShape.circle,
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              fullName.isNotEmpty ? fullName[0].toUpperCase() : 'A',
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.primaryBlue,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                fullName,
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.darkText,
-                                ),
-                              ),
-                              SizedBox(height: 2),
-                              Text(
-                                '$collegeUniversity · $program',
-                                style: TextStyle(
-                                  fontSize: 13.5,
-                                  color: AppColors.mutedText,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                      StudentProfileHeader(
+                        displayName: fullName,
+                        collegeProgram:
+                            collegeUniversity.isNotEmpty
+                                ? collegeUniversity
+                                : null,
+                        isVerified: verifiedProjects > 0,
                       ),
                       const SizedBox(height: 18),
                       Container(
