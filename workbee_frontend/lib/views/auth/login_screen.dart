@@ -5,6 +5,7 @@ import 'package:workbee_frontend/widgets/primary_button.dart';
 import 'package:workbee_frontend/views/auth/register_student_screen.dart';
 import 'package:workbee_frontend/views/auth/register_business_screen.dart';
 import 'package:workbee_frontend/views/student/student_dashboard_screen.dart';
+import 'package:workbee_frontend/views/business/business_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -29,10 +30,14 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (success) {
+      final role = _controller.currentUser?.role;
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => const StudentDashboardScreen(),
+          builder: (context) => role == 'business'
+              ? const BusinessDashboardScreen()
+              : const StudentDashboardScreen(),
         ),
       );
     } else if (_controller.errorMessage != null) {
@@ -47,13 +52,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+            padding:
+            const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 460),
               child: Column(
@@ -177,7 +182,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   const Center(
                     child: Text(
                       'New to WorkBee? Register as:',
-                      style: TextStyle(fontSize: 14, color: AppColors.mutedText),
+                      style:
+                      TextStyle(fontSize: 14, color: AppColors.mutedText),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -190,7 +196,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const StudentRegistrationScreen(),
+                          builder: (context) =>
+                          const StudentRegistrationScreen(),
                         ),
                       );
                     },
@@ -205,7 +212,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const BusinessRegistrationScreen(),
+                          builder: (context) =>
+                          const BusinessRegistrationScreen(),
                         ),
                       );
                     },
@@ -275,7 +283,8 @@ class _WorkBeeInput extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.primaryBlue, width: 1.5),
+              borderSide:
+              const BorderSide(color: AppColors.primaryBlue, width: 1.5),
             ),
           ),
         ),
