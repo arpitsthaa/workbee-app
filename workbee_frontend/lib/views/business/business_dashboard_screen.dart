@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:workbee_frontend/views/business/business_gigs_screen.dart';
 
 class BusinessDashboardScreen extends StatefulWidget {
   final String businessName;
@@ -23,6 +24,18 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
     if (parts.isEmpty || parts.first.isEmpty) return 'MJ';
     if (parts.length == 1) return parts.first[0].toUpperCase();
     return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
+  }
+
+  void _openGigsScreen() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => BusinessGigsScreen(
+          businessName: widget.businessName,
+          location: widget.location,
+        ),
+      ),
+    );
   }
 
   @override
@@ -302,7 +315,7 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
                         child: SizedBox(
                           height: 48,
                           child: ElevatedButton.icon(
-                            onPressed: () {},
+                            onPressed: _openGigsScreen,
                             icon: const Icon(Icons.add, size: 18),
                             label: const Text(
                               'Post a Gig',
@@ -390,7 +403,7 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> {
                 activeIcon: Icons.work_rounded,
                 label: 'Gigs',
                 selected: _selectedIndex == 1,
-                onTap: () => setState(() => _selectedIndex = 1),
+                onTap: _openGigsScreen,
               ),
               _BottomNavItem(
                 icon: Icons.assignment_outlined,
