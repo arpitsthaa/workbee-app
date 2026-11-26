@@ -7,11 +7,13 @@ import 'package:workbee_frontend/services/token_service.dart';
 class BusinessProjectsPage extends StatefulWidget {
   final String businessName;
   final String location;
+  final bool showNavBar;
 
   const BusinessProjectsPage({
     super.key,
     this.businessName = 'My Business',
     this.location = '',
+    this.showNavBar = true,
   });
 
   @override
@@ -38,7 +40,7 @@ class _BusinessProjectsPageState extends State<BusinessProjectsPage> {
       body: SafeArea(
         child: Column(
           children: [
-            _BusinessAppBar(onAvatarTap: _logout),
+            if (widget.showNavBar) _BusinessAppBar(onAvatarTap: _logout),
             const SizedBox(height: 24),
             Expanded(
               child: Center(
@@ -74,50 +76,52 @@ class _BusinessProjectsPageState extends State<BusinessProjectsPage> {
           ],
         ),
       ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Container(
-          height: 68,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            border: Border(
-              top: BorderSide(color: Color(0xFFE2E8F0), width: 1),
-            ),
-          ),
-          child: Row(
-            children: [
-              _BottomNavItem(
-                icon: Icons.home_outlined,
-                activeIcon: Icons.home_rounded,
-                label: 'Home',
-                selected: _selectedIndex == 0,
-                onTap: () => setState(() => _selectedIndex = 0),
+      bottomNavigationBar: widget.showNavBar
+          ? SafeArea(
+              top: false,
+              child: Container(
+                height: 68,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  border: Border(
+                    top: BorderSide(color: Color(0xFFE2E8F0), width: 1),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    _BottomNavItem(
+                      icon: Icons.home_outlined,
+                      activeIcon: Icons.home_rounded,
+                      label: 'Home',
+                      selected: _selectedIndex == 0,
+                      onTap: () => setState(() => _selectedIndex = 0),
+                    ),
+                    _BottomNavItem(
+                      icon: Icons.work_outline_rounded,
+                      activeIcon: Icons.work_rounded,
+                      label: 'Gigs',
+                      selected: _selectedIndex == 1,
+                      onTap: () => setState(() => _selectedIndex = 1),
+                    ),
+                    _BottomNavItem(
+                      icon: Icons.assignment_outlined,
+                      activeIcon: Icons.assignment_rounded,
+                      label: 'Projects',
+                      selected: _selectedIndex == 2,
+                      onTap: () => setState(() => _selectedIndex = 2),
+                    ),
+                    _BottomNavItem(
+                      icon: Icons.person_outline_rounded,
+                      activeIcon: Icons.person_rounded,
+                      label: 'Profile',
+                      selected: _selectedIndex == 3,
+                      onTap: () => setState(() => _selectedIndex = 3),
+                    ),
+                  ],
+                ),
               ),
-              _BottomNavItem(
-                icon: Icons.work_outline_rounded,
-                activeIcon: Icons.work_rounded,
-                label: 'Gigs',
-                selected: _selectedIndex == 1,
-                onTap: () => setState(() => _selectedIndex = 1),
-              ),
-              _BottomNavItem(
-                icon: Icons.assignment_outlined,
-                activeIcon: Icons.assignment_rounded,
-                label: 'Projects',
-                selected: _selectedIndex == 2,
-                onTap: () => setState(() => _selectedIndex = 2),
-              ),
-              _BottomNavItem(
-                icon: Icons.person_outline_rounded,
-                activeIcon: Icons.person_rounded,
-                label: 'Profile',
-                selected: _selectedIndex == 3,
-                onTap: () => setState(() => _selectedIndex = 3),
-              ),
-            ],
-          ),
-        ),
-      ),
+            )
+          : null,
     );
   }
 
