@@ -1,257 +1,476 @@
 import 'package:flutter/material.dart';
-import 'package:workbee_frontend/constants/app_colors.dart';
-import 'package:workbee_frontend/pages/auth/login_page.dart';
-import 'package:workbee_frontend/services/token_service.dart';
 
-/// Business Projects page - placeholder for future implementation.
-class BusinessProjectsPage extends StatefulWidget {
+class BusinessProjectsScreen extends StatefulWidget {
   final String businessName;
   final String location;
   final bool showNavBar;
 
-  const BusinessProjectsPage({
+  const BusinessProjectsScreen({
     super.key,
-    this.businessName = 'My Business',
-    this.location = '',
+    this.businessName = 'Momo Junction',
+    this.location = 'Baneshwor, Kathmandu',
     this.showNavBar = true,
   });
 
   @override
-  State<BusinessProjectsPage> createState() => _BusinessProjectsPageState();
+  State<BusinessProjectsScreen> createState() => _BusinessProjectsScreenState();
 }
 
-class _BusinessProjectsPageState extends State<BusinessProjectsPage> {
-  int _selectedIndex = 2;
+class _BusinessProjectsScreenState extends State<BusinessProjectsScreen> {
+  static const _primaryBlue = Color(0xFF1D61E7);
+  static const _softBlueBg = Color(0xFFEFF6FF);
+  static const _darkText = Color(0xFF0F172A);
+  static const _mutedText = Color(0xFF64748B);
+  static const _borderColor = Color(0xFFE2E8F0);
+  static const _lightSurface = Color(0xFFF8FAFC);
 
-  Future<void> _logout() async {
-    await TokenService.clear();
-    if (!mounted) return;
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (context) => const LoginPage()),
-      (route) => false,
+  final TextEditingController _reviewController = TextEditingController();
+
+  String _aayushaStatus = 'Shortlisted';
+  String _rohanStatus = 'Pending';
+  String _projectStatus = 'In Progress';
+  int _rating = 0;
+
+  @override
+  void dispose() {
+    _reviewController.dispose();
+    super.dispose();
+  }
+
+  void _showMessage(String text) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(text)),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final bool canRate = _projectStatus == 'Approved';
+
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
-          children: [
-            if (widget.showNavBar) _BusinessAppBar(onAvatarTap: _logout),
-            const SizedBox(height: 24),
-            Expanded(
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.assignment_outlined,
-                      size: 48,
-                      color: AppColors.mutedText,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Projects',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.darkText,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'No projects yet.',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: AppColors.mutedText,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
+      appBar: widget.showNavBar
+          ? AppBar(
+        backgroundColor: Colors.white,
+        foregroundColor: _darkText,
+        elevation: 0,
+        title: const Text(
+          'Applicants & Projects',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
         ),
-      ),
-      bottomNavigationBar: widget.showNavBar
-          ? SafeArea(
-              top: false,
-              child: Container(
-                height: 68,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  border: Border(
-                    top: BorderSide(color: Color(0xFFE2E8F0), width: 1),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    _BottomNavItem(
-                      icon: Icons.home_outlined,
-                      activeIcon: Icons.home_rounded,
-                      label: 'Home',
-                      selected: _selectedIndex == 0,
-                      onTap: () => setState(() => _selectedIndex = 0),
-                    ),
-                    _BottomNavItem(
-                      icon: Icons.work_outline_rounded,
-                      activeIcon: Icons.work_rounded,
-                      label: 'Gigs',
-                      selected: _selectedIndex == 1,
-                      onTap: () => setState(() => _selectedIndex = 1),
-                    ),
-                    _BottomNavItem(
-                      icon: Icons.assignment_outlined,
-                      activeIcon: Icons.assignment_rounded,
-                      label: 'Projects',
-                      selected: _selectedIndex == 2,
-                      onTap: () => setState(() => _selectedIndex = 2),
-                    ),
-                    _BottomNavItem(
-                      icon: Icons.person_outline_rounded,
-                      activeIcon: Icons.person_rounded,
-                      label: 'Profile',
-                      selected: _selectedIndex == 3,
-                      onTap: () => setState(() => _selectedIndex = 3),
-                    ),
-                  ],
-                ),
-              ),
-            )
+      )
           : null,
-    );
-  }
-
-  Widget _BusinessAppBar({required VoidCallback onAvatarTap}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      child: Row(
-        children: [
-          Row(
-            children: [
-              Image.asset(
-                'assets/workbee_logo.png',
-                width: 44,
-                height: 44,
-                fit: BoxFit.contain,
-              ),
-              const SizedBox(width: 12),
-              const Column(
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'WorkBee',
+                    '${widget.businessName} · ${widget.location}',
+                    style: const TextStyle(fontSize: 13, color: _mutedText),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // 1. Applicants
+                  const Text(
+                    '1. Review Applicants',
                     style: TextStyle(
-                      fontSize: 20,
+                      fontSize: 16,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.darkText,
-                      height: 1.1,
+                      color: _darkText,
                     ),
                   ),
-                  Text(
-                    'Bee Busy Be Paid',
+                  const SizedBox(height: 10),
+                  _ApplicantCard(
+                    initials: 'AS',
+                    name: 'Aayusha Shrestha',
+                    subtitle: 'Canva · Social media design · ★ 4.9/5',
+                    status: _aayushaStatus,
+                    onAccept: () {
+                      setState(() => _aayushaStatus = 'Accepted');
+                      _showMessage('Accepted Aayusha Shrestha');
+                    },
+                    onReject: () {
+                      setState(() => _aayushaStatus = 'Rejected');
+                      _showMessage('Rejected Aayusha Shrestha');
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  _ApplicantCard(
+                    initials: 'RA',
+                    name: 'Rohan Adhikari',
+                    subtitle: 'Canva · Illustration · ★ 4.7/5',
+                    status: _rohanStatus,
+                    onAccept: () {
+                      setState(() => _rohanStatus = 'Accepted');
+                      _showMessage('Accepted Rohan Adhikari');
+                    },
+                    onReject: () {
+                      setState(() => _rohanStatus = 'Rejected');
+                      _showMessage('Rejected Rohan Adhikari');
+                    },
+                  ),
+                  const SizedBox(height: 24),
+
+                  // 2. Active Project
+                  const Text(
+                    '2. Active Project',
                     style: TextStyle(
-                      fontSize: 12,
-                      color: AppColors.mutedText,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: _darkText,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: _borderColor),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                'Festive Menu Flyer',
+                                style: TextStyle(
+                                  fontSize: 15.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: _darkText,
+                                ),
+                              ),
+                            ),
+                            _StatusPill(
+                              label: _projectStatus,
+                              isHighlight: _projectStatus == 'Approved',
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Suman Karki · NPR 1,500 · menu-flyer-v1.pdf',
+                          style: TextStyle(fontSize: 12.5, color: _mutedText),
+                        ),
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: SizedBox(
+                                height: 42,
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    setState(() => _projectStatus = 'Approved');
+                                    _showMessage('Project approved');
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: _primaryBlue,
+                                    foregroundColor: Colors.white,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                  child: const Text('Approve Work'),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: SizedBox(
+                                height: 42,
+                                child: OutlinedButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      _projectStatus = 'Changes Requested';
+                                    });
+                                    _showMessage('Requested changes');
+                                  },
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: _primaryBlue,
+                                    side: const BorderSide(color: _borderColor),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                  child: const Text('Request Changes'),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // 3. Rate Student
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        '3. Rate Student',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: _darkText,
+                        ),
+                      ),
+                      Text(
+                        canRate ? 'Ready' : 'Approve work first',
+                        style: const TextStyle(fontSize: 12, color: _mutedText),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: _borderColor),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: List.generate(5, (index) {
+                            final starValue = index + 1;
+                            return IconButton(
+                              visualDensity: VisualDensity.compact,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(
+                                minWidth: 34,
+                                minHeight: 34,
+                              ),
+                              onPressed: canRate
+                                  ? () => setState(() => _rating = starValue)
+                                  : null,
+                              icon: Icon(
+                                starValue <= _rating
+                                    ? Icons.star
+                                    : Icons.star_border,
+                                color: starValue <= _rating
+                                    ? const Color(0xFFF59E0B)
+                                    : _mutedText,
+                              ),
+                            );
+                          }),
+                        ),
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: _reviewController,
+                          enabled: canRate,
+                          decoration: InputDecoration(
+                            hintText: 'Write a short review...',
+                            filled: true,
+                            fillColor: _lightSurface,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 12,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: const BorderSide(color: _borderColor),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: const BorderSide(color: _borderColor),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 42,
+                          child: ElevatedButton(
+                            onPressed: canRate
+                                ? () {
+                              _reviewController.clear();
+                              _showMessage(
+                                'Review submitted ($_rating/5 stars)',
+                              );
+                            }
+                                : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _primaryBlue,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            child: const Text('Submit Review'),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ApplicantCard extends StatelessWidget {
+  final String initials;
+  final String name;
+  final String subtitle;
+  final String status;
+  final VoidCallback onAccept;
+  final VoidCallback onReject;
+
+  const _ApplicantCard({
+    required this.initials,
+    required this.name,
+    required this.subtitle,
+    required this.status,
+    required this.onAccept,
+    required this.onReject,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const primaryBlue = Color(0xFF1D61E7);
+    const softBlueBg = Color(0xFFEFF6FF);
+    const darkText = Color(0xFF0F172A);
+    const mutedText = Color(0xFF64748B);
+    const borderColor = Color(0xFFE2E8F0);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: borderColor),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: softBlueBg,
+                child: Text(
+                  initials,
+                  style: const TextStyle(
+                    color: primaryBlue,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: darkText,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(fontSize: 12, color: mutedText),
+                    ),
+                  ],
+                ),
+              ),
+              _StatusPill(
+                label: status,
+                isHighlight: status == 'Accepted' || status == 'Shortlisted',
+              ),
             ],
           ),
-          const Spacer(),
-          IconButton(
-            onPressed: onAvatarTap,
-            icon: _DashboardAvatar(
-              businessName: widget.businessName,
-              isVerified: false,
-            ),
-            splashRadius: 24,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 38,
+                  child: ElevatedButton(
+                    onPressed: onAccept,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryBlue,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: const Text('Accept'),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: SizedBox(
+                  height: 38,
+                  child: OutlinedButton(
+                    onPressed: onReject,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: mutedText,
+                      side: const BorderSide(color: borderColor),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: const Text('Reject'),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
-
-  Widget _DashboardAvatar({
-    required String businessName,
-    required bool isVerified,
-  }) {
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: const BoxDecoration(
-        color: AppColors.softBlueBg,
-        shape: BoxShape.circle,
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        businessName.isNotEmpty ? businessName[0].toUpperCase() : 'M',
-        style: const TextStyle(
-          color: AppColors.primaryBlue,
-          fontWeight: FontWeight.w700,
-          fontSize: 14,
-        ),
-      ),
-    );
-  }
-
 }
 
-class _BottomNavItem extends StatelessWidget {
-  final IconData icon;
-  final IconData activeIcon;
+class _StatusPill extends StatelessWidget {
   final String label;
-  final bool selected;
-  final VoidCallback onTap;
+  final bool isHighlight;
 
-  const _BottomNavItem({
-    required this.icon,
-    required this.activeIcon,
+  const _StatusPill({
     required this.label,
-    required this.selected,
-    required this.onTap,
+    required this.isHighlight,
   });
 
   @override
   Widget build(BuildContext context) {
-    const blue = Color(0xFF2563EB);
-
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 38,
-              height: 32,
-              decoration: BoxDecoration(
-                color: selected ? const Color(0xFFEFF6FF) : Colors.transparent,
-                borderRadius: BorderRadius.circular(9),
-              ),
-              alignment: Alignment.center,
-              child: Icon(
-                selected ? activeIcon : icon,
-                size: 22,
-                color: selected ? blue : const Color(0xFF64748B),
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10.5,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                color: selected ? blue : const Color(0xFF64748B),
-              ),
-            ),
-          ],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: isHighlight ? const Color(0xFFEFF6FF) : const Color(0xFFFEF3C7),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11.5,
+          fontWeight: FontWeight.w700,
+          color:
+          isHighlight ? const Color(0xFF1D61E7) : const Color(0xFFB45309),
         ),
       ),
     );
