@@ -122,7 +122,7 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
                     location: displayLocation,
                     showNavBar: false,
                   ),
-                  BusinessProjectsPage(
+                  BusinessProjectsScreen(
                     businessName: displayName,
                     location: displayLocation,
                     showNavBar: false,
@@ -143,95 +143,98 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
   }
 
   Widget _buildHomeBody(
-    Color primaryBlue,
-    Color softBlueBg,
-    Color darkText,
-    Color mutedText,
-    Color borderColor,
-    BusinessDashboardResponse dashboard,
-    String displayName,
-    String displayLocation,
-    List<GigApplication> recentApplications,
-  ) {
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 480),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 16, 24, 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Hi $displayName',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-                color: darkText,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Your business workspace',
-              style: TextStyle(fontSize: 14.5, color: mutedText),
-            ),
-            const SizedBox(height: 12),
-            if (dashboard.isVerified)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: softBlueBg,
-                  borderRadius: BorderRadius.circular(8),
+      Color primaryBlue,
+      Color softBlueBg,
+      Color darkText,
+      Color mutedText,
+      Color borderColor,
+      BusinessDashboardResponse dashboard,
+      String displayName,
+      String displayLocation,
+      List<GigApplication> recentApplications,
+      ) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 480),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 16, 24, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Hi $displayName',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                  color: darkText,
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.check,
-                      size: 14,
-                      color: primaryBlue,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Verified business',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Your business workspace',
+                style: TextStyle(fontSize: 14.5, color: mutedText),
+              ),
+              const SizedBox(height: 12),
+              if (dashboard.isVerified)
+                Container(
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: softBlueBg,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.check,
+                        size: 14,
                         color: primaryBlue,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 4),
+                      Text(
+                        'Verified business',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: primaryBlue,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+              const SizedBox(height: 20),
+              _buildActiveGigsCard(primaryBlue, softBlueBg, darkText, mutedText,
+                  borderColor, dashboard),
+              const SizedBox(height: 22),
+              _buildMetricGrid(
+                primaryBlue,
+                softBlueBg,
+                darkText,
+                mutedText,
+                borderColor,
+                dashboard,
               ),
-            const SizedBox(height: 20),
-            _buildActiveGigsCard(primaryBlue, softBlueBg, darkText, mutedText,
-                borderColor, dashboard),
-            const SizedBox(height: 22),
-            _buildMetricGrid(
-              primaryBlue,
-              softBlueBg,
-              darkText,
-              mutedText,
-              borderColor,
-              dashboard,
-            ),
-            const SizedBox(height: 22),
-            _buildRecentApplicationsHeader(
-              primaryBlue,
-              darkText,
-              mutedText,
-              recentApplications,
-            ),
-            const SizedBox(height: 12),
-            _buildRecentApplicationsCard(
-              borderColor,
-              mutedText,
-              recentApplications,
-              _getInitials,
-              _skillsAndRating,
-            ),
-            const SizedBox(height: 18),
-            _buildActionButtons(primaryBlue),
-            const SizedBox(height: 30),
-          ],
+              const SizedBox(height: 22),
+              _buildRecentApplicationsHeader(
+                primaryBlue,
+                darkText,
+                mutedText,
+                recentApplications,
+              ),
+              const SizedBox(height: 12),
+              _buildRecentApplicationsCard(
+                borderColor,
+                mutedText,
+                recentApplications,
+                _getInitials,
+                _skillsAndRating,
+              ),
+              const SizedBox(height: 18),
+              _buildActionButtons(primaryBlue),
+              const SizedBox(height: 30),
+            ],
+          ),
         ),
       ),
     );
@@ -364,13 +367,13 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
   }
 
   Widget _buildActiveGigsCard(
-    Color primaryBlue,
-    Color softBlueBg,
-    Color darkText,
-    Color mutedText,
-    Color borderColor,
-    BusinessDashboardResponse dashboard,
-  ) {
+      Color primaryBlue,
+      Color softBlueBg,
+      Color darkText,
+      Color mutedText,
+      Color borderColor,
+      BusinessDashboardResponse dashboard,
+      ) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -462,13 +465,13 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
   }
 
   Widget _buildMetricGrid(
-    Color primaryBlue,
-    Color softBlueBg,
-    Color darkText,
-    Color mutedText,
-    Color borderColor,
-    BusinessDashboardResponse dashboard,
-  ) {
+      Color primaryBlue,
+      Color softBlueBg,
+      Color darkText,
+      Color mutedText,
+      Color borderColor,
+      BusinessDashboardResponse dashboard,
+      ) {
     return Column(
       children: [
         Row(
@@ -494,7 +497,7 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
                 borderColor: borderColor,
               ),
             ),
-            SizedBox(width: 12),
+            const SizedBox(width: 12),
             Expanded(
               child: _MetricCard(
                 count: dashboard.completedProjects.toString(),
@@ -510,11 +513,11 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
   }
 
   Widget _buildRecentApplicationsHeader(
-    Color primaryBlue,
-    Color darkText,
-    Color mutedText,
-    List<GigApplication> recentApplications,
-  ) {
+      Color primaryBlue,
+      Color darkText,
+      Color mutedText,
+      List<GigApplication> recentApplications,
+      ) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -527,35 +530,38 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
           ),
         ),
         if (recentApplications.isNotEmpty)
-          Row(
-            children: [
-              Text(
-                'View all',
-                style: TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w700,
+          GestureDetector(
+            onTap: () => setState(() => _selectedIndex = 2),
+            child: Row(
+              children: [
+                Text(
+                  'View all',
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                    color: primaryBlue,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.arrow_forward,
+                  size: 15,
                   color: primaryBlue,
                 ),
-              ),
-              SizedBox(width: 4),
-              Icon(
-                Icons.arrow_forward,
-                size: 15,
-                color: primaryBlue,
-              ),
-            ],
+              ],
+            ),
           ),
       ],
     );
   }
 
   Widget _buildRecentApplicationsCard(
-    Color borderColor,
-    Color mutedText,
-    List<GigApplication> recentApplications,
-    String Function(String) getInitials,
-    String Function(GigApplication) skillsAndRating,
-  ) {
+      Color borderColor,
+      Color mutedText,
+      List<GigApplication> recentApplications,
+      String Function(String) getInitials,
+      String Function(GigApplication) skillsAndRating,
+      ) {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -566,35 +572,35 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
       child: Column(
         children: recentApplications.isEmpty
             ? [
-                Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Text(
-                    'No recent applications.',
-                    style: TextStyle(
-                      color: mutedText,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-              ]
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Text(
+              'No recent applications.',
+              style: TextStyle(
+                color: mutedText,
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ]
             : recentApplications
-                .asMap()
-                .entries
-                .expand((entry) {
-                    final index = entry.key;
-                    final app = entry.value;
-                    return [
-                      _RecentApplicationRow(
-                        initials: getInitials(app.studentName),
-                        name: app.studentName,
-                        skillsAndRating: skillsAndRating(app),
-                        gigTitle: app.gigTitle,
-                      ),
-                      if (index < recentApplications.length - 1)
-                        Divider(height: 1, color: borderColor),
-                    ];
-                  })
-                .toList(),
+            .asMap()
+            .entries
+            .expand((entry) {
+          final index = entry.key;
+          final app = entry.value;
+          return [
+            _RecentApplicationRow(
+              initials: getInitials(app.studentName),
+              name: app.studentName,
+              skillsAndRating: skillsAndRating(app),
+              gigTitle: app.gigTitle,
+            ),
+            if (index < recentApplications.length - 1)
+              Divider(height: 1, color: borderColor),
+          ];
+        })
+            .toList(),
       ),
     );
   }
@@ -631,7 +637,7 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
           child: SizedBox(
             height: 48,
             child: OutlinedButton(
-              onPressed: () {},
+              onPressed: () => setState(() => _selectedIndex = 2),
               style: OutlinedButton.styleFrom(
                 foregroundColor: primaryBlue,
                 side: const BorderSide(color: Color(0xFFCBD5E1)),
@@ -742,7 +748,7 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (context) => const LoginPage()),
-      (route) => false,
+          (route) => false,
     );
   }
 }
@@ -926,9 +932,7 @@ class _BottomNavItem extends StatelessWidget {
               width: 38,
               height: 32,
               decoration: BoxDecoration(
-                color: selected
-                    ? const Color(0xFFEFF6FF)
-                    : Colors.transparent,
+                color: selected ? const Color(0xFFEFF6FF) : Colors.transparent,
                 borderRadius: BorderRadius.circular(9),
               ),
               alignment: Alignment.center,
@@ -943,8 +947,7 @@ class _BottomNavItem extends StatelessWidget {
               label,
               style: TextStyle(
                 fontSize: 10.5,
-                fontWeight:
-                    selected ? FontWeight.w600 : FontWeight.w400,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
                 color: selected ? blue : const Color(0xFF64748B),
               ),
             ),
