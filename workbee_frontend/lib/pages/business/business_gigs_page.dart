@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:workbee_frontend/clients/business_client.dart';
+import 'package:workbee_frontend/helpers/alert_helper.dart';
 import 'package:workbee_frontend/models/api_models.dart';
-import 'package:workbee_frontend/services/auth_service.dart';
 
-class BusinessGigsScreen extends StatefulWidget {
+/// Business gigs page for posting and managing gigs.
+class BusinessGigsPage extends StatefulWidget {
   final String businessName;
   final String location;
 
-  const BusinessGigsScreen({
+  const BusinessGigsPage({
     super.key,
     this.businessName = 'My Business',
     this.location = '',
   });
 
   @override
-  State<BusinessGigsScreen> createState() => _BusinessGigsScreenState();
+  State<BusinessGigsPage> createState() => _BusinessGigsPageState();
 }
 
-class _BusinessGigsScreenState extends State<BusinessGigsScreen> {
+class _BusinessGigsPageState extends State<BusinessGigsPage> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _skillsController = TextEditingController();
@@ -55,7 +57,7 @@ class _BusinessGigsScreenState extends State<BusinessGigsScreen> {
     });
 
     try {
-      final result = await AuthService().getBusinessGigs();
+      final result = await BusinessClient.getGigs();
 
       if (result.containsKey('error')) {
         setState(() {
@@ -89,13 +91,11 @@ class _BusinessGigsScreenState extends State<BusinessGigsScreen> {
         .toList();
   }
 
-  // Convert common date inputs (YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY, etc.) to YYYY-MM-DD.
   String? _formatDeadline(String raw) {
     final trimmed = raw.trim();
     final reg = RegExp(r'^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$');
     final match = reg.firstMatch(trimmed);
     if (match == null) {
-      // Already YYYY-MM-DD?
       final iso = RegExp(r'^(\d{4})-(\d{1,2})-(\d{1,2})$');
       final isoMatch = iso.firstMatch(trimmed);
       if (isoMatch != null) return trimmed;
@@ -104,12 +104,10 @@ class _BusinessGigsScreenState extends State<BusinessGigsScreen> {
     final day = int.parse(match.group(1)!);
     final month = int.parse(match.group(2)!);
     final year = int.parse(match.group(3)!);
-    // Validate ranges
     if (day < 1 || day > 31 || month < 1 || month > 12) return null;
     return '${year.toString().padLeft(4, '0')}-${month.toString().padLeft(2, '0')}-${day.toString().padLeft(2, '0')}';
   }
 
-  // Open Flutter's built-in date picker to select the deadline date.
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -147,34 +145,33 @@ class _BusinessGigsScreenState extends State<BusinessGigsScreen> {
     final locationRaw = _locationController.text.trim();
 
     if (title.isEmpty) {
-      setState(() => _errorMessage = 'Please enter a gig title.');
+      showAlert(context, message: 'Please enter a gig title.', isError: true);
       return;
     }
     if (description.isEmpty) {
-      setState(() => _errorMessage = 'Please enter a description.');
+      showAlert(context, message: 'Please enter a description.', isError: true);
       return;
     }
     if (skillsRaw.isEmpty) {
-      setState(() => _errorMessage = 'Please enter required skills.');
+      showAlert(context, message: 'Please enter required skills.', isError: true);
       return;
     }
     if (locationRaw.isEmpty) {
-      setState(() => _errorMessage = 'Please enter a location.');
+      showAlert(context, message: 'Please enter a location.', isError: true);
       return;
     }
     if (budgetRaw.isEmpty || int.tryParse(budgetRaw) == null) {
-      setState(() => _errorMessage = 'Please enter a valid budget (NPR).');
+      showAlert(context, message: 'Please enter a valid budget (NPR).', isError: true);
       return;
     }
     if (deadlineRaw.isEmpty) {
-      setState(() => _errorMessage = 'Please enter a deadline.');
+      showAlert(context, message: 'Please enter a deadline.', isError: true);
       return;
     }
 
     final deadline = _formatDeadline(deadlineRaw);
     if (deadline == null) {
-      setState(() =>
-          _errorMessage = 'Invalid deadline date. Use YYYY-MM-DD (e.g. 2026-10-23).');
+      showAlert(context, message: 'Invalid deadline date. Use YYYY-MM-DD (e.g. 2026-10-23).', isError: true);
       return;
     }
 
@@ -185,7 +182,7 @@ class _BusinessGigsScreenState extends State<BusinessGigsScreen> {
     });
 
     try {
-      final result = await AuthService().postBusinessGig({
+      final result = await BusinessClient.postGig({
         'title': title,
         'description': description,
         'required_skills': _parseSkills(skillsRaw),
@@ -212,7 +209,6 @@ class _BusinessGigsScreenState extends State<BusinessGigsScreen> {
         _errorMessage = null;
       });
 
-      // Clear form
       _titleController.clear();
       _descriptionController.clear();
       _skillsController.clear();
@@ -220,7 +216,6 @@ class _BusinessGigsScreenState extends State<BusinessGigsScreen> {
       _deadlineController.clear();
       _locationController.clear();
 
-      // Refresh gig list
       _loadGigs();
     } catch (e) {
       setState(() {
@@ -238,7 +233,6 @@ class _BusinessGigsScreenState extends State<BusinessGigsScreen> {
     const borderColor = Color(0xFFE2E8F0);
     const inputFill = Color(0xFFF8FAFC);
 
-    // Loading state
     if (_isLoading && _gigs.isEmpty) {
       return Scaffold(
         backgroundColor: Colors.white,
@@ -262,7 +256,6 @@ class _BusinessGigsScreenState extends State<BusinessGigsScreen> {
       );
     }
 
-    // Error state (with gigs possibly empty)
     if (_errorMessage != null && _gigs.isEmpty) {
       return Scaffold(
         backgroundColor: Colors.white,
@@ -328,7 +321,6 @@ class _BusinessGigsScreenState extends State<BusinessGigsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header
                   const Text(
                     'My Gigs',
                     style: TextStyle(
@@ -347,7 +339,6 @@ class _BusinessGigsScreenState extends State<BusinessGigsScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Section Title
                   const Text(
                     'Post New Gig',
                     style: TextStyle(
@@ -358,7 +349,6 @@ class _BusinessGigsScreenState extends State<BusinessGigsScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  // Gig Title
                   _LabeledBoxField(
                     label: 'Gig title',
                     controller: _titleController,
@@ -367,7 +357,6 @@ class _BusinessGigsScreenState extends State<BusinessGigsScreen> {
                   ),
                   const SizedBox(height: 10),
 
-                  // Description
                   _LabeledBoxField(
                     label: 'Description',
                     controller: _descriptionController,
@@ -377,7 +366,6 @@ class _BusinessGigsScreenState extends State<BusinessGigsScreen> {
                   ),
                   const SizedBox(height: 10),
 
-                  // Required Skills
                   _LabeledBoxField(
                     label: 'Required skills',
                     controller: _skillsController,
@@ -386,7 +374,6 @@ class _BusinessGigsScreenState extends State<BusinessGigsScreen> {
                   ),
                   const SizedBox(height: 10),
 
-                  // Budget (NPR)
                   _LabeledBoxField(
                     label: 'Budget (NPR)',
                     controller: _budgetController,
@@ -396,7 +383,6 @@ class _BusinessGigsScreenState extends State<BusinessGigsScreen> {
                   ),
                   const SizedBox(height: 10),
 
-                  // Deadline (nicer date picker UI)
                   GestureDetector(
                     onTap: () => _selectDate(context),
                     child: Container(
@@ -454,7 +440,6 @@ class _BusinessGigsScreenState extends State<BusinessGigsScreen> {
                   ),
                   const SizedBox(height: 10),
 
-                  // Location
                   _LabeledBoxField(
                     label: 'Location',
                     controller: _locationController,
@@ -463,7 +448,6 @@ class _BusinessGigsScreenState extends State<BusinessGigsScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Post result message
                   if (_postSuccessMessage != null)
                     Container(
                       width: double.infinity,
@@ -494,7 +478,6 @@ class _BusinessGigsScreenState extends State<BusinessGigsScreen> {
                   if (_postSuccessMessage != null)
                     const SizedBox(height: 12),
 
-                  // Error message
                   if (_errorMessage != null)
                     Container(
                       width: double.infinity,
@@ -525,7 +508,6 @@ class _BusinessGigsScreenState extends State<BusinessGigsScreen> {
                   if (_errorMessage != null)
                     const SizedBox(height: 12),
 
-                  // Post New Gig Button
                   SizedBox(
                     width: double.infinity,
                     height: 50,
@@ -545,8 +527,7 @@ class _BusinessGigsScreenState extends State<BusinessGigsScreen> {
                               height: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor:
-                                    AlwaysStoppedAnimation(Colors.white),
+                                valueColor: AlwaysStoppedAnimation(Colors.white),
                               ),
                             )
                           : const Text(
@@ -560,7 +541,6 @@ class _BusinessGigsScreenState extends State<BusinessGigsScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Existing Gigs Header
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -583,7 +563,6 @@ class _BusinessGigsScreenState extends State<BusinessGigsScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  // Existing gigs list (live from API)
                   if (_gigs.isEmpty)
                     Container(
                       width: double.infinity,
@@ -887,7 +866,7 @@ class _BottomNavItem extends StatelessWidget {
     const blue = Color(0xFF2563EB);
 
     return Expanded(
-      child: InkWell(
+      child: GestureDetector(
         onTap: onTap,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

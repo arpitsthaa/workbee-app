@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:workbee_frontend/constants/app_colors.dart';
-import 'package:workbee_frontend/services/user_session_service.dart';
+import 'package:workbee_frontend/services/token_service.dart';
 
 class DashboardAvatar extends StatelessWidget {
   final String studentName;
@@ -42,9 +42,9 @@ class StudentAppBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: UserSessionService(),
+      listenable: TokenService(),
       builder: (context, _) {
-        final studentName = UserSessionService().userName ?? '';
+        final studentName = TokenService.getNameSync() ?? '';
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           child: Row(

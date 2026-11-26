@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:workbee_frontend/constants/app_colors.dart';
+import '../constants/app_colors.dart';
 
 /// Shows a consistent success or error message at the bottom of the screen.
 ///
-/// Beginners: call `showWorkBeeMessage(context, 'Saved!')` or
-/// `showWorkBeeMessage(context, 'Something went wrong', isError: true)`
+/// Beginners: call `showAlert(context, 'Saved!')` or
+/// `showAlert(context, 'Something went wrong', isError: true)`
 /// instead of writing ScaffoldMessenger + SnackBar everywhere.
-void showWorkBeeMessage(
+void showAlert(
   BuildContext context, {
   required String message,
   bool isError = false,

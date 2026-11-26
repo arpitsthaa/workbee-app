@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:workbee_frontend/constants/app_colors.dart';
-import 'package:workbee_frontend/services/user_session_service.dart';
+import 'package:workbee_frontend/services/token_service.dart';
 
 /// Consistent student profile header (avatar + name + college) used across all 5 student screens.
 class StudentProfileHeader extends StatelessWidget {
@@ -23,12 +23,11 @@ class StudentProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final session = UserSessionService();
-    final name = displayName ?? session.userName ?? 'Student';
-    final college = collegeProgram ?? session.collegeUniversity ?? '';
-    final program = session.program ?? '';
-    final semester = session.semester ?? '';
-    final loc = location ?? session.location ?? '';
+    final name = displayName ?? TokenService.getNameSync() ?? 'Student';
+    final college = collegeProgram ?? TokenService.getCollegeUniversitySync() ?? '';
+    final program = TokenService.getProgramSync() ?? '';
+    final semester = TokenService.getSemesterSync() ?? '';
+    final loc = location ?? TokenService.getLocationSync() ?? '';
     final em = email ?? '';
 
     final initials = name.isNotEmpty ? name[0].toUpperCase() : 'A';
@@ -56,7 +55,7 @@ class StudentProfileHeader extends StatelessWidget {
               child: Text(
                 initials,
                 style: TextStyle(
-                  fontSize: avatarSize * 0.38, // proportional to avatar size
+                  fontSize: avatarSize * 0.38,
                   fontWeight: FontWeight.w800,
                   color: AppColors.primaryBlue,
                 ),

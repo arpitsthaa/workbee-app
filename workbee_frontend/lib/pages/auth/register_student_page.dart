@@ -1,30 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:workbee_frontend/clients/auth_client.dart';
 import 'package:workbee_frontend/constants/app_colors.dart';
-import '../../controller/student_registration_controller.dart';
-import '../../views/student/student_dashboard_screen.dart';
+import 'package:workbee_frontend/helpers/alert_helper.dart';
+import 'package:workbee_frontend/pages/student/student_dashboard_page.dart';
+import 'package:workbee_frontend/services/token_service.dart';
 
-class StudentRegistrationScreen extends StatefulWidget {
-  const StudentRegistrationScreen({super.key});
+/// Student registration page. Collects full name, email, password, and college/university.
+class RegisterStudentPage extends StatefulWidget {
+  const RegisterStudentPage({super.key});
 
   @override
-  State<StudentRegistrationScreen> createState() =>
-      _StudentRegistrationScreenState();
+  State<RegisterStudentPage> createState() => _RegisterStudentPageState();
 }
 
-class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
-  final StudentRegistrationController _controller =
-  StudentRegistrationController();
-
-  final TextEditingController _fullNameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _collegeController = TextEditingController();
+class _RegisterStudentPageState extends State<RegisterStudentPage> {
+  final _fullNameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _collegeController = TextEditingController();
 
   bool _obscurePassword = true;
+  bool _isLoading = false;
 
   @override
   void dispose() {
-    _controller.dispose();
     _fullNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -35,44 +34,68 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
   Future<void> _onRegisterPressed() async {
     FocusScope.of(context).unfocus();
 
-    final success = await _controller.registerAndLoginStudent(
-      fullName: _fullNameController.text,
-      email: _emailController.text,
-      password: _passwordController.text,
-      college: _collegeController.text,
-    );
+    final fullName = _fullNameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+    final college = _collegeController.text.trim();
+
+    if (fullName.isEmpty) {
+      showAlert(context, message: 'Please enter your full name.', isError: true);
+      return;
+    }
+    if (email.isEmpty || !email.contains('@')) {
+      showAlert(context, message: 'Please enter a valid email address.', isError: true);
+      return;
+    }
+    if (password.length < 8) {
+      showAlert(context, message: 'Password must be at least 8 characters long.', isError: true);
+      return;
+    }
+    if (college.isEmpty) {
+      showAlert(context, message: 'Please enter your college or university.', isError: true);
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    final result = await AuthClient.registerStudent({
+      'full_name': fullName,
+      'email': email,
+      'password': password,
+      'college_university': college,
+    });
 
     if (!mounted) return;
 
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Registration and login successful!'),
-          backgroundColor: AppColors.successGreenDark,
-          duration: Duration(seconds: 3),
-        ),
-      );
-      if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (result['success'] == true) {
+      showAlert(context, message: result['message'] ?? 'Registration and login successful!');
+      final token = result['token'] as String?;
+      if (token != null && token.isNotEmpty) {
+        await AuthClient.saveToken(token);
+        await TokenService.saveRole('student');
+        final userData = result['user'];
+        if (userData is Map) {
+          await TokenService.saveUser(
+            name: userData['full_name']?.toString() ?? '',
+            id: userData['id']?.toString() ?? '',
+            role: 'student',
+          );
+        }
+      }
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => const StudentDashboardScreen(),
+          builder: (context) => const StudentDashboardPage(),
         ),
       );
-    } else if (_controller.errorMessage != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_controller.errorMessage!),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+    } else {
+      showAlert(context, message: result['message'] ?? 'Registration failed.', isError: true);
     }
   }
 
-  InputDecoration _buildInputDecoration({
-    required String hintText,
-    Widget? suffixIcon,
-  }) {
+  InputDecoration _buildInputDecoration({required String hintText, Widget? suffixIcon}) {
     return InputDecoration(
       hintText: hintText,
       hintStyle: const TextStyle(
@@ -89,17 +112,11 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
       suffixIcon: suffixIcon,
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(
-          color: AppColors.borderColor,
-          width: 1,
-        ),
+        borderSide: const BorderSide(color: AppColors.borderColor, width: 1),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(
-          color: Color(0xFF2563EB),
-          width: 1.5,
-        ),
+        borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5),
       ),
     );
   }
@@ -177,9 +194,7 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
                 controller: _fullNameController,
                 textInputAction: TextInputAction.next,
                 textCapitalization: TextCapitalization.words,
-                decoration: _buildInputDecoration(
-                  hintText: 'Enter your full name',
-                ),
+                decoration: _buildInputDecoration(hintText: 'Enter your full name'),
               ),
               const SizedBox(height: 18),
               _buildFieldLabel('Email'),
@@ -187,9 +202,7 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
-                decoration: _buildInputDecoration(
-                  hintText: 'Enter your email',
-                ),
+                decoration: _buildInputDecoration(hintText: 'Enter your email'),
               ),
               const SizedBox(height: 18),
               _buildFieldLabel('Password'),
@@ -208,9 +221,7 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
                       size: 20,
                     ),
                     onPressed: () {
-                      setState(() {
-                        _obscurePassword = !_obscurePassword;
-                      });
+                      setState(() => _obscurePassword = !_obscurePassword);
                     },
                   ),
                 ),
@@ -221,49 +232,40 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
                 controller: _collegeController,
                 textInputAction: TextInputAction.done,
                 textCapitalization: TextCapitalization.words,
-                decoration: _buildInputDecoration(
-                  hintText: 'Enter your college or university',
-                ),
+                decoration: _buildInputDecoration(hintText: 'Enter your college or university'),
               ),
               const SizedBox(height: 28),
-              ListenableBuilder(
-                listenable: _controller,
-                builder: (context, _) {
-                  return SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton(
-                      onPressed:
-                      _controller.isLoading ? null : _onRegisterPressed,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2563EB),
-                        foregroundColor: Colors.white,
-                        disabledBackgroundColor:
-                        const Color(0xFF2563EB).withValues(alpha: 0.6),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: _controller.isLoading
-                          ? const SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.5,
-                          color: Colors.white,
-                        ),
-                      )
-                          : const Text(
-                        'Create account',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _onRegisterPressed,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2563EB),
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: const Color(0xFF2563EB).withValues(alpha: 0.6),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                  );
-                },
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: Colors.white,
+                    ),
+                  )
+                      : const Text(
+                    'Create account',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
               ),
               const SizedBox(height: 20),
               Row(
