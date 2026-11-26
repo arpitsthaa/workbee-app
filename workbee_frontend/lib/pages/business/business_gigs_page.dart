@@ -7,11 +7,13 @@ import 'package:workbee_frontend/models/api_models.dart';
 class BusinessGigsPage extends StatefulWidget {
   final String businessName;
   final String location;
+  final bool showNavBar;
 
   const BusinessGigsPage({
     super.key,
     this.businessName = 'My Business',
     this.location = '',
+    this.showNavBar = true,
   });
 
   @override
@@ -252,7 +254,7 @@ class _BusinessGigsPageState extends State<BusinessGigsPage> {
             ),
           ),
         ),
-        bottomNavigationBar: _bottomNav(),
+        bottomNavigationBar: widget.showNavBar ? _bottomNav() : null,
       );
     }
 
@@ -306,7 +308,7 @@ class _BusinessGigsPageState extends State<BusinessGigsPage> {
             ),
           ),
         ),
-        bottomNavigationBar: _bottomNav(),
+        bottomNavigationBar: widget.showNavBar ? _bottomNav() : null,
       );
     }
 
@@ -621,7 +623,7 @@ class _BusinessGigsPageState extends State<BusinessGigsPage> {
           ),
         ),
       ),
-      bottomNavigationBar: _bottomNav(),
+      bottomNavigationBar: widget.showNavBar ? _bottomNav() : null,
     );
   }
 

@@ -4,6 +4,8 @@ import 'package:workbee_frontend/constants/app_colors.dart';
 import 'package:workbee_frontend/models/api_models.dart';
 import 'package:workbee_frontend/pages/auth/login_page.dart';
 import 'package:workbee_frontend/pages/business/business_gigs_page.dart';
+import 'package:workbee_frontend/pages/business/business_profile_page.dart';
+import 'package:workbee_frontend/pages/business/business_projects_page.dart';
 import 'package:workbee_frontend/services/token_service.dart';
 
 class BusinessDashboardPage extends StatefulWidget {
@@ -69,18 +71,6 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
     _loadDashboard();
   }
 
-  void _openGigsScreen() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => BusinessGigsPage(
-          businessName: _dashboard?.businessName ?? widget.businessName,
-          location: _dashboard?.location ?? widget.location,
-        ),
-      ),
-    );
-  }
-
   String _skillsAndRating(GigApplication app) {
     final skills = app.studentSkills.isNotEmpty
         ? app.studentSkills.join(' · ')
@@ -113,68 +103,137 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
             _BusinessAppBar(onAvatarTap: _logout, displayName: displayName),
             const SizedBox(height: 16),
             Expanded(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 480),
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 24, 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        displayName,
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w800,
-                          color: darkText,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'Your business workspace',
-                        style: TextStyle(fontSize: 14.5, color: mutedText),
-                      ),
-                      const SizedBox(height: 16),
-                      _buildVerifiedBanner(
-                        primaryBlue,
-                        softBlueBg,
-                        mutedText,
-                        displayLocation,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildMetricGrid(
-                        primaryBlue,
-                        softBlueBg,
-                        darkText,
-                        mutedText,
-                        borderColor,
-                        dashboard,
-                      ),
-                      const SizedBox(height: 22),
-                      _buildRecentApplicationsHeader(
-                        primaryBlue,
-                        darkText,
-                        mutedText,
-                        recentApplications,
-                      ),
-                      const SizedBox(height: 12),
-                      _buildRecentApplicationsCard(
-                        borderColor,
-                        mutedText,
-                        recentApplications,
-                        _getInitials,
-                        _skillsAndRating,
-                      ),
-                      const SizedBox(height: 18),
-                      _buildActionButtons(primaryBlue),
-                    ],
+              child: IndexedStack(
+                index: _selectedIndex,
+                children: [
+                  _buildHomeBody(
+                    primaryBlue,
+                    softBlueBg,
+                    darkText,
+                    mutedText,
+                    borderColor,
+                    dashboard,
+                    displayName,
+                    displayLocation,
+                    recentApplications,
                   ),
-                ),
+                  BusinessGigsPage(
+                    businessName: displayName,
+                    location: displayLocation,
+                    showNavBar: false,
+                  ),
+                  BusinessProjectsPage(
+                    businessName: displayName,
+                    location: displayLocation,
+                    showNavBar: false,
+                  ),
+                  BusinessProfilePage(
+                    businessName: displayName,
+                    location: displayLocation,
+                    showNavBar: false,
+                  ),
+                ],
               ),
             ),
           ],
         ),
       ),
       bottomNavigationBar: _bottomNav(),
+    );
+  }
+
+  Widget _buildHomeBody(
+    Color primaryBlue,
+    Color softBlueBg,
+    Color darkText,
+    Color mutedText,
+    Color borderColor,
+    BusinessDashboardResponse dashboard,
+    String displayName,
+    String displayLocation,
+    List<GigApplication> recentApplications,
+  ) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 480),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 16, 24, 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Hi $displayName',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.w800,
+                color: darkText,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Your business workspace',
+              style: TextStyle(fontSize: 14.5, color: mutedText),
+            ),
+            const SizedBox(height: 12),
+            if (dashboard.isVerified)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: softBlueBg,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.check,
+                      size: 14,
+                      color: primaryBlue,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Verified business',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: primaryBlue,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 20),
+            _buildActiveGigsCard(primaryBlue, softBlueBg, darkText, mutedText,
+                borderColor, dashboard),
+            const SizedBox(height: 22),
+            _buildMetricGrid(
+              primaryBlue,
+              softBlueBg,
+              darkText,
+              mutedText,
+              borderColor,
+              dashboard,
+            ),
+            const SizedBox(height: 22),
+            _buildRecentApplicationsHeader(
+              primaryBlue,
+              darkText,
+              mutedText,
+              recentApplications,
+            ),
+            const SizedBox(height: 12),
+            _buildRecentApplicationsCard(
+              borderColor,
+              mutedText,
+              recentApplications,
+              _getInitials,
+              _skillsAndRating,
+            ),
+            const SizedBox(height: 18),
+            _buildActionButtons(primaryBlue),
+            const SizedBox(height: 30),
+          ],
+        ),
+      ),
     );
   }
 
@@ -203,7 +262,7 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
               activeIcon: Icons.work_rounded,
               label: 'Gigs',
               selected: _selectedIndex == 1,
-              onTap: _openGigsScreen,
+              onTap: () => setState(() => _selectedIndex = 1),
             ),
             _BottomNavItem(
               icon: Icons.assignment_outlined,
@@ -304,64 +363,96 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
     );
   }
 
-  Widget _buildVerifiedBanner(
+  Widget _buildActiveGigsCard(
     Color primaryBlue,
     Color softBlueBg,
+    Color darkText,
     Color mutedText,
-    String displayLocation,
+    Color borderColor,
+    BusinessDashboardResponse dashboard,
   ) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: softBlueBg,
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: borderColor),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Icon(Icons.check, size: 16, color: primaryBlue),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Verified business',
-                    style: TextStyle(
-                      fontSize: 14.5,
-                      fontWeight: FontWeight.w700,
+              Text(
+                'Active Gigs',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: darkText,
+                ),
+              ),
+              GestureDetector(
+                onTap: () => setState(() => _selectedIndex = 1),
+                child: Row(
+                  children: [
+                    Text(
+                      'View all',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: primaryBlue,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.arrow_forward,
+                      size: 16,
                       color: primaryBlue,
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(
-                displayLocation,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: mutedText,
+                  ],
                 ),
               ),
             ],
           ),
+          const SizedBox(height: 12),
           Row(
             children: [
-              Text(
-                'Profile',
-                style: TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w700,
-                  color: primaryBlue,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      dashboard.activeGigs.toString(),
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        color: primaryBlue,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Open for applications',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: mutedText,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              SizedBox(width: 4),
-              Icon(
-                Icons.arrow_forward,
-                size: 15,
-                color: primaryBlue,
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: softBlueBg,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.work_outline,
+                  size: 24,
+                  color: primaryBlue,
+                ),
               ),
             ],
           ),
@@ -383,26 +474,11 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
         Row(
           children: [
             Expanded(
-              child: SizedBox(
-                height: 100,
-                child: _MetricCard(
-                  count: dashboard.activeGigs.toString(),
-                  title: 'Active Gigs',
-                  subtitle: 'Open for applications',
-                  borderColor: borderColor,
-                ),
-              ),
-            ),
-            SizedBox(width: 12),
-            Expanded(
-              child: SizedBox(
-                height: 100,
-                child: _MetricCard(
-                  count: dashboard.newApplicants.toString(),
-                  title: 'New Applicants',
-                  subtitle: 'Ready to review',
-                  borderColor: borderColor,
-                ),
+              child: _MetricCard(
+                count: dashboard.newApplicants.toString(),
+                title: 'New Applicants',
+                subtitle: 'Ready to review',
+                borderColor: borderColor,
               ),
             ),
           ],
@@ -411,26 +487,20 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
         Row(
           children: [
             Expanded(
-              child: SizedBox(
-                height: 100,
-                child: _MetricCard(
-                  count: dashboard.projectsInProgress.toString(),
-                  title: 'Projects in Progress',
-                  subtitle: 'Work awaiting review',
-                  borderColor: borderColor,
-                ),
+              child: _MetricCard(
+                count: dashboard.projectsInProgress.toString(),
+                title: 'Projects in Progress',
+                subtitle: 'Work awaiting review',
+                borderColor: borderColor,
               ),
             ),
             SizedBox(width: 12),
             Expanded(
-              child: SizedBox(
-                height: 100,
-                child: _MetricCard(
-                  count: dashboard.completedProjects.toString(),
-                  title: 'Completed Projects',
-                  subtitle: 'After your approval',
-                  borderColor: borderColor,
-                ),
+              child: _MetricCard(
+                count: dashboard.completedProjects.toString(),
+                title: 'Completed Projects',
+                subtitle: 'After your approval',
+                borderColor: borderColor,
               ),
             ),
           ],
@@ -536,7 +606,7 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
           child: SizedBox(
             height: 48,
             child: ElevatedButton.icon(
-              onPressed: _openGigsScreen,
+              onPressed: () => setState(() => _selectedIndex = 1),
               icon: const Icon(Icons.add, size: 18),
               label: const Text(
                 'Post a Gig',

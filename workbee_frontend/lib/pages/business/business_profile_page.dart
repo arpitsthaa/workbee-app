@@ -9,11 +9,13 @@ import 'package:workbee_frontend/services/token_service.dart';
 class BusinessProfilePage extends StatefulWidget {
   final String businessName;
   final String location;
+  final bool showNavBar;
 
   const BusinessProfilePage({
     super.key,
     this.businessName = 'My Business',
     this.location = '',
+    this.showNavBar = true,
   });
 
   @override
@@ -101,7 +103,11 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
       body: SafeArea(
         child: Column(
           children: [
-            _BusinessAppBar(onAvatarTap: _logout, displayName: displayName),
+            if (widget.showNavBar)
+              _BusinessAppBar(
+                onAvatarTap: _logout,
+                displayName: displayName,
+              ),
             const SizedBox(height: 24),
             Expanded(
               child: ConstrainedBox(
@@ -152,7 +158,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
           ],
         ),
       ),
-      bottomNavigationBar: _bottomNav(),
+      bottomNavigationBar: widget.showNavBar ? _bottomNav() : null,
     );
   }
 
