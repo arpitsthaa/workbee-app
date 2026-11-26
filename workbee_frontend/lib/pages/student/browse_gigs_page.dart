@@ -1,26 +1,21 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:workbee_frontend/clients/student_client.dart';
 import 'package:workbee_frontend/constants/app_colors.dart';
 import 'package:workbee_frontend/format_utils.dart';
-import 'package:workbee_frontend/services/auth_service.dart';
-import 'package:workbee_frontend/services/user_session_service.dart';
 import 'package:workbee_frontend/models/api_models.dart';
-import 'package:workbee_frontend/widgets/gig_post_card.dart';
-import 'package:workbee_frontend/widgets/filter_chip_button.dart';
 
-class BrowseGigsScreen extends StatefulWidget {
+/// Browse gigs page where students can search, filter, and apply for gigs.
+class BrowseGigsPage extends StatefulWidget {
   final VoidCallback? onAppliedNavigate;
 
-  const BrowseGigsScreen({super.key, this.onAppliedNavigate});
+  const BrowseGigsPage({super.key, this.onAppliedNavigate});
 
   @override
-  State<BrowseGigsScreen> createState() => _BrowseGigsScreenState();
+  State<BrowseGigsPage> createState() => _BrowseGigsPageState();
 }
 
-class _BrowseGigsScreenState extends State<BrowseGigsScreen> {
+class _BrowseGigsPageState extends State<BrowseGigsPage> {
   final TextEditingController _searchController = TextEditingController();
-  final AuthService _authService = AuthService();
-
   String _searchQuery = '';
   String _selectedCategory = 'All categories';
   String _selectedBudget = 'Any budget';
@@ -42,19 +37,16 @@ class _BrowseGigsScreenState extends State<BrowseGigsScreen> {
   ];
 
   late Future<List<Gig>> _gigsFuture;
-  late StreamSubscription _gigSubscription;
 
   @override
   void initState() {
     super.initState();
     _gigsFuture = _fetchGigs();
-    _gigSubscription = AuthService.onGigCreated.listen((_) => _reload());
   }
 
   @override
   void dispose() {
     _searchController.dispose();
-    _gigSubscription.cancel();
     super.dispose();
   }
 
@@ -68,7 +60,7 @@ class _BrowseGigsScreenState extends State<BrowseGigsScreen> {
       maxBudget = 999999;
     }
 
-    final result = await _authService.browseGigs(
+    final result = await StudentClient.browseGigs(
       search: _searchQuery.isEmpty ? null : _searchQuery,
       category: _selectedCategory == 'All categories' ? null : _selectedCategory,
       maxBudget: maxBudget,
@@ -216,7 +208,7 @@ class _BrowseGigsScreenState extends State<BrowseGigsScreen> {
             return Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 480),
-child: CustomScrollView(
+                child: CustomScrollView(
                   slivers: [
                     SliverToBoxAdapter(
                       child: Padding(
@@ -256,15 +248,10 @@ child: CustomScrollView(
                                   vertical: 14,
                                 ),
                                 enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(color: AppColors.borderColor),
+                                                                    borderSide: const BorderSide(color: AppColors.borderColor),
                                 ),
                                 focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(
-                                    color: AppColors.primaryBlue,
-                                    width: 1.5,
-                                  ),
+                                                                    borderSide: const BorderSide(color: AppColors.primaryBlue, width: 1.5),
                                 ),
                               ),
                             ),
@@ -442,6 +429,7 @@ child: CustomScrollView(
   }
 }
 
+/// Gig details bottom sheet shown when tapping "Details" on a gig card.
 class _GigDetailsSheet extends StatefulWidget {
   final Gig gig;
   final VoidCallback? onApplied;
@@ -457,18 +445,16 @@ class _GigDetailsSheetState extends State<_GigDetailsSheet> {
   bool isApplying = false;
   bool hasApplied = false;
 
-  final AuthService _authService = AuthService();
-
   @override
   void initState() {
     super.initState();
-    hasApplied = UserSessionService().isApplied(widget.gig.id) || widget.gig.hasApplied;
+    hasApplied = widget.gig.hasApplied;
   }
 
   Future<void> handleApply() async {
     setState(() => isApplying = true);
 
-    final result = await _authService.applyForGig(widget.gig.id, coverMessage: '');
+    final result = await StudentClient.applyForGig(widget.gig.id, coverMessage: '');
 
     if (!mounted) return;
 
@@ -485,16 +471,12 @@ class _GigDetailsSheetState extends State<_GigDetailsSheet> {
       return;
     }
 
-    UserSessionService().markApplied(widget.gig.id);
-    if (!mounted) return;
-
     setState(() {
       isApplying = false;
       hasApplied = true;
     });
 
     Navigator.pop(context);
-    AuthService.notifyGigCreated();
     widget.onApplied?.call();
     widget.onAppliedNavigate?.call();
   }
@@ -601,8 +583,7 @@ class _GigDetailsSheetState extends State<_GigDetailsSheet> {
                   foregroundColor: Colors.white,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                                      ),
                 ),
                 child: isApplying
                     ? const SizedBox(
@@ -610,9 +591,7 @@ class _GigDetailsSheetState extends State<_GigDetailsSheet> {
                         height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       )
                     : hasApplied
@@ -638,3 +617,198 @@ class _GigDetailsSheetState extends State<_GigDetailsSheet> {
     );
   }
 }
+
+/// Filter chip button widget (used only by browse gigs page).
+class FilterChipButton extends StatelessWidget {
+  final String label;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const FilterChipButton({
+    super.key,
+    required this.label,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+            child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        decoration: BoxDecoration(
+          color: isActive ? AppColors.softBlueBg : Colors.white,
+                    border: Border.all(
+            color: isActive ? AppColors.borderLight : AppColors.borderColor,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13.5,
+                fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                color: isActive ? AppColors.primaryBlue : AppColors.mutedText,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Icon(
+              Icons.keyboard_arrow_down,
+              size: 18,
+              color: isActive ? AppColors.primaryBlue : AppColors.mutedText,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Gig post card widget (used only by browse gigs page).
+class GigPostCard extends StatelessWidget {
+  final Gig gig;
+  final String formattedBudget;
+  final Color softBlueBg;
+  final VoidCallback onDetailsTap;
+
+  const GigPostCard({
+    super.key,
+    required this.gig,
+    required this.formattedBudget,
+    required this.softBlueBg,
+    required this.onDetailsTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const primaryBlue = Color(0xFF1D61E7);
+    const mutedText = Color(0xFF64748B);
+    const borderColor = Color(0xFFE2E8F0);
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+                border: Border.all(color: borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            gig.businessName,
+            style: const TextStyle(
+              fontSize: 13,
+              color: mutedText,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            gig.title,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF0F172A),
+              height: 1.25,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            gig.requiredSkills.join(' · '),
+            style: const TextStyle(
+              fontSize: 13.5,
+              color: Color(0xFF475569),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                formattedBudget,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: primaryBlue,
+                ),
+              ),
+              Text(
+                '${gig.durationDays} days · ${gig.deadline}',
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: mutedText,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              const Icon(
+                Icons.location_on_outlined,
+                size: 16,
+                color: mutedText,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                gig.location,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: mutedText,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                gig.isRemote ? 'Remote-friendly' : 'On-site',
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: mutedText,
+                ),
+              ),
+              GestureDetector(
+                onTap: onDetailsTap,
+                                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: softBlueBg,
+                                      ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Details',
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                          color: primaryBlue,
+                        ),
+                      ),
+                      SizedBox(width: 4),
+                      Icon(
+                        Icons.arrow_forward,
+                        size: 15,
+                        color: primaryBlue,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+

@@ -1,24 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:workbee_frontend/clients/auth_client.dart';
 import 'package:workbee_frontend/constants/app_colors.dart';
-import 'package:workbee_frontend/widgets/primary_button.dart';
-import '../../models/business_registration_model.dart';
-import '../../services/auth_service.dart';
-import '../../services/user_session_service.dart';
-import '../../views/business/business_dashboard_screen.dart';
+import 'package:workbee_frontend/helpers/alert_helper.dart';
+import 'package:workbee_frontend/pages/business/business_dashboard_page.dart';
+import 'package:workbee_frontend/services/token_service.dart';
 
-class BusinessRegistrationScreen extends StatefulWidget {
-  const BusinessRegistrationScreen({super.key});
+/// Business registration page. Collects business details and creates a business account.
+class RegisterBusinessPage extends StatefulWidget {
+  const RegisterBusinessPage({super.key});
 
   @override
-  State<BusinessRegistrationScreen> createState() =>
-      _BusinessRegistrationScreenState();
+  State<RegisterBusinessPage> createState() => _RegisterBusinessPageState();
 }
 
-class _BusinessRegistrationScreenState
-    extends State<BusinessRegistrationScreen> {
-  final _authService = AuthService();
-
+class _RegisterBusinessPageState extends State<RegisterBusinessPage> {
   final _businessNameController = TextEditingController();
   final _contactPersonController = TextEditingController();
   final _emailController = TextEditingController();
@@ -46,12 +41,7 @@ class _BusinessRegistrationScreenState
   }
 
   void _showMessage(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Colors.red.shade700 : Colors.green.shade700,
-      ),
-    );
+    showAlert(context, message: message, isError: isError);
   }
 
   Future<void> _handleCreateAccount() async {
@@ -93,54 +83,52 @@ class _BusinessRegistrationScreenState
 
     setState(() => _isLoading = true);
 
-    final request = BusinessRegistrationRequest(
-      businessName: businessName,
-      contactPerson: contactPerson,
-      email: email,
-      phone: phone,
-      location: location,
-      panNumber: pan,
-      password: password,
-      confirmPassword: confirmPassword,
-    );
-
-    final response = await _authService.registerBusiness(request);
+    final result = await AuthClient.registerBusiness({
+      'business_name': businessName,
+      'contact_person': contactPerson,
+      'email': email,
+      'phone': phone,
+      'location': location,
+      'pan_number': pan,
+      'password': password,
+      'confirm_password': confirmPassword,
+    });
 
     if (!mounted) return;
 
     setState(() => _isLoading = false);
 
-    if (response.success) {
+    if (result['success'] == true) {
       // Save token and session so the user is logged in automatically
-      final token = response.data?['token'] as String?;
+      final token = result['token'] as String?;
       if (token != null && token.isNotEmpty) {
-        AuthService.setCachedToken(token);
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('auth_token', token);
-        await prefs.setString('user_role', 'business');
-        await UserSessionService().setUser(
-          name: response.data?['user']?['full_name'] ?? businessName,
-          id: response.data?['user']?['id']?.toString() ?? '',
-          role: 'business',
-        );
+        await AuthClient.saveToken(token);
+        await TokenService.saveRole('business');
+        final userData = result['data']?['user'];
+        if (userData is Map) {
+          await TokenService.saveUser(
+            name: userData['full_name']?.toString() ?? '',
+            id: userData['id']?.toString() ?? '',
+            role: 'business',
+          );
+        }
       }
 
-      _showMessage(response.message);
+      _showMessage(result['message'] ?? 'Business account created successfully!');
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => const BusinessDashboardScreen(),
+          builder: (context) => const BusinessDashboardPage(),
         ),
       );
     } else {
-      _showMessage(response.message, isError: true);
+      _showMessage(result['message'] ?? 'Registration failed.', isError: true);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -267,18 +255,43 @@ class _BusinessRegistrationScreenState
                         color: AppColors.mutedText,
                       ),
                       onPressed: () {
-                        setState(() {
-                          _obscureConfirmPassword = !_obscureConfirmPassword;
-                        });
+                        setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
                       },
                     ),
                   ),
                   const SizedBox(height: 28),
 
-                  PrimaryButton(
-                    text: 'Create Business Account',
-                    onPressed: _handleCreateAccount,
-                    isLoading: _isLoading,
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _handleCreateAccount,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2563EB),
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: const Color(0xFF2563EB).withValues(alpha: 0.6),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: Colors.white,
+                        ),
+                      )
+                          : const Text(
+                        'Create Business Account',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 20),
 
@@ -312,6 +325,7 @@ class _BusinessRegistrationScreenState
   }
 }
 
+/// Reusable form field item used on the business registration page.
 class _FormFieldItem extends StatelessWidget {
   final String label;
   final String hint;

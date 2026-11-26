@@ -1,53 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:workbee_frontend/clients/student_client.dart';
 import 'package:workbee_frontend/constants/app_colors.dart';
 import 'package:workbee_frontend/format_utils.dart';
-import 'package:workbee_frontend/services/auth_service.dart';
-import 'package:workbee_frontend/services/user_session_service.dart';
+import 'package:workbee_frontend/helpers/alert_helper.dart';
 import 'package:workbee_frontend/models/api_models.dart';
-import 'package:workbee_frontend/widgets/segment_tab.dart';
-import 'package:workbee_frontend/widgets/simple_item_card.dart';
-import 'package:workbee_frontend/widgets/profile_info_row.dart';
-import 'package:workbee_frontend/widgets/empty_state.dart';
+import 'package:workbee_frontend/services/token_service.dart';
 import 'package:workbee_frontend/widgets/error_retry_state.dart';
 import 'package:workbee_frontend/widgets/loading_state.dart';
 
-/// The "My work" screen showing the student's applications and projects.
+/// My Work page showing the student's applications and projects.
 ///
 /// Has two tabs: Applications (gigs the student has applied to) and
 /// Projects (gigs the student is currently working on).
 /// Also includes a form to submit work for approval.
-class MyWorkScreen extends StatefulWidget {
-  const MyWorkScreen({super.key});
+class MyWorkPage extends StatefulWidget {
+  const MyWorkPage({super.key});
 
   @override
-  State<MyWorkScreen> createState() => MyWorkScreenState();
+  State<MyWorkPage> createState() => MyWorkPageState();
 }
 
-class MyWorkScreenState extends State<MyWorkScreen> {
-  // Service used to fetch applications and projects from the API.
-  final AuthService _authService = AuthService();
-
-  // Controllers for the "submit work" form.
-  final TextEditingController _linkController = TextEditingController();
-  final TextEditingController _noteController = TextEditingController();
-
-  // -------------------------------------------------------------------------
-  // UI STATE
-  // -------------------------------------------------------------------------
-  // 0 = Applications tab, 1 = Projects tab
+class MyWorkPageState extends State<MyWorkPage> {
   int _activeTab = 0;
-
   bool _applicationsLoading = true;
   bool _projectsLoading = true;
-
-  // ID of the application currently being withdrawn (shows a spinner).
   int? _withdrawingAppId;
-
   String? _error;
-
-  // Data from the API.
   List<GigApplication> _applications = <GigApplication>[];
   List<Project> _projects = <Project>[];
+
+  final TextEditingController _linkController = TextEditingController();
+  final TextEditingController _noteController = TextEditingController();
 
   @override
   void initState() {
@@ -62,13 +45,8 @@ class MyWorkScreenState extends State<MyWorkScreen> {
     super.dispose();
   }
 
-  // =========================================================================
-  // DATA LOADING
-  // =========================================================================
-
-  /// Loads applications and projects in parallel using the fast endpoint.
   Future<void> _loadWork() async {
-    final result = await _authService.loadWorkFast();
+    final result = await StudentClient.loadWorkFast();
 
     if (!mounted) return;
 
@@ -94,7 +72,6 @@ class MyWorkScreenState extends State<MyWorkScreen> {
     });
   }
 
-  /// Refreshes both lists (called by pull-to-refresh).
   Future<void> _refreshWork() async {
     setState(() {
       _applications = <GigApplication>[];
@@ -106,18 +83,11 @@ class MyWorkScreenState extends State<MyWorkScreen> {
     await _loadWork();
   }
 
-  /// Public refresh method (called from the dashboard when the tab opens).
   Future<void> refresh() async {
     await _loadWork();
   }
 
-  // =========================================================================
-  // WITHDRAW APPLICATION
-  // =========================================================================
-
-  /// Lets the user withdraw a pending/shortlisted application.
   Future<void> _withdrawApplication(GigApplication app) async {
-    // Ask for confirmation first.
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -139,84 +109,59 @@ class MyWorkScreenState extends State<MyWorkScreen> {
 
     if (confirmed != true) return;
 
-    // Show a loading spinner on the withdraw button.
     setState(() => _withdrawingAppId = app.id);
 
-    // Call the API to withdraw.
-    final result = await _authService.withdrawApplication(app.id);
+    final result = await StudentClient.withdrawApplication(app.id);
 
     if (!mounted) return;
 
     setState(() => _withdrawingAppId = null);
 
     if (result.containsKey('error')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result['error'] as String? ?? 'Failed to withdraw'),
-          backgroundColor: Colors.redAccent,
-        ),
+      showAlert(
+        context,
+        message: result['error'] as String? ?? 'Failed to withdraw',
+        isError: true,
       );
     } else {
-      // Success: update local session and reload the list.
-      UserSessionService().markWithdrawn(app.gig);
+      await TokenService.markWithdrawn(app.gig);
       await _loadWork();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Application withdrawn'),
-          backgroundColor: AppColors.successGreen,
-        ),
-      );
+      showAlert(context, message: 'Application withdrawn');
     }
   }
 
-  // =========================================================================
-  // HELPERS
-  // =========================================================================
-
-  /// Returns the badge background color based on application status.
   Color _badgeColor(String status) {
     switch (status.toUpperCase()) {
       case 'PENDING':
-        return AppColors.badgePending;
+        return const Color(0xFFFEF3C7);
       case 'SHORTLISTED':
-        return AppColors.badgeShortlisted;
+        return const Color(0xFFFEF3C7);
       case 'ACCEPTED':
-        return AppColors.badgeAccepted;
+        return const Color(0xFFD1FAE5);
       case 'REJECTED':
-        return AppColors.badgeRejected;
+        return const Color(0xFFFEE2E2);
       default:
         return AppColors.borderColor;
     }
   }
 
-  /// Formats a date string for display (or returns "recently" if empty).
   String _formatDate(String? dateStr) {
     if (dateStr == null || dateStr.isEmpty) return 'recently';
     return dateStr;
   }
 
-  /// Called when the user submits a delivery link for a project.
   void _handleSubmitWork() {
     final link = _linkController.text.trim();
     if (link.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please paste a Canva or Google Drive link first.'),
-        ),
-      );
+      showAlert(context, message: 'Please paste a Canva or Google Drive link first.', isError: true);
       return;
     }
     _linkController.clear();
     _noteController.clear();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Work submitted for review!'),
-      ),
-    );
+    showAlert(context, message: 'Work submitted for review!');
   }
 
-  /// Shows the application details bottom sheet.
   void _showApplicationDetails(GigApplication app) {
     showModalBottomSheet(
       context: context,
@@ -310,11 +255,11 @@ class MyWorkScreenState extends State<MyWorkScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  ProfileInfoRow(label: 'Name', value: app.studentName),
-                  ProfileInfoRow(label: 'College', value: app.studentCollege),
-                  ProfileInfoRow(label: 'Skills', value: app.studentSkills.join(', ')),
-                  ProfileInfoRow(label: 'Rating', value: app.studentRating.toString()),
-                  ProfileInfoRow(
+                  _ProfileInfoRow(label: 'Name', value: app.studentName),
+                  _ProfileInfoRow(label: 'College', value: app.studentCollege),
+                  _ProfileInfoRow(label: 'Skills', value: app.studentSkills.join(', ')),
+                  _ProfileInfoRow(label: 'Rating', value: app.studentRating.toString()),
+                  _ProfileInfoRow(
                     label: 'Verified Projects',
                     value: app.verifiedProjectsCount.toString(),
                   ),
@@ -327,18 +272,12 @@ class MyWorkScreenState extends State<MyWorkScreen> {
     );
   }
 
-  // =========================================================================
-  // UI BUILD
-  // =========================================================================
-
   @override
   Widget build(BuildContext context) {
-    // Show loading spinner while both sections are loading.
     if (_applicationsLoading && _projectsLoading) {
       return const LoadingState();
     }
 
-    // Show error state if loading failed.
     if (_error != null) {
       return ErrorRetryState(
         error: _error!,
@@ -349,9 +288,6 @@ class MyWorkScreenState extends State<MyWorkScreen> {
     return SafeArea(
       child: Column(
         children: [
-          // -----------------------------------------------------------------
-          // SEGMENT TABS (Applications | Projects)
-          // -----------------------------------------------------------------
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
             child: Container(
@@ -359,41 +295,33 @@ class MyWorkScreenState extends State<MyWorkScreen> {
                 color: AppColors.inputFill,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: ListenableBuilder(
-                listenable: UserSessionService(),
-                builder: (context, _) {
-                  return Row(
-                    children: [
-                      Expanded(
-                        child: SegmentTab(
-                          label: 'Applications',
-                          selected: _activeTab == 0,
-                          onTap: () {
-                            setState(() => _activeTab = 0);
-                            _loadWork();
-                          },
-                        ),
-                      ),
-                      Expanded(
-                        child: SegmentTab(
-                          label: 'Projects',
-                          selected: _activeTab == 1,
-                          onTap: () {
-                            setState(() => _activeTab = 1);
-                            _loadWork();
-                          },
-                        ),
-                      ),
-                    ],
-                  );
-                },
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _SegmentTab(
+                      label: 'Applications',
+                      selected: _activeTab == 0,
+                      onTap: () {
+                        setState(() => _activeTab = 0);
+                        _loadWork();
+                      },
+                    ),
+                  ),
+                  Expanded(
+                    child: _SegmentTab(
+                      label: 'Projects',
+                      selected: _activeTab == 1,
+                      onTap: () {
+                        setState(() => _activeTab = 1);
+                        _loadWork();
+                      },
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
 
-          // -----------------------------------------------------------------
-          // TAB CONTENT
-          // -----------------------------------------------------------------
           Expanded(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 480),
@@ -404,9 +332,6 @@ class MyWorkScreenState extends State<MyWorkScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // =====================================================
-                      // APPLICATIONS TAB
-                      // =====================================================
                       if (_activeTab == 0) ...[
                         const Text(
                           'Application updates',
@@ -418,7 +343,7 @@ class MyWorkScreenState extends State<MyWorkScreen> {
                         ),
                         const SizedBox(height: 12),
                         if (_applications.isEmpty)
-                          EmptyState(
+                          _EmptyState(
                             icon: Icons.assignment_outlined,
                             title: 'No applications yet.',
                             subtitle: 'Browse gigs and apply to get started.',
@@ -429,7 +354,7 @@ class MyWorkScreenState extends State<MyWorkScreen> {
                                 app.status.toUpperCase() == 'SHORTLISTED';
                             return Column(
                               children: [
-                                SimpleItemCard(
+                                _SimpleItemCard(
                                   title: app.gigTitle,
                                   subtitle:
                                       '${app.businessName} · Applied ${_formatDate(app.appliedAt)}',
@@ -462,9 +387,6 @@ class MyWorkScreenState extends State<MyWorkScreen> {
                             );
                           }),
                       ] else ...[
-                        // =====================================================
-                        // PROJECTS TAB
-                        // =====================================================
                         if (_projects.isEmpty)
                           const Text(
                             'No projects yet. Get shortlisted for a gig to start working!',
@@ -555,10 +477,6 @@ class MyWorkScreenState extends State<MyWorkScreen> {
                             );
                           }),
                           const SizedBox(height: 22),
-
-                          // -----------------------------------------------------------------
-                          // SUBMIT WORK FORM
-                          // -----------------------------------------------------------------
                           const Text(
                             'Submit work',
                             style: TextStyle(
@@ -656,6 +574,210 @@ class MyWorkScreenState extends State<MyWorkScreen> {
                     ],
                   ),
                 ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Empty state widget (used only by my work page).
+class _EmptyState extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+
+  const _EmptyState({
+    required this.icon,
+    required this.title,
+    this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 48, color: AppColors.mutedText),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: AppColors.darkText,
+            ),
+          ),
+          if (subtitle != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              subtitle!,
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppColors.mutedText,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Segment tab widget (used only by my work page).
+class _SegmentTab extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _SegmentTab({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.softBlueBg : Colors.transparent,
+          borderRadius: BorderRadius.circular(9),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13.5,
+            fontWeight: FontWeight.w700,
+            color: selected ? AppColors.primaryBlue : AppColors.mutedText,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Simple item card widget (used only by my work page).
+class _SimpleItemCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String badgeText;
+  final Color badgeBg;
+  final Color badgeColor;
+  final VoidCallback? onTap;
+  final Widget? trailingAction;
+
+  const _SimpleItemCard({
+    required this.title,
+    required this.subtitle,
+    required this.badgeText,
+    required this.badgeBg,
+    required this.badgeColor,
+    this.onTap,
+    this.trailingAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.borderColor),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.darkText,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      color: AppColors.mutedText,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: badgeBg,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                badgeText,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: badgeColor,
+                ),
+              ),
+            ),
+            if (trailingAction != null) ...[
+              const SizedBox(width: 8),
+              trailingAction!,
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Profile info row widget (used only by my work page).
+class _ProfileInfoRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _ProfileInfoRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+                color: AppColors.mutedText,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 13.5,
+                color: AppColors.darkText,
               ),
             ),
           ),

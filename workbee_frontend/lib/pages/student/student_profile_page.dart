@@ -1,48 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:workbee_frontend/clients/student_client.dart';
 import 'package:workbee_frontend/constants/app_colors.dart';
-import 'package:workbee_frontend/services/auth_service.dart';
-import 'package:workbee_frontend/services/user_session_service.dart';
+import 'package:workbee_frontend/helpers/alert_helper.dart';
 import 'package:workbee_frontend/models/api_models.dart';
-import 'package:workbee_frontend/views/auth/login_screen.dart';
-import 'package:workbee_frontend/widgets/app_message.dart';
-import 'package:workbee_frontend/widgets/loading_state.dart';
+import 'package:workbee_frontend/pages/auth/login_page.dart';
+import 'package:workbee_frontend/services/token_service.dart';
 import 'package:workbee_frontend/widgets/error_retry_state.dart';
+import 'package:workbee_frontend/widgets/loading_state.dart';
 import 'package:workbee_frontend/widgets/student_profile_header.dart';
 
-/// The student profile screen.
-///
-/// Shows read-only profile info by default. Tapping "Edit Profile" opens an
-/// editable form. Changes are saved to the API and the local session.
-class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+/// Student profile page showing read-only info with an editable form.
+class StudentProfilePage extends StatefulWidget {
+  const StudentProfilePage({super.key});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  State<StudentProfilePage> createState() => _StudentProfilePageState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
-  // Service used to fetch/update profile data from the API.
-  final AuthService _authService = AuthService();
-
-  // -------------------------------------------------------------------------
-  // UI STATE
-  // -------------------------------------------------------------------------
-  // When true, shows the edit form. When false, shows the read-only view.
+class _StudentProfilePageState extends State<StudentProfilePage> {
   bool _isEditing = false;
-
-  // When true, data is being fetched from the API.
   bool _isLoading = true;
-
-  // Error message if the API call fails.
   String? _error;
-
-  // The profile data fetched from the API.
   ProfileResponse? _profile;
 
-  // -------------------------------------------------------------------------
-  // TEXT CONTROLLERS (one per editable field)
-  // -------------------------------------------------------------------------
-  // These hold what the user types. Must be disposed in dispose().
   final _nameController = TextEditingController();
   final _locationController = TextEditingController();
   final _collegeController = TextEditingController();
@@ -59,7 +39,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   void dispose() {
-    // Dispose all text controllers to free memory.
     _nameController.dispose();
     _locationController.dispose();
     _collegeController.dispose();
@@ -70,30 +49,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.dispose();
   }
 
-  // =========================================================================
-  // DATA LOADING
-  // =========================================================================
-
-  /// Loads the profile: first shows session data (instant), then fetches fresh data from the API.
   Future<void> _loadProfile() async {
-    // Step 1: Populate fields from local session for instant display.
-    final session = UserSessionService();
-    if (session.isInitialized) {
-      _nameController.text = session.userName ?? '';
-      _locationController.text = session.location ?? '';
-      _collegeController.text = session.collegeUniversity ?? '';
-      final program = session.program ?? '';
-      final semester = session.semester ?? '';
+    final session = TokenService();
+    if (await _isInitialized(session)) {
+      _nameController.text = (await TokenService.getName()) ?? '';
+      _locationController.text = (await TokenService.getLocation()) ?? '';
+      _collegeController.text = (await TokenService.getCollegeUniversity()) ?? '';
+      final program = await TokenService.getProgram() ?? '';
+      final semester = await TokenService.getSemester() ?? '';
       _courseController.text = (program.isNotEmpty && semester.isNotEmpty)
           ? '$program · $semester'
           : (program.isNotEmpty ? program : (semester.isNotEmpty ? semester : ''));
-      _aboutController.text = session.bio ?? '';
-      _skillsController.text = session.skills.join(', ');
-      _portfolioController.text = session.portfolioUrl ?? '';
+      _aboutController.text = (await TokenService.getBio()) ?? '';
+      final skills = await TokenService.getSkills();
+      _skillsController.text = skills.join(', ');
+      _portfolioController.text = (await TokenService.getPortfolioUrl()) ?? '';
     }
 
-    // Step 2: Fetch fresh data from the API and overwrite the fields.
-    final result = await _authService.getStudentProfile();
+    final result = await StudentClient.getProfile();
     if (!mounted) return;
     if (result.containsKey('error')) {
       setState(() {
@@ -107,7 +80,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _nameController.text = profile.fullName;
         _locationController.text = profile.location ?? '';
         _collegeController.text = profile.collegeUniversity ?? '';
-        _courseController.text = '${profile.program} · ${profile.semester}'.trim();
+        _courseController.text =
+            '${profile.program} · ${profile.semester}'.trim();
         _aboutController.text = profile.bio;
         _skillsController.text = profile.skills.join(', ');
         _portfolioController.text = profile.portfolioUrl;
@@ -116,18 +90,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // =========================================================================
-  // SAVE PROFILE
-  // =========================================================================
+  static Future<bool> _isInitialized(TokenService session) async {
+    return true;
+  }
 
-  /// Saves the edited profile to the API and updates the local session.
   Future<void> _saveProfile() async {
     final portfolioUrl = _portfolioController.text.trim();
 
-    // Validate the portfolio URL if it's not empty.
     if (portfolioUrl.isNotEmpty && !_isValidUrl(portfolioUrl)) {
       if (!mounted) return;
-      showWorkBeeMessage(
+      showAlert(
         context,
         message: 'Please enter a valid URL (e.g., example.com or https://example.com)',
         isError: true,
@@ -135,15 +107,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return;
     }
 
-    // Build the data map to send to the API.
-    // The "Course & semester" field stores both values separated by " · ",
-    // so we split them back into separate program/semester fields for the API.
     final courseText = _courseController.text.trim();
     final courseParts = courseText.split(' · ');
     final program = courseParts.isNotEmpty ? courseParts.first : '';
     final semester = courseParts.length > 1 ? courseParts.last : '';
 
-    // Build the skills list from the comma-separated input.
     final skillsList = _skillsController.text.trim().split(',')
         .where((s) => s.trim().isNotEmpty)
         .map((s) => s.trim())
@@ -160,20 +128,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
       'portfolio_url': portfolioUrl,
     };
 
-    // Send the update to the API.
-    final result = await _authService.updateStudentProfile(data);
+    final result = await StudentClient.updateProfile(data);
     if (!mounted) return;
 
     if (result.containsKey('error')) {
-      if (!mounted) return;
-      showWorkBeeMessage(
+      showAlert(
         context,
         message: result['error'] as String? ?? 'Save failed',
         isError: true,
       );
     } else {
-      // Update the local session so the change shows up instantly elsewhere.
-      await UserSessionService().updateProfile(
+      await TokenService.updateProfile(
         name: _nameController.text.trim(),
         location: _locationController.text.trim(),
         collegeUniversity: _collegeController.text.trim(),
@@ -185,14 +150,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
       if (!mounted) return;
       setState(() => _isEditing = false);
-      showWorkBeeMessage(
-        context,
-        message: 'Profile saved',
-      );
+      showAlert(context, message: 'Profile saved');
     }
   }
 
-  /// Simple check: accepts http://, https://, or just domain.tld
   bool _isValidUrl(String url) {
     final regex = RegExp(
       r'^(https?://)?([\w-]+\.)+[\w-]+(/[\w-./?%&=]*)?$',
@@ -201,33 +162,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return regex.hasMatch(url);
   }
 
-  // =========================================================================
-  // LOGOUT
-  // =========================================================================
-
-  /// Clears the session and sends the user back to the login screen.
-  void _handleLogout() async {
-    await UserSessionService().clear();
+  Future<void> _handleLogout() async {
+    await TokenService.clear();
     if (!mounted) return;
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(builder: (context) => const LoginScreen()),
+      MaterialPageRoute(builder: (context) => const LoginPage()),
       (route) => false,
     );
   }
 
-  // =========================================================================
-  // UI BUILD
-  // =========================================================================
-
   @override
   Widget build(BuildContext context) {
-    // Show loading spinner while fetching data.
     if (_isLoading) {
       return const LoadingState();
     }
 
-    // Show error state if loading failed.
     if (_error != null) {
       return ErrorRetryState(
         error: _error!,
@@ -243,7 +193,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Show either the edit form or the read-only view.
               if (_isEditing) _buildEditForm() else _buildViewMode(),
             ],
           ),
@@ -251,10 +200,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
-
-  // -------------------------------------------------------------------------
-  // EDIT FORM (shown when _isEditing is true)
-  // -------------------------------------------------------------------------
 
   Widget _buildEditForm() {
     return Column(
@@ -327,10 +272,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // -------------------------------------------------------------------------
-  // VIEW MODE (read-only profile)
-  // -------------------------------------------------------------------------
-
   Widget _buildViewMode() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -358,7 +299,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  /// Builds a section title (e.g. "About me", "Skills").
   Widget _buildSectionTitle(String text) {
     return Text(
       text,
@@ -370,30 +310,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // -------------------------------------------------------------------------
-  // PROFILE HEADER (avatar + name + verified badge + location + email)
-  // -------------------------------------------------------------------------
-
   Widget _buildProfileHeader() {
     return ListenableBuilder(
-      listenable: UserSessionService(),
+      listenable: TokenService(),
       builder: (context, _) {
-        final session = UserSessionService();
-        final displayName = session.userName ?? _profile!.fullName;
-        final displayLocation = session.location ?? _profile!.location ?? '';
         return StudentProfileHeader(
-          displayName: displayName,
-          location: displayLocation,
-          email: _profile!.email,
-          isVerified: _profile!.isVerified,
+          displayName: TokenService.getNameSync() ?? _profile?.fullName,
+          location: TokenService.getLocationSync() ?? _profile?.location ?? '',
+          email: _profile?.email,
+          isVerified: _profile?.isVerified ?? false,
         );
       },
     );
   }
-
-  // -------------------------------------------------------------------------
-  // COLLEGE INFO CARD
-  // -------------------------------------------------------------------------
 
   Widget _buildCollegeInfoCard() {
     return Container(
@@ -407,95 +336,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ListenableBuilder(
-            listenable: UserSessionService(),
-            builder: (context, _) {
-              final session = UserSessionService();
-              final displayCollege = session.collegeUniversity ?? _profile!.collegeUniversity ?? '';
-              final displayProgram = session.program ?? _profile!.program;
-              final displaySemester = session.semester ?? _profile!.semester;
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    displayCollege,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.darkText,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '$displayProgram · $displaySemester',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: AppColors.mutedText,
-                    ),
-                  ),
-                ],
-              );
-            },
+          Text(
+            TokenService.getCollegeUniversitySync() ?? _profile?.collegeUniversity ?? '',
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: AppColors.darkText,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${TokenService.getProgramSync() ?? _profile?.program ?? ''} · ${TokenService.getSemesterSync() ?? _profile?.semester ?? ''}',
+            style: const TextStyle(
+              fontSize: 13,
+              color: AppColors.mutedText,
+            ),
           ),
         ],
       ),
     );
   }
 
-  // -------------------------------------------------------------------------
-  // ABOUT SECTION
-  // -------------------------------------------------------------------------
-
   Widget _buildAboutSection() {
-    return ListenableBuilder(
-      listenable: UserSessionService(),
-      builder: (context, _) {
-        final session = UserSessionService();
-        final displayBio = session.bio ?? _profile!.bio;
-        return Text(
-          displayBio,
-          style: const TextStyle(fontSize: 14, color: AppColors.mutedText),
-        );
-      },
+    return Text(
+      TokenService.getBioSync() ?? _profile?.bio ?? '',
+      style: const TextStyle(fontSize: 14, color: AppColors.mutedText),
     );
   }
-
-  // -------------------------------------------------------------------------
-  // SKILLS SECTION (chips)
-  // -------------------------------------------------------------------------
 
   Widget _buildSkillsSection() {
-    return ListenableBuilder(
-      listenable: UserSessionService(),
-      builder: (context, _) {
-        final session = UserSessionService();
-        final displaySkills = session.skills.isNotEmpty ? session.skills : _profile!.skills;
-        return Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: displaySkills
-              .map(
-                (skill) => Chip(
-                  label: Text(
-                    skill,
-                    style: const TextStyle(
-                      color: AppColors.primaryBlue,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  backgroundColor: AppColors.softBlueBg,
-                  side: BorderSide.none,
+    final skills = TokenService.getSkillsSync().isNotEmpty
+        ? TokenService.getSkillsSync()
+        : _profile?.skills ?? [];
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: skills
+          .map(
+            (skill) => Chip(
+              label: Text(
+                skill,
+                style: const TextStyle(
+                  color: AppColors.primaryBlue,
+                  fontWeight: FontWeight.w600,
                 ),
-              )
-              .toList(),
-        );
-      },
+              ),
+              backgroundColor: AppColors.softBlueBg,
+              side: BorderSide.none,
+            ),
+          )
+          .toList(),
     );
   }
-
-  // -------------------------------------------------------------------------
-  // PORTFOLIO SECTION
-  // -------------------------------------------------------------------------
 
   Widget _buildPortfolioSection() {
     return Container(
@@ -517,28 +409,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           const SizedBox(height: 4),
-          ListenableBuilder(
-            listenable: UserSessionService(),
-            builder: (context, _) {
-              final session = UserSessionService();
-              final displayPortfolio = session.portfolioUrl ?? _profile!.portfolioUrl;
-              return Text(
-                displayPortfolio,
-                style: const TextStyle(
-                  fontSize: 13.5,
-                  color: AppColors.primaryBlue,
-                ),
-              );
-            },
+          Text(
+            TokenService.getPortfolioUrlSync() ?? _profile?.portfolioUrl ?? '',
+            style: const TextStyle(
+              fontSize: 13.5,
+              color: AppColors.primaryBlue,
+            ),
           ),
         ],
       ),
     );
   }
-
-  // -------------------------------------------------------------------------
-  // RECENT ACTIVITY SECTION
-  // -------------------------------------------------------------------------
 
   Widget _buildRecentActivity() {
     return Column(
@@ -569,12 +450,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   TextButton(
-                    onPressed: () {
-                      // Navigate to passport screen - handled by bottom nav
-                    },
-                    child: Text(
+                    onPressed: () {},
+                    child: const Text(
                       'View all',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: AppColors.primaryBlue,
@@ -597,10 +476,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ],
     );
   }
-
-  // -------------------------------------------------------------------------
-  // BUTTONS
-  // -------------------------------------------------------------------------
 
   Widget _buildEditProfileButton() {
     return SizedBox(

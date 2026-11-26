@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'views/auth/splash_screen.dart';
+import 'package:workbee_frontend/pages/auth/splash_page.dart';
 
 void main() {
   runApp(const WorkBeeApp());
@@ -22,7 +22,7 @@ class WorkBeeApp extends StatelessWidget {
           secondary: const Color(0xFFE5A922),
         ),
       ),
-      home: const SplashScreen(),
+      home: const SplashPage(),
     );
   }
 }
