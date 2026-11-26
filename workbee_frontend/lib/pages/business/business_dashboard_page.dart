@@ -4,9 +4,10 @@ import 'package:workbee_frontend/constants/app_colors.dart';
 import 'package:workbee_frontend/models/api_models.dart';
 import 'package:workbee_frontend/pages/auth/login_page.dart';
 import 'package:workbee_frontend/pages/business/business_gigs_page.dart';
-import 'package:workbee_frontend/pages/business/business_profile_page.dart';
+import 'package:workbee_frontend/pages/business/business_profile_screen.dart';
 import 'package:workbee_frontend/pages/business/business_projects_page.dart';
 import 'package:workbee_frontend/services/token_service.dart';
+import 'package:workbee_frontend/pages/business/business_profile_screen.dart';
 
 class BusinessDashboardPage extends StatefulWidget {
   final String businessName;
