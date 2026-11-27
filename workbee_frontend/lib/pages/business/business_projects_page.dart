@@ -491,22 +491,18 @@ class _TabButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+        padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
           color: selected ? AppColors.softBlueBg : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: selected ? AppColors.primaryBlue : AppColors.borderColor,
-            width: selected ? 2 : 1,
-          ),
+          borderRadius: BorderRadius.circular(9),
         ),
         alignment: Alignment.center,
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w800,
-            color: selected ? AppColors.primaryBlue : AppColors.darkText,
+            fontSize: 13.5,
+            fontWeight: FontWeight.w700,
+            color: selected ? AppColors.primaryBlue : AppColors.mutedText,
           ),
         ),
       ),

@@ -297,6 +297,7 @@ class ProfileResponse {
 class BusinessProfileResponse {
   final int id;
   final String email;
+  final String? fullName;
   final String? location;
   final String? businessType;
   final String? about;
@@ -305,16 +306,24 @@ class BusinessProfileResponse {
   BusinessProfileResponse({
     required this.id,
     required this.email,
+    this.fullName,
     this.location,
     this.businessType,
     this.about,
     required this.isVerified,
   });
 
+  /// Display name: full name if available, otherwise the part before '@' in the email.
+  String get displayName {
+    if (fullName != null && fullName!.isNotEmpty) return fullName!;
+    return email.isNotEmpty ? email.split('@').first : email;
+  }
+
   factory BusinessProfileResponse.fromJson(Map<String, dynamic> json) {
     return BusinessProfileResponse(
       id: json['id'] ?? 0,
       email: (json['email'] ?? '') as String,
+      fullName: json['full_name'] as String?,
       location: json['location'] as String?,
       businessType: json['business_type'] as String?,
       about: json['about'] as String?,

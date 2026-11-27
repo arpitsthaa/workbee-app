@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:workbee_frontend/clients/business_client.dart';
 import 'package:workbee_frontend/models/api_models.dart';
-import 'package:workbee_frontend/pages/auth/login_page.dart';
 import 'package:workbee_frontend/pages/business/business_gigs_page.dart';
 import 'package:workbee_frontend/pages/business/business_profile_screen.dart';
 import 'package:workbee_frontend/pages/business/business_projects_page.dart';
-import 'package:workbee_frontend/services/token_service.dart';
 import 'package:workbee_frontend/widgets/common_app_bar.dart';
 
 class BusinessDashboardPage extends StatefulWidget {
@@ -102,7 +100,7 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
       appBar: CommonAppBar(
         displayName: displayName,
         role: 'business',
-        onAvatarTap: _logout,
+        onAvatarTap: () => setState(() => _selectedIndex = 3),
       ),
       body: SafeArea(
         child: IndexedStack(
@@ -690,16 +688,6 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
         ),
       ),
       bottomNavigationBar: _bottomNav(),
-    );
-  }
-
-  Future<void> _logout() async {
-    await TokenService.clear();
-    if (!mounted) return;
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (context) => const LoginPage()),
-      (route) => false,
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:workbee_frontend/clients/business_client.dart';
 import 'package:workbee_frontend/constants/app_colors.dart';
 import 'package:workbee_frontend/models/api_models.dart';
+import 'package:workbee_frontend/pages/auth/login_page.dart';
 import 'package:workbee_frontend/services/token_service.dart';
 import 'package:workbee_frontend/widgets/common_app_bar.dart';
 
@@ -78,23 +79,44 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
   }
 
   Future<void> _updateProfileFromDialog(Map<String, dynamic> data) async {
-    final result = await BusinessClient.updateProfile(data);
-
-    if (!mounted) return;
-
-    if (result.containsKey('error')) {
+    Map<String, dynamic> result;
+    try {
+      result = await BusinessClient.updateProfile(data);
+    } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(result['error'] as String? ?? 'Update failed'),
+          content: Text('Update failed: $e'),
           backgroundColor: AppColors.errorRed,
         ),
       );
       return;
     }
 
+    if (!mounted) return;
+
+    // A failed/empty response must not wipe the existing profile.
+    if (result.containsKey('error') || !result.containsKey('id')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result['error'] as String? ?? 'Update failed. Please try again.',
+          ),
+          backgroundColor: AppColors.errorRed,
+        ),
+      );
+      return;
+    }
+
+    final profile = BusinessProfileResponse.fromJson(result);
     setState(() {
-      _profile = BusinessProfileResponse.fromJson(result);
+      _profile = profile;
     });
+
+    // Keep the cached display name in sync with the saved profile.
+    if (profile.displayName.isNotEmpty) {
+      TokenService.updateProfile(name: profile.displayName);
+    }
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -102,8 +124,16 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
         backgroundColor: AppColors.successGreen,
       ),
     );
+  }
 
-    Navigator.pop(context);
+  Future<void> _logout() async {
+    await TokenService.clear();
+    if (!mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => const LoginPage()),
+      (route) => false,
+    );
   }
 
   void _openEditProfileDialog() {
@@ -168,13 +198,15 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
             ),
           ),
           ElevatedButton(
-            onPressed: () {
-              _updateProfileFromDialog({
+            onPressed: () async {
+              final dialogContext = context;
+              await _updateProfileFromDialog({
                 'full_name': nameCtrl.text.trim(),
                 'business_type': categoryCtrl.text.trim(),
                 'about': aboutCtrl.text.trim(),
                 'location': locationCtrl.text.trim(),
               });
+              if (dialogContext.mounted) Navigator.pop(dialogContext);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: _primaryBlue,
@@ -472,6 +504,28 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                       ),
                       child: const Text(
                         'Edit Profile',
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: OutlinedButton(
+                      onPressed: _isLoading ? null : _logout,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.errorRed,
+                        side: const BorderSide(color: AppColors.errorRed),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Logout',
                         style: TextStyle(
                           fontSize: 14.5,
                           fontWeight: FontWeight.w700,

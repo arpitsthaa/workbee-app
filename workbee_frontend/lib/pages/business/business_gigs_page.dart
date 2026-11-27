@@ -134,6 +134,32 @@ class _BusinessGigsPageState extends State<BusinessGigsPage> {
               onAvatarTap: _logout,
             )
           : null,
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () async {
+            final posted = await Navigator.push<bool>(
+              context,
+              MaterialPageRoute(
+                builder: (context) => PostGigPage(
+                  businessName: widget.businessName,
+                  location: widget.location,
+                ),
+              ),
+            );
+            if (posted == true) {
+              _loadGigs();
+            }
+          },
+          icon: const Icon(Icons.add, size: 20, color: Colors.white),
+          label: const Text(
+            'Post Gig',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+          ),
+          backgroundColor: AppColors.primaryBlue,
+        ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -264,46 +290,7 @@ class _BusinessGigsPageState extends State<BusinessGigsPage> {
                   ),
                 ),
 
-                // Post a Gig button compact at bottom
-                Center(
-                  child: SizedBox(
-                    width: 260,
-                    height: 50,
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
-                        final posted = await Navigator.push<bool>(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => PostGigPage(
-                              businessName: widget.businessName,
-                              location: widget.location,
-                            ),
-                          ),
-                        );
-                        if (posted == true) {
-                          _loadGigs();
-                        }
-                      },
-                      icon: const Icon(Icons.add, size: 16),
-                      label: const Text(
-                        'Post Gig',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryBlue,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
+                
               ],
             ),
           ),
@@ -685,4 +672,5 @@ class _BottomNavItem extends StatelessWidget {
     );
   }
 }
+
 
