@@ -272,6 +272,30 @@ class BusinessClient {
     }
   }
 
+  /// Fetches the business's gig applications (applicants).
+  static Future<Map<String, dynamic>> getApplications() async {
+    final url = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.businessApplicationsStatus}');
+    final headers = await _authHeaders();
+
+    try {
+      final response = await http.get(url, headers: headers).timeout(_timeout);
+      final body = _decodeBody(response.body);
+
+      if (response.statusCode == 200) {
+        return {'applications': _decodeList(response.body)};
+      }
+
+      return {
+        'error': _errorMessage(body, response.statusCode),
+        'status': response.statusCode,
+      };
+    } on TimeoutException {
+      return {'error': 'Server took too long to respond.', 'status': 408};
+    } catch (e) {
+      return {'error': 'Connection error: $e', 'status': 0};
+    }
+  }
+
   /// Updates an application's status (shortlisted / accepted / rejected).
   static Future<Map<String, dynamic>> updateApplicationStatus(
       int applicationId, String status) async {

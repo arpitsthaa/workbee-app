@@ -130,6 +130,18 @@ class BusinessProjectsView(generics.ListAPIView):
         ).prefetch_related("review")
 
 
+class BusinessApplicationsListView(generics.ListAPIView):
+    serializer_class = GigApplicationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return GigApplication.objects.filter(
+            gig__business=self.request.user
+        ).select_related("student", "student__student_profile").prefetch_related(
+            "student__career_passport_reviews"
+        )
+
+
 class ReviewProjectWorkView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
