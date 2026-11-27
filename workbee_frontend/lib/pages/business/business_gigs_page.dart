@@ -1,19 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:workbee_frontend/clients/business_client.dart';
-import 'package:workbee_frontend/helpers/alert_helper.dart';
+import 'package:workbee_frontend/constants/app_colors.dart';
 import 'package:workbee_frontend/models/api_models.dart';
+import 'package:workbee_frontend/pages/auth/login_page.dart';
+import 'package:workbee_frontend/pages/business/business_post_gig_page.dart';
+import 'package:workbee_frontend/services/token_service.dart';
+import 'package:workbee_frontend/widgets/common_app_bar.dart';
 
-/// Business gigs page for posting and managing gigs.
 class BusinessGigsPage extends StatefulWidget {
   final String businessName;
   final String location;
   final bool showNavBar;
+  final bool showAppBar;
 
   const BusinessGigsPage({
     super.key,
     this.businessName = 'My Business',
     this.location = '',
     this.showNavBar = true,
+    this.showAppBar = true,
   });
 
   @override
@@ -21,30 +26,11 @@ class BusinessGigsPage extends StatefulWidget {
 }
 
 class _BusinessGigsPageState extends State<BusinessGigsPage> {
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
-  final TextEditingController _skillsController = TextEditingController();
-  final TextEditingController _budgetController = TextEditingController();
-  final TextEditingController _deadlineController = TextEditingController();
-  final TextEditingController _locationController = TextEditingController();
-
   int _selectedNavIndex = 1;
   bool _isLoading = true;
-  bool _isPosting = false;
   String? _errorMessage;
-  String? _postSuccessMessage;
   List<Gig> _gigs = [];
-
-  @override
-  void dispose() {
-    _titleController.dispose();
-    _descriptionController.dispose();
-    _skillsController.dispose();
-    _budgetController.dispose();
-    _deadlineController.dispose();
-    _locationController.dispose();
-    super.dispose();
-  }
+  String _filter = 'All';
 
   @override
   void initState() {
@@ -60,6 +46,8 @@ class _BusinessGigsPageState extends State<BusinessGigsPage> {
 
     try {
       final result = await BusinessClient.getGigs();
+
+      if (!mounted) return;
 
       if (result.containsKey('error')) {
         setState(() {
@@ -78,6 +66,7 @@ class _BusinessGigsPageState extends State<BusinessGigsPage> {
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = 'Connection error: $e';
         _isLoading = false;
@@ -85,545 +74,576 @@ class _BusinessGigsPageState extends State<BusinessGigsPage> {
     }
   }
 
-  List<String> _parseSkills(String raw) {
-    return raw
-        .split(RegExp(r'[·,]'))
-        .map((s) => s.trim())
-        .where((s) => s.isNotEmpty)
-        .toList();
-  }
-
-  String? _formatDeadline(String raw) {
-    final trimmed = raw.trim();
-    final reg = RegExp(r'^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$');
-    final match = reg.firstMatch(trimmed);
-    if (match == null) {
-      final iso = RegExp(r'^(\d{4})-(\d{1,2})-(\d{1,2})$');
-      final isoMatch = iso.firstMatch(trimmed);
-      if (isoMatch != null) return trimmed;
-      return null;
-    }
-    final day = int.parse(match.group(1)!);
-    final month = int.parse(match.group(2)!);
-    final year = int.parse(match.group(3)!);
-    if (day < 1 || day > 31 || month < 1 || month > 12) return null;
-    return '${year.toString().padLeft(4, '0')}-${month.toString().padLeft(2, '0')}-${day.toString().padLeft(2, '0')}';
-  }
-
-  Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime(2100),
+  Future<void> _logout() async {
+    await TokenService.clear();
+    if (!mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => const LoginPage()),
+      (route) => false,
     );
-    if (picked != null) {
-      setState(() {
-        _deadlineController.text =
-            '${picked.year.toString().padLeft(4, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
-      });
-    }
+  }
+
+  List<Gig> get _filteredGigs {
+    if (_filter == 'All') return _gigs;
+    return _gigs
+        .where((g) => g.status.toUpperCase() == _filter.toUpperCase())
+        .toList();
   }
 
   (Color bgColor, Color textColor) _statusStyle(String status) {
     switch (status.toUpperCase()) {
       case 'OPEN':
-        return (const Color(0xFFEFF6FF), const Color(0xFF1D61E7));
+        return (AppColors.badgeShortlisted, AppColors.primaryBlue);
       case 'IN_PROGRESS':
-        return (const Color(0xFFFEF3C7), const Color(0xFFB45309));
-      case 'CLOSED':
-        return (const Color(0xFFF1F5F9), const Color(0xFF64748B));
+        return (AppColors.badgePending, const Color(0xFFB45309));
       default:
-        return (const Color(0xFFF1F5F9), const Color(0xFF64748B));
+        return (AppColors.cardLight, AppColors.mutedText);
     }
   }
 
-  Future<void> _postGig() async {
-    final title = _titleController.text.trim();
-    final description = _descriptionController.text.trim();
-    final skillsRaw = _skillsController.text.trim();
-    final budgetRaw = _budgetController.text.trim().replaceAll(',', '');
-    final deadlineRaw = _deadlineController.text.trim();
-    final locationRaw = _locationController.text.trim();
+  String _getEmptyMessage() {
+    if (_filter == 'All') return 'No gigs yet.';
+    return 'There is no $_filter gigs';
+  }
 
-    if (title.isEmpty) {
-      showAlert(context, message: 'Please enter a gig title.', isError: true);
-      return;
-    }
-    if (description.isEmpty) {
-      showAlert(context, message: 'Please enter a description.', isError: true);
-      return;
-    }
-    if (skillsRaw.isEmpty) {
-      showAlert(context, message: 'Please enter required skills.', isError: true);
-      return;
-    }
-    if (locationRaw.isEmpty) {
-      showAlert(context, message: 'Please enter a location.', isError: true);
-      return;
-    }
-    if (budgetRaw.isEmpty || int.tryParse(budgetRaw) == null) {
-      showAlert(context, message: 'Please enter a valid budget (NPR).', isError: true);
-      return;
-    }
-    if (deadlineRaw.isEmpty) {
-      showAlert(context, message: 'Please enter a deadline.', isError: true);
-      return;
-    }
+  void _showManageGigDialog(Gig gig) {
+    final titleCtrl = TextEditingController(text: gig.title);
+    final descCtrl = TextEditingController(text: '');
+    final skillsCtrl = TextEditingController(text: gig.requiredSkills.join(', '));
+    final budgetCtrl = TextEditingController(text: gig.budgetNpr.toString());
+    final deadlineCtrl = TextEditingController(text: gig.deadline);
+    final locationCtrl = TextEditingController(text: gig.location);
 
-    final deadline = _formatDeadline(deadlineRaw);
-    if (deadline == null) {
-      showAlert(context, message: 'Invalid deadline date. Use YYYY-MM-DD (e.g. 2026-10-23).', isError: true);
-      return;
-    }
-
-    setState(() {
-      _isPosting = true;
-      _errorMessage = null;
-      _postSuccessMessage = null;
-    });
-
-    try {
-      final result = await BusinessClient.postGig({
-        'title': title,
-        'description': description,
-        'required_skills': _parseSkills(skillsRaw),
-        'budget_npr': int.parse(budgetRaw),
-        'duration_days': 7,
-        'deadline': deadline,
-        'location': locationRaw,
-        'is_remote': true,
-        'category': 'Design & creative',
-        'deliverables': [],
-      });
-
-      if (result.containsKey('error')) {
-        setState(() {
-          _errorMessage = result['error'] as String?;
-          _isPosting = false;
-        });
-        return;
-      }
-
-      setState(() {
-        _isPosting = false;
-        _postSuccessMessage = 'Gig posted successfully!';
-        _errorMessage = null;
-      });
-
-      _titleController.clear();
-      _descriptionController.clear();
-      _skillsController.clear();
-      _budgetController.clear();
-      _deadlineController.clear();
-      _locationController.clear();
-
-      _loadGigs();
-    } catch (e) {
-      setState(() {
-        _isPosting = false;
-        _errorMessage = 'Connection error: $e';
-      });
-    }
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Manage Gig'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleCtrl,
+                decoration: const InputDecoration(labelText: 'Gig Title'),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: descCtrl,
+                maxLines: 3,
+                decoration: const InputDecoration(labelText: 'Description'),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: skillsCtrl,
+                decoration: const InputDecoration(labelText: 'Required Skills'),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: budgetCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Budget (NPR)'),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: deadlineCtrl,
+                decoration: const InputDecoration(labelText: 'Deadline'),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: locationCtrl,
+                decoration: const InputDecoration(labelText: 'Location'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final result = await BusinessClient.updateGig(
+                gig.id,
+                {
+                  'title': titleCtrl.text.trim(),
+                  'description': descCtrl.text.trim(),
+                  'required_skills': skillsCtrl.text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList(),
+                  'budget_npr': int.tryParse(budgetCtrl.text.trim()) ?? 0,
+                  'deadline': deadlineCtrl.text.trim(),
+                  'location': locationCtrl.text.trim(),
+                },
+              );
+              if (result.containsKey('error')) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(result['error'] ?? 'Failed to update'),
+                    backgroundColor: AppColors.errorRed,
+                  ),
+                );
+                return;
+              }
+              Navigator.pop(context);
+              _loadGigs();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Gig updated'),
+                  backgroundColor: AppColors.successGreen,
+                ),
+              );
+            },
+            child: const Text('Update'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Delete Gig'),
+                  content: const Text('Are you sure you want to delete this gig?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Delete', style: TextStyle(color: AppColors.errorRed)),
+                    ),
+                  ],
+                ),
+              );
+              if (confirm == true) {
+                final result = await BusinessClient.deleteGig(gig.id);
+                if (result.containsKey('error')) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(result['error'] ?? 'Failed to delete'),
+                      backgroundColor: AppColors.errorRed,
+                    ),
+                  );
+                  return;
+                }
+                _loadGigs();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Gig deleted'),
+                    backgroundColor: AppColors.successGreen,
+                  ),
+                );
+              }
+            },
+            child: const Text('Delete Gig', style: TextStyle(color: AppColors.errorRed)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    const primaryBlue = Color(0xFF1D61E7);
-    const darkText = Color(0xFF0F172A);
-    const mutedText = Color(0xFF64748B);
-    const borderColor = Color(0xFFE2E8F0);
-    const inputFill = Color(0xFFF8FAFC);
+    const darkText = AppColors.darkText;
+    const mutedText = AppColors.mutedText;
 
     if (_isLoading && _gigs.isEmpty) {
-      return Scaffold(
-        backgroundColor: Colors.white,
-        body: SafeArea(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
-              child: const Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Loading gigs...',
-                      style: TextStyle(color: mutedText, fontSize: 14)),
-                ],
-              ),
-            ),
-          ),
-        ),
-        bottomNavigationBar: widget.showNavBar ? _bottomNav() : null,
-      );
+      return _buildLoadingSkeleton();
     }
 
     if (_errorMessage != null && _gigs.isEmpty) {
-      return Scaffold(
-        backgroundColor: Colors.white,
-        body: SafeArea(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline,
-                      color: Colors.redAccent, size: 48),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Failed to load gigs',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: darkText,
+      return _buildErrorState();
+    }
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: widget.showAppBar
+          ? CommonAppBar(
+              displayName: widget.businessName,
+              role: 'business',
+              onAvatarTap: _logout,
+            )
+          : null,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Filter chips (horizontal scroll, no dropdown icon)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+                  child: SizedBox(
+                    height: 50,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: ['All', 'Open', 'In Progress', 'Closed']
+                            .map((f) => Padding(
+                                  padding: const EdgeInsets.only(right: 10),
+                                  child: GestureDetector(
+                                    onTap: () => setState(() => _filter = f),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 14, vertical: 9),
+                                      decoration: BoxDecoration(
+                                        color: _filter == f
+                                            ? AppColors.softBlueBg
+                                            : Colors.white,
+                                        border: Border.all(
+                                          color: _filter == f
+                                              ? AppColors.borderLight
+                                              : AppColors.borderColor,
+                                        ),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            f,
+                                            style: TextStyle(
+                                              fontSize: 13.5,
+                                              fontWeight: _filter == f
+                                                  ? FontWeight.w600
+                                                  : FontWeight.w500,
+                                              color: _filter == f
+                                                  ? AppColors.primaryBlue
+                                                  : AppColors.mutedText,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ))
+                            .toList(),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _errorMessage!,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: mutedText, fontSize: 13),
+                ),
+                const SizedBox(height: 12),
+
+                // Scrollable gigs list with pull-to-refresh
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: _loadGigs,
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Existing Gigs section header
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Existing Gigs',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                  color: darkText,
+                                ),
+                              ),
+                              Text(
+                                '${_filteredGigs.length} total',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: mutedText,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Gig list or empty state
+                          if (_filteredGigs.isEmpty)
+                            _buildEmptyState()
+                          else
+                            ..._filteredGigs.map((gig) {
+                              final (bgColor, textColor) =
+                                  _statusStyle(gig.status);
+                              final statusLabel =
+                                  gig.status[0].toUpperCase() +
+                                      gig.status.substring(1);
+                              return Column(
+                                children: [
+                                  _GigCard(
+                                    title: gig.title,
+                                    meta:
+                                        'NPR ${gig.budgetNpr} · ${gig.isRemote ? 'Remote' : 'On-site'} · ${gig.durationDays} days · Due ${gig.deadline}',
+                                    statusText: statusLabel,
+                                    statusBg: bgColor,
+                                    statusColor: textColor,
+                                    onManage: () => _showManageGigDialog(gig),
+                                  ),
+                                  const SizedBox(height: 12),
+                                ],
+                              );
+                            }),
+
+                          const SizedBox(height: 16),
+                        ],
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
+                ),
+
+                // Post a Gig button compact at bottom
+                Center(
+                  child: SizedBox(
+                    width: 260,
+                    height: 50,
                     child: ElevatedButton.icon(
-                      onPressed: _loadGigs,
-                      icon: const Icon(Icons.refresh, size: 18),
-                      label: const Text('Try again'),
+                      onPressed: () async {
+                        final posted = await Navigator.push<bool>(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => PostGigPage(
+                              businessName: widget.businessName,
+                              location: widget.location,
+                            ),
+                          ),
+                        );
+                        if (posted == true) {
+                          _loadGigs();
+                        }
+                      },
+                      icon: const Icon(Icons.add, size: 16),
+                      label: const Text(
+                        'Post Gig',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryBlue,
+                        backgroundColor: AppColors.primaryBlue,
                         foregroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(10),
                         ),
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 16),
+              ],
             ),
           ),
         ),
-        bottomNavigationBar: widget.showNavBar ? _bottomNav() : null,
-      );
-    }
+      ),
+      bottomNavigationBar: widget.showNavBar ? _bottomNav() : null,
+    );
+  }
 
+  Widget _buildLoadingSkeleton() {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 480),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'My Gigs',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      color: darkText,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${widget.businessName} · ${widget.location}',
-                    style: const TextStyle(
-                      fontSize: 13.5,
-                      color: mutedText,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  const Text(
-                    'Post New Gig',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: primaryBlue,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  _LabeledBoxField(
-                    label: 'Gig title',
-                    controller: _titleController,
-                    fillColor: inputFill,
-                    borderColor: borderColor,
-                  ),
-                  const SizedBox(height: 10),
-
-                  _LabeledBoxField(
-                    label: 'Description',
-                    controller: _descriptionController,
-                    fillColor: inputFill,
-                    borderColor: borderColor,
-                    maxLines: 2,
-                  ),
-                  const SizedBox(height: 10),
-
-                  _LabeledBoxField(
-                    label: 'Required skills',
-                    controller: _skillsController,
-                    fillColor: inputFill,
-                    borderColor: borderColor,
-                  ),
-                  const SizedBox(height: 10),
-
-                  _LabeledBoxField(
-                    label: 'Budget (NPR)',
-                    controller: _budgetController,
-                    fillColor: inputFill,
-                    borderColor: borderColor,
-                    keyboardType: TextInputType.number,
-                  ),
-                  const SizedBox(height: 10),
-
-                  GestureDetector(
-                    onTap: () => _selectDate(context),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFCBD5E1)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.calendar_today,
-                            size: 18,
-                            color: Color(0xFF64748B),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Deadline',
-                                  style: TextStyle(
-                                    fontSize: 11.5,
-                                    color: Color(0xFF64748B),
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  _deadlineController.text.isEmpty
-                                      ? 'Select a date'
-                                      : _deadlineController.text,
-                                  style: TextStyle(
-                                    fontSize: 14.5,
-                                    color: _deadlineController.text.isEmpty
-                                        ? const Color(0xFF94A3B8)
-                                        : const Color(0xFF0F172A),
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Icon(
-                            Icons.arrow_drop_down,
-                            size: 20,
-                            color: Color(0xFF64748B),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-
-                  _LabeledBoxField(
-                    label: 'Location',
-                    controller: _locationController,
-                    fillColor: inputFill,
-                    borderColor: borderColor,
-                  ),
-                  const SizedBox(height: 16),
-
-                  if (_postSuccessMessage != null)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFECFDF5),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFBBF7D0)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.check_circle,
-                              color: Color(0xFF15803D), size: 20),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              _postSuccessMessage!,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF166534),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  if (_postSuccessMessage != null)
-                    const SizedBox(height: 12),
-
-                  if (_errorMessage != null)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFEF2F2),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFFECACA)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.error_outline,
-                              color: Color(0xFFB91C1C), size: 20),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              _errorMessage!,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF991B1B),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  if (_errorMessage != null)
-                    const SizedBox(height: 12),
-
-                  SizedBox(
-                    width: double.infinity,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 60),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                  child: SizedBox(
                     height: 50,
-                    child: ElevatedButton(
-                      onPressed: _isPosting ? null : _postGig,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryBlue,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: ['All', 'Open', 'In Progress', 'Closed']
+                            .map((f) => Padding(
+                                  padding: const EdgeInsets.only(right: 10),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 14, vertical: 9),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.softBlueBg,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Container(
+                                          height: 16,
+                                          width: 60,
+                                          decoration: BoxDecoration(
+                                            color: AppColors.softBlueBg,
+                                            borderRadius: BorderRadius.circular(
+                                                4),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ))
+                            .toList(),
                       ),
-                      child: _isPosting
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation(Colors.white),
-                              ),
-                            )
-                          : const Text(
-                              'Post New Gig',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
                     ),
                   ),
-                  const SizedBox(height: 24),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Existing Gigs',
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w800,
-                          color: darkText,
+                ),
+                const SizedBox(height: 24),
+                ...List.generate(3, (index) {
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.borderColor),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          height: 16,
+                          width: 140,
+                          decoration: BoxDecoration(
+                            color: AppColors.softBlueBg,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
                         ),
-                      ),
-                      Text(
-                        '${_gigs.length} total',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          color: mutedText,
+                        const SizedBox(height: 8),
+                        Container(
+                          height: 13,
+                          width: 260,
+                          decoration: BoxDecoration(
+                            color: AppColors.softBlueBg,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-
-                  if (_gigs.isEmpty)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: borderColor),
-                      ),
-                      child: Column(
-                        children: [
-                          Icon(Icons.inbox_outlined,
-                              size: 48, color: const Color(0xFFCBD5E1)),
-                          const SizedBox(height: 12),
-                          Text(
-                            'No gigs yet.',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: darkText,
+                        const SizedBox(height: 14),
+                        Row(
+                          mainAxisAlignment:
+                              MainAxisAlignment.spaceBetween,
+                          children: [
+                            Container(
+                              height: 14,
+                              width: 100,
+                              decoration: BoxDecoration(
+                                color: AppColors.softBlueBg,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'Post your first gig above to get started.',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: mutedText,
+                            Container(
+                              height: 13,
+                              width: 120,
+                              decoration: BoxDecoration(
+                                color: AppColors.softBlueBg,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    )
-                  else
-                    ..._gigs.map((gig) {
-                      final (bgColor, textColor) = _statusStyle(gig.status);
-                      final statusLabel =
-                          gig.status[0].toUpperCase() + gig.status.substring(1);
-                      return Column(
-                        children: [
-                          _ExistingGigCard(
-                            title: gig.title,
-                            meta:
-                                'NPR ${gig.budgetNpr} · ${gig.isRemote ? 'Remote' : 'On-site'} · ${gig.durationDays} days · Due ${gig.deadline}',
-                            statusText: statusLabel,
-                            statusBg: bgColor,
-                            statusColor: textColor,
-                          ),
-                          const SizedBox(height: 12),
-                        ],
-                      );
-                    }),
-                ],
-              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
             ),
           ),
         ),
       ),
       bottomNavigationBar: widget.showNavBar ? _bottomNav() : null,
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline,
+                    color: AppColors.errorRed, size: 48),
+                const SizedBox(height: 16),
+                Text(
+                  'Failed to load gigs',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.darkText,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _errorMessage!,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: AppColors.mutedText, fontSize: 13),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    onPressed: _loadGigs,
+                    icon: const Icon(Icons.refresh, size: 18),
+                    label: const Text('Try again'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryBlue,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      bottomNavigationBar: widget.showNavBar ? _bottomNav() : null,
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borderColor),
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.inbox_outlined,
+              size: 56, color: AppColors.borderLight),
+          const SizedBox(height: 16),
+          Text(
+            _getEmptyMessage(),
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: AppColors.darkText,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _filter == 'All'
+                ? 'Post your first gig to get started.'
+                : 'Try selecting a different filter.',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppColors.mutedText,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 
@@ -635,7 +655,7 @@ class _BusinessGigsPageState extends State<BusinessGigsPage> {
         decoration: const BoxDecoration(
           color: Colors.white,
           border: Border(
-            top: BorderSide(color: Color(0xFFE2E8F0), width: 1),
+            top: BorderSide(color: AppColors.borderColor, width: 1),
           ),
         ),
         child: Row(
@@ -678,92 +698,32 @@ class _BusinessGigsPageState extends State<BusinessGigsPage> {
   }
 }
 
-class _LabeledBoxField extends StatelessWidget {
-  final String label;
-  final TextEditingController controller;
-  final Color fillColor;
-  final Color borderColor;
-  final int maxLines;
-  final TextInputType keyboardType;
-
-  const _LabeledBoxField({
-    required this.label,
-    required this.controller,
-    required this.fillColor,
-    required this.borderColor,
-    this.maxLines = 1,
-    this.keyboardType = TextInputType.text,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-      decoration: BoxDecoration(
-        color: fillColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 11.5,
-              color: Color(0xFF64748B),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 2),
-          TextField(
-            controller: controller,
-            maxLines: maxLines,
-            keyboardType: keyboardType,
-            style: const TextStyle(
-              fontSize: 14.5,
-              color: Color(0xFF0F172A),
-              fontWeight: FontWeight.w500,
-            ),
-            decoration: const InputDecoration(
-              isDense: true,
-              contentPadding: EdgeInsets.symmetric(vertical: 2),
-              border: InputBorder.none,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ExistingGigCard extends StatelessWidget {
+class _GigCard extends StatelessWidget {
   final String title;
   final String meta;
   final String statusText;
   final Color statusBg;
   final Color statusColor;
+  final VoidCallback onManage;
 
-  const _ExistingGigCard({
+  const _GigCard({
     required this.title,
     required this.meta,
     required this.statusText,
     required this.statusBg,
     required this.statusColor,
+    required this.onManage,
   });
 
   @override
   Widget build(BuildContext context) {
-    const primaryBlue = Color(0xFF1D61E7);
-
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: AppColors.borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -775,16 +735,15 @@ class _ExistingGigCard extends StatelessWidget {
                 child: Text(
                   title,
                   style: const TextStyle(
-                    fontSize: 15.5,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF0F172A),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.darkText,
                   ),
                 ),
               ),
               const SizedBox(width: 8),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
                   color: statusBg,
                   borderRadius: BorderRadius.circular(8),
@@ -792,7 +751,7 @@ class _ExistingGigCard extends StatelessWidget {
                 child: Text(
                   statusText,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: FontWeight.w700,
                     color: statusColor,
                   ),
@@ -800,48 +759,62 @@ class _ExistingGigCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Text(
             meta,
             style: const TextStyle(
-              fontSize: 12,
-              color: Color(0xFF64748B),
+              fontSize: 12.5,
+              color: AppColors.mutedText,
+              height: 1.4,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              GestureDetector(
-                onTap: () {},
-                child: const Text(
-                  'Edit',
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w700,
-                    color: primaryBlue,
-                  ),
-                ),
-              ),
-              GestureDetector(
-                onTap: () {},
-                child: const Row(
-                  children: [
-                    Text(
-                      'Manage',
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w700,
-                        color: primaryBlue,
-                      ),
-                    ),
-                    SizedBox(width: 4),
-                    Icon(Icons.arrow_forward, size: 15, color: primaryBlue),
-                  ],
-                ),
+              _ActionLink(
+                label: 'Manage',
+                icon: Icons.arrow_forward,
+                onTap: onManage,
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionLink extends StatelessWidget {
+  final String label;
+  final IconData? icon;
+  final VoidCallback onTap;
+
+  const _ActionLink({
+    required this.label,
+    this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: AppColors.primaryBlue,
+            ),
+          ),
+          if (icon != null) ...[
+            const SizedBox(width: 4),
+            Icon(icon, size: 14, color: AppColors.primaryBlue),
+          ],
         ],
       ),
     );
@@ -865,7 +838,7 @@ class _BottomNavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const blue = Color(0xFF2563EB);
+    const blue = AppColors.primaryBlue;
 
     return Expanded(
       child: GestureDetector(
@@ -902,3 +875,4 @@ class _BottomNavItem extends StatelessWidget {
     );
   }
 }
+

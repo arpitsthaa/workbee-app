@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:workbee_frontend/clients/business_client.dart';
-import 'package:workbee_frontend/constants/app_colors.dart';
 import 'package:workbee_frontend/models/api_models.dart';
 import 'package:workbee_frontend/pages/auth/login_page.dart';
 import 'package:workbee_frontend/pages/business/business_gigs_page.dart';
 import 'package:workbee_frontend/pages/business/business_profile_screen.dart';
 import 'package:workbee_frontend/pages/business/business_projects_page.dart';
 import 'package:workbee_frontend/services/token_service.dart';
-import 'package:workbee_frontend/pages/business/business_profile_screen.dart';
+import 'package:workbee_frontend/widgets/common_app_bar.dart';
 
 class BusinessDashboardPage extends StatefulWidget {
   final String businessName;
@@ -24,8 +23,9 @@ class BusinessDashboardPage extends StatefulWidget {
 }
 
 class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
+  static const softBlueBg = Color(0xFFEFF6FF);
+
   int _selectedIndex = 0;
-  bool _isLoading = true;
   String? _errorMessage;
   BusinessDashboardResponse? _dashboard;
 
@@ -37,18 +37,14 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
   }
 
   Future<void> _loadDashboard() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
     try {
       final result = await BusinessClient.getDashboard();
+
+      if (!mounted) return;
 
       if (result.containsKey('error')) {
         setState(() {
           _errorMessage = result['error'] as String?;
-          _isLoading = false;
         });
         return;
       }
@@ -56,12 +52,11 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
       final dashboard = BusinessDashboardResponse.fromJson(result);
       setState(() {
         _dashboard = dashboard;
-        _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = 'Connection error: $e';
-        _isLoading = false;
       });
     }
   }
@@ -87,54 +82,53 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
     const mutedText = Color(0xFF64748B);
     const borderColor = Color(0xFFE2E8F0);
 
-    if (_isLoading) return _buildLoading(context);
     if (_errorMessage != null) return _buildError(context, _errorMessage!);
-    final dashboard = _dashboard;
-    if (dashboard == null) return _buildLoading(context);
 
-    final displayName = dashboard.businessName;
-    final displayLocation = dashboard.location;
-    final recentApplications = dashboard.recentApplications;
+    final displayName = _dashboard?.businessName ?? widget.businessName;
+    final displayLocation = _dashboard?.location ?? widget.location;
+    final recentApplications = _dashboard?.recentApplications ?? const [];
+    final isLoading = _dashboard == null;
 
     return Scaffold(
       backgroundColor: Colors.white,
+      appBar: CommonAppBar(
+        displayName: displayName,
+        role: 'business',
+        onAvatarTap: _logout,
+      ),
       body: SafeArea(
-        child: Column(
+        child: IndexedStack(
+          index: _selectedIndex,
           children: [
-            _BusinessAppBar(onAvatarTap: _logout, displayName: displayName),
-            const SizedBox(height: 16),
-            Expanded(
-              child: IndexedStack(
-                index: _selectedIndex,
-                children: [
-                  _buildHomeBody(
-                    primaryBlue,
-                    softBlueBg,
-                    darkText,
-                    mutedText,
-                    borderColor,
-                    dashboard,
-                    displayName,
-                    displayLocation,
-                    recentApplications,
-                  ),
-                  BusinessGigsPage(
-                    businessName: displayName,
-                    location: displayLocation,
-                    showNavBar: false,
-                  ),
-                  BusinessProjectsScreen(
-                    businessName: displayName,
-                    location: displayLocation,
-                    showNavBar: false,
-                  ),
-                  BusinessProfilePage(
-                    businessName: displayName,
-                    location: displayLocation,
-                    showNavBar: false,
-                  ),
-                ],
-              ),
+            _buildHomeBody(
+              primaryBlue,
+              softBlueBg,
+              darkText,
+              mutedText,
+              borderColor,
+              _dashboard,
+              displayName,
+              displayLocation,
+              recentApplications,
+              isLoading,
+            ),
+            BusinessGigsPage(
+              businessName: displayName,
+              location: displayLocation,
+              showNavBar: false,
+              showAppBar: false,
+            ),
+            BusinessProjectsScreen(
+              businessName: displayName,
+              location: displayLocation,
+              showNavBar: false,
+              showAppBar: false,
+            ),
+            BusinessProfilePage(
+              businessName: displayName,
+              location: displayLocation,
+              showNavBar: false,
+              showAppBar: false,
             ),
           ],
         ),
@@ -149,26 +143,50 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
       Color darkText,
       Color mutedText,
       Color borderColor,
-      BusinessDashboardResponse dashboard,
+      BusinessDashboardResponse? dashboard,
       String displayName,
       String displayLocation,
       List<GigApplication> recentApplications,
+      bool isLoading,
       ) {
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 480),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 24, 20),
+          padding: const EdgeInsets.fromLTRB(20, 16, 24, 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Hi $displayName',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                  color: darkText,
-                ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Hi ',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      color: darkText,
+                    ),
+                  ),
+                  if (isLoading)
+                    Container(
+                      height: 28,
+                      width: 120,
+                      decoration: BoxDecoration(
+                        color: softBlueBg,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    )
+                  else
+                    Text(
+                      displayName,
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        color: darkText,
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(height: 4),
               Text(
@@ -176,10 +194,39 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
                 style: TextStyle(fontSize: 14.5, color: mutedText),
               ),
               const SizedBox(height: 12),
-              if (dashboard.isVerified)
+              if (isLoading)
                 Container(
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: softBlueBg,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 14,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          color: softBlueBg,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Container(
+                        width: 100,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: softBlueBg,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else if (dashboard!.isVerified)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
                     color: softBlueBg,
                     borderRadius: BorderRadius.circular(8),
@@ -205,8 +252,14 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
                   ),
                 ),
               const SizedBox(height: 20),
-              _buildActiveGigsCard(primaryBlue, softBlueBg, darkText, mutedText,
-                  borderColor, dashboard),
+              _buildActiveGigsCard(
+                primaryBlue,
+                softBlueBg,
+                darkText,
+                mutedText,
+                borderColor,
+                dashboard,
+              ),
               const SizedBox(height: 22),
               _buildMetricGrid(
                 primaryBlue,
@@ -222,6 +275,7 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
                 darkText,
                 mutedText,
                 recentApplications,
+                isLoading,
               ),
               const SizedBox(height: 12),
               _buildRecentApplicationsCard(
@@ -230,6 +284,7 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
                 recentApplications,
                 _getInitials,
                 _skillsAndRating,
+                isLoading,
               ),
               const SizedBox(height: 18),
               _buildActionButtons(primaryBlue),
@@ -288,93 +343,15 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
     );
   }
 
-  Widget _BusinessAppBar({
-    required VoidCallback onAvatarTap,
-    required String displayName,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      child: Row(
-        children: [
-          Row(
-            children: [
-              Image.asset(
-                'assets/workbee_logo.png',
-                width: 44,
-                height: 44,
-                fit: BoxFit.contain,
-              ),
-              const SizedBox(width: 12),
-              const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'WorkBee',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.darkText,
-                      height: 1.1,
-                    ),
-                  ),
-                  Text(
-                    'Bee Busy Be Paid',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppColors.mutedText,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const Spacer(),
-          IconButton(
-            onPressed: onAvatarTap,
-            icon: _DashboardAvatar(
-              businessName: displayName,
-              isVerified: _dashboard?.isVerified ?? false,
-            ),
-            splashRadius: 24,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _DashboardAvatar({
-    required String businessName,
-    required bool isVerified,
-  }) {
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: const BoxDecoration(
-        color: AppColors.softBlueBg,
-        shape: BoxShape.circle,
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        businessName.isNotEmpty ? businessName[0].toUpperCase() : 'M',
-        style: const TextStyle(
-          color: AppColors.primaryBlue,
-          fontWeight: FontWeight.w700,
-          fontSize: 14,
-        ),
-      ),
-    );
-  }
-
   Widget _buildActiveGigsCard(
       Color primaryBlue,
       Color softBlueBg,
       Color darkText,
       Color mutedText,
       Color borderColor,
-      BusinessDashboardResponse dashboard,
+      BusinessDashboardResponse? dashboard,
       ) {
+    final isLoading = dashboard == null;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -427,14 +404,24 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      dashboard.activeGigs.toString(),
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w800,
-                        color: primaryBlue,
+                    if (isLoading)
+                      Container(
+                        height: 28,
+                        width: 60,
+                        decoration: BoxDecoration(
+                          color: softBlueBg,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      )
+                    else
+                      Text(
+                        dashboard.activeGigs.toString(),
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w800,
+                          color: primaryBlue,
+                        ),
                       ),
-                    ),
                     const SizedBox(height: 4),
                     Text(
                       'Open for applications',
@@ -471,18 +458,20 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
       Color darkText,
       Color mutedText,
       Color borderColor,
-      BusinessDashboardResponse dashboard,
+      BusinessDashboardResponse? dashboard,
       ) {
+    final isLoading = dashboard == null;
     return Column(
       children: [
         Row(
           children: [
             Expanded(
               child: _MetricCard(
-                count: dashboard.newApplicants.toString(),
+                count: dashboard?.newApplicants.toString() ?? '',
                 title: 'New Applicants',
                 subtitle: 'Ready to review',
                 borderColor: borderColor,
+                isLoading: isLoading,
               ),
             ),
           ],
@@ -492,19 +481,21 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
           children: [
             Expanded(
               child: _MetricCard(
-                count: dashboard.projectsInProgress.toString(),
+                count: dashboard?.projectsInProgress.toString() ?? '',
                 title: 'Projects in Progress',
                 subtitle: 'Work awaiting review',
                 borderColor: borderColor,
+                isLoading: isLoading,
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: _MetricCard(
-                count: dashboard.completedProjects.toString(),
+                count: dashboard?.completedProjects.toString() ?? '',
                 title: 'Completed Projects',
                 subtitle: 'After your approval',
                 borderColor: borderColor,
+                isLoading: isLoading,
               ),
             ),
           ],
@@ -518,6 +509,7 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
       Color darkText,
       Color mutedText,
       List<GigApplication> recentApplications,
+      bool isLoading,
       ) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -530,7 +522,16 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
             color: darkText,
           ),
         ),
-        if (recentApplications.isNotEmpty)
+        if (isLoading)
+          Container(
+            height: 16,
+            width: 80,
+            decoration: BoxDecoration(
+              color: softBlueBg,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          )
+        else if (recentApplications.isNotEmpty)
           GestureDetector(
             onTap: () => setState(() => _selectedIndex = 2),
             child: Row(
@@ -562,7 +563,80 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
       List<GigApplication> recentApplications,
       String Function(String) getInitials,
       String Function(GigApplication) skillsAndRating,
+      bool isLoading,
       ) {
+    if (isLoading) {
+      return Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: borderColor),
+        ),
+        child: Column(
+          children: List.generate(3, (index) {
+            return Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: softBlueBg,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              height: 15,
+                              width: 120,
+                              decoration: BoxDecoration(
+                                color: softBlueBg,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              height: 12.5,
+                              width: 200,
+                              decoration: BoxDecoration(
+                                color: softBlueBg,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              height: 12.5,
+                              width: 150,
+                              decoration: BoxDecoration(
+                                color: softBlueBg,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (index < 2)
+                    Divider(height: 1, color: borderColor),
+                ],
+              ),
+            );
+          }),
+        ),
+      );
+    }
+
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -660,32 +734,6 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
     );
   }
 
-  Widget _buildLoading(BuildContext context) {
-    const mutedText = Color(0xFF64748B);
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const CircularProgressIndicator(),
-                const SizedBox(height: 16),
-                Text(
-                  'Loading dashboard...',
-                  style: TextStyle(color: mutedText, fontSize: 14),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-      bottomNavigationBar: _bottomNav(),
-    );
-  }
-
   Widget _buildError(BuildContext context, String message) {
     const primaryBlue = Color(0xFF1D61E7);
     const mutedText = Color(0xFF64748B);
@@ -749,7 +797,7 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (context) => const LoginPage()),
-          (route) => false,
+      (route) => false,
     );
   }
 }
@@ -759,16 +807,19 @@ class _MetricCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final Color borderColor;
+  final bool isLoading;
 
   const _MetricCard({
     required this.count,
     required this.title,
     required this.subtitle,
     required this.borderColor,
+    this.isLoading = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    const softBlueBg = Color(0xFFEFF6FF);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -779,15 +830,25 @@ class _MetricCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(
-            count,
-            style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF1D61E7),
-              height: 1.1,
+          if (isLoading)
+            Container(
+              height: 28,
+              width: 60,
+              decoration: BoxDecoration(
+                color: softBlueBg,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            )
+          else
+            Text(
+              count,
+              style: const TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF1D61E7),
+                height: 1.1,
+              ),
             ),
-          ),
           const SizedBox(height: 8),
           Text(
             title,
