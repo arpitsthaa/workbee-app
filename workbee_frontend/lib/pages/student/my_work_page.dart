@@ -148,6 +148,23 @@ class MyWorkPageState extends State<MyWorkPage> {
     }
   }
 
+  Color _getProjectStatusColor(String status) {
+    switch (status.toUpperCase()) {
+      case 'NOT_STARTED':
+        return AppColors.mutedText;
+      case 'IN_PROGRESS':
+        return AppColors.primaryBlue;
+      case 'COMPLETED':
+        return AppColors.successGreen;
+      case 'SUBMITTED':
+        return const Color(0xFFF59E0B);
+      case 'APPROVED':
+        return const Color(0xFF10B981);
+      default:
+        return AppColors.mutedText;
+    }
+  }
+
   String _formatDate(String? dateStr) {
     if (dateStr == null || dateStr.isEmpty) return 'recently';
     return dateStr;
@@ -474,61 +491,27 @@ class MyWorkPageState extends State<MyWorkPage> {
                                                 ),
                                               ),
                                             ),
-                                            Text(
-                                              project.status.replaceAll('_', ' ').toUpperCase(),
-                                              style: TextStyle(
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w600,
-                                                color: AppColors.primaryBlue,
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: _getProjectStatusColor(project.status).withOpacity(0.15),
+                                                borderRadius: BorderRadius.circular(6),
+                                                border: Border.all(
+                                                  color: _getProjectStatusColor(project.status),
+                                                ),
+                                              ),
+                                              child: Text(
+                                                project.status.replaceAll('_', ' ').toUpperCase(),
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: _getProjectStatusColor(project.status),
+                                                ),
                                               ),
                                             ),
                                           ],
                                         ),
                                         const SizedBox(height: 6),
-                                        Row(
-                                          children: [
-                                            const Text(
-                                              'Status:',
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w600,
-                                                color: AppColors.mutedText,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            _StatusToggle(
-                                              currentStatus: project.status,
-                                              onStatusChanged: (newStatus) async {
-                                                final result = await StudentClient.updateProjectStatus(
-                                                  project.id,
-                                                  newStatus,
-                                                );
-                                                if (!mounted) return;
-                                                if (result.containsKey('error')) {
-                                                  if (!mounted) return;
-                                                  ScaffoldMessenger.of(context).showSnackBar(
-                                                    SnackBar(
-                                                      content: Text(
-                                                        result['error'] ??
-                                                            'Failed to update status',
-                                                      ),
-                                                      backgroundColor: AppColors.errorRed,
-                                                    ),
-                                                  );
-                                                  return;
-                                                }
-                                                if (!mounted) return;
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  SnackBar(
-                                                    content: Text(
-                                                        'Status updated to ${newStatus.toLowerCase()}'),
-                                                    backgroundColor: AppColors.successGreen,
-                                                  ),
-                                                );
-                                              },
-                                            ),
-                                          ],
-                                        ),
                                         Text(
                                           '${project.businessName} · Due ${project.deadline}',
                                           style: TextStyle(
@@ -556,6 +539,81 @@ class MyWorkPageState extends State<MyWorkPage> {
                                           ),
                                         ],
                                         if (isSelected) ...[
+                                          const SizedBox(height: 16),
+                                          Row(
+                                            children: [
+                                              const Text(
+                                                'Status:',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: AppColors.mutedText,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: DropdownButtonFormField<String>(
+                                                  value: project.status,
+                                                  items: const [
+                                                    DropdownMenuItem(
+                                                      value: 'NOT_STARTED',
+                                                      child: Text('Not Started'),
+                                                    ),
+                                                    DropdownMenuItem(
+                                                      value: 'IN_PROGRESS',
+                                                      child: Text('In Progress'),
+                                                    ),
+                                                    DropdownMenuItem(
+                                                      value: 'COMPLETED',
+                                                      child: Text('Completed'),
+                                                    ),
+                                                    DropdownMenuItem(
+                                                      value: 'SUBMITTED',
+                                                      child: Text('Submitted'),
+                                                    ),
+                                                    DropdownMenuItem(
+                                                      value: 'APPROVED',
+                                                      child: Text('Approved'),
+                                                    ),
+                                                  ],
+                                                onChanged: (newStatus) async {
+                                                  if (newStatus == null) return;
+                                                  final result = await StudentClient.updateProjectStatus(
+                                                    project.id,
+                                                    newStatus,
+                                                  );
+                                                  if (!mounted) return;
+                                                  if (result.containsKey('error')) {
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      SnackBar(
+                                                        content: Text(
+                                                          result['error'] ??
+                                                              'Failed to update status',
+                                                        ),
+                                                        backgroundColor: AppColors.errorRed,
+                                                      ),
+                                                    );
+                                                    return;
+                                                  }
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text(
+                                                          'Status updated to ${newStatus.toLowerCase()}'),
+                                                      backgroundColor: AppColors.successGreen,
+                                                    ),
+                                                  );
+                                                  await _loadWork();
+                                                },
+                                                decoration: InputDecoration(
+                                                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                  border: OutlineInputBorder(
+                                                    borderRadius: BorderRadius.circular(8),
+                                                  ),
+                                                ),
+                                              ),
+                                              ),
+                                            ],
+                                          ),
                                           const SizedBox(height: 16),
                                           const Text(
                                             'Submit Work',
@@ -881,124 +939,6 @@ class _ProfileInfoRow extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// Status toggle widget: Not Started / In Progress / Completed.
-class _StatusToggle extends StatefulWidget {
-  final String currentStatus;
-  final ValueChanged<String> onStatusChanged;
-
-  const _StatusToggle({
-    required this.currentStatus,
-    required this.onStatusChanged,
-  });
-
-  @override
-  State<_StatusToggle> createState() => _StatusToggleState();
-}
-
-class _StatusToggleState extends State<_StatusToggle> {
-  late String _selectedStatus;
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedStatus = widget.currentStatus;
-  }
-
-  Color _statusColor(String status) {
-    switch (status.toUpperCase()) {
-      case 'NOT_STARTED':
-        return AppColors.mutedText;
-      case 'IN_PROGRESS':
-        return AppColors.primaryBlue;
-      case 'COMPLETED':
-        return AppColors.successGreen;
-      default:
-        return AppColors.mutedText;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _StatusChip(
-          label: 'Not Started',
-          value: 'NOT_STARTED',
-          selected: _selectedStatus.toUpperCase() == 'NOT_STARTED',
-          color: _statusColor(_selectedStatus),
-          onTap: () => _selectStatus('NOT_STARTED'),
-        ),
-        const SizedBox(width: 6),
-        _StatusChip(
-          label: 'In Progress',
-          value: 'IN_PROGRESS',
-          selected: _selectedStatus.toUpperCase() == 'IN_PROGRESS',
-          color: _statusColor(_selectedStatus),
-          onTap: () => _selectStatus('IN_PROGRESS'),
-        ),
-        const SizedBox(width: 6),
-        _StatusChip(
-          label: 'Completed',
-          value: 'COMPLETED',
-          selected: _selectedStatus.toUpperCase() == 'COMPLETED',
-          color: _statusColor(_selectedStatus),
-          onTap: () => _selectStatus('COMPLETED'),
-        ),
-      ],
-    );
-  }
-
-  void _selectStatus(String status) {
-    setState(() {
-      _selectedStatus = status;
-    });
-    widget.onStatusChanged(status);
-  }
-}
-
-class _StatusChip extends StatelessWidget {
-  final String label;
-  final String value;
-  final bool selected;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _StatusChip({
-    required this.label,
-    required this.value,
-    required this.selected,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        decoration: BoxDecoration(
-          color: selected ? color.withValues(alpha: 0.15) : AppColors.inputFill,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: selected ? color : AppColors.borderColor,
-            width: selected ? 1.5 : 1,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            color: selected ? color : AppColors.mutedText,
-          ),
-        ),
       ),
     );
   }
