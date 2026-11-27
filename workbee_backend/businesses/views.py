@@ -106,7 +106,7 @@ class UpdateApplicationStatusView(APIView):
                 defaults={
                     "student": application.student,
                     "business": request.user,
-                    "status": "IN_PROGRESS",
+                    "status": "NOT_STARTED",
                 },
             )
             project_data = ProjectSerializer(project).data

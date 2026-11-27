@@ -190,6 +190,12 @@ class _BusinessProjectsScreenState extends State<BusinessProjectsScreen> {
         return const Color(0xFFF59E0B);
       case 'PENDING':
         return _mutedText;
+      case 'NOT_STARTED':
+        return _mutedText;
+      case 'COMPLETED':
+        return AppColors.successGreen;
+      case 'SUBMITTED':
+        return const Color(0xFFF59E0B);
       default:
         return _mutedText;
     }
@@ -205,6 +211,12 @@ class _BusinessProjectsScreenState extends State<BusinessProjectsScreen> {
         return _badgePending;
       case 'PENDING':
         return _badgeRejected;
+      case 'NOT_STARTED':
+        return const Color(0xFFE2E8F0);
+      case 'COMPLETED':
+        return const Color(0xFFD1FAE5);
+      case 'SUBMITTED':
+        return const Color(0xFFFEF3C7);
       default:
         return _badgePending;
     }
