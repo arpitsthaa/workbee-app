@@ -16,6 +16,12 @@ class StudentProfileSerializer(serializers.ModelSerializer):
         source="user.college_university", required=False
     )
     location = serializers.CharField(source="user.location", required=False)
+    phone = serializers.CharField(source="user.phone", required=False)
+    graduation_year = serializers.CharField(required=False)
+    linkedin = serializers.URLField(required=False, allow_blank=True)
+    github = serializers.URLField(required=False, allow_blank=True)
+    address = serializers.CharField(required=False, allow_blank=True)
+    avatar_url = serializers.URLField(required=False, allow_blank=True)
     profile_completion = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -26,11 +32,17 @@ class StudentProfileSerializer(serializers.ModelSerializer):
             "email",
             "college_university",
             "location",
+            "phone",
             "program",
             "semester",
+            "graduation_year",
             "bio",
             "skills",
             "portfolio_url",
+            "linkedin",
+            "github",
+            "address",
+            "avatar_url",
             "is_verified",
             "verified_date",
             "profile_completion",
@@ -53,6 +65,13 @@ class BusinessProfileSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source="user.email", read_only=True)
     full_name = serializers.CharField(source="user.full_name", required=False)
     location = serializers.CharField(source="user.location", required=False)
+    phone = serializers.CharField(source="user.phone", required=False)
+    website = serializers.URLField(required=False, allow_blank=True)
+    registration_number = serializers.CharField(required=False, allow_blank=True)
+    founded_year = serializers.CharField(required=False, allow_blank=True)
+    team_size = serializers.CharField(required=False, allow_blank=True)
+    social_links = serializers.JSONField(required=False, default=dict)
+    logo_url = serializers.URLField(required=False, allow_blank=True)
 
     class Meta:
         model = BusinessProfile
@@ -61,8 +80,15 @@ class BusinessProfileSerializer(serializers.ModelSerializer):
             "email",
             "full_name",
             "location",
+            "phone",
             "business_type",
             "about",
+            "website",
+            "registration_number",
+            "founded_year",
+            "team_size",
+            "social_links",
+            "logo_url",
             "is_verified",
         ]
         read_only_fields = ["is_verified"]

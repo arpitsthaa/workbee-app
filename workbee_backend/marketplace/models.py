@@ -16,6 +16,12 @@ class StudentProfile(models.Model):
     portfolio_url = models.URLField(blank=True, default="")
     is_verified = models.BooleanField(default=False)
     verified_date = models.DateField(null=True, blank=True)
+    # Extra student info (all optional)
+    graduation_year = models.CharField(max_length=10, blank=True, default="")
+    linkedin = models.URLField(blank=True, default="")
+    github = models.URLField(blank=True, default="")
+    address = models.CharField(max_length=255, blank=True, default="")
+    avatar_url = models.URLField(blank=True, default="")
 
     @property
     def profile_completion(self):
@@ -28,6 +34,10 @@ class StudentProfile(models.Model):
             self.bio,
             bool(self.skills),
             self.portfolio_url,
+            self.graduation_year,
+            self.linkedin,
+            self.github,
+            self.address,
         ]
         filled = sum(1 for item in fields if item)
         return int((filled / len(fields)) * 100)
@@ -47,6 +57,14 @@ class BusinessProfile(models.Model):
     )  # e.g., Restaurant · Local business
     about = models.TextField(blank=True, default="")
     is_verified = models.BooleanField(default=False)
+    # Extra business info (all optional)
+    phone = models.CharField(max_length=20, blank=True, default="")
+    website = models.URLField(blank=True, default="")
+    registration_number = models.CharField(max_length=100, blank=True, default="")
+    founded_year = models.CharField(max_length=10, blank=True, default="")
+    team_size = models.CharField(max_length=50, blank=True, default="")
+    social_links = models.JSONField(default=dict, blank=True)  # e.g., {"instagram": "..."}
+    logo_url = models.URLField(blank=True, default="")
 
     def __str__(self):
         return f"Business Profile: {self.user.email}"

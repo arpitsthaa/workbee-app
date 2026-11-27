@@ -1,7 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:workbee_frontend/pages/auth/splash_page.dart';
+import 'package:workbee_frontend/services/supabase_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await SupabaseService().init();
   runApp(const WorkBeeApp());
 }
 

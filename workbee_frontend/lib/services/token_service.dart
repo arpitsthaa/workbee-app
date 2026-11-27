@@ -23,6 +23,12 @@ class TokenService extends ChangeNotifier {
   static const String _skillsKey = 'user_skills';
   static const String _portfolioKey = 'user_portfolio_url';
   static const String _appliedGigIdsKey = 'applied_gig_ids';
+  static const String _phoneKey = 'user_phone';
+  static const String _graduationYearKey = 'user_graduation_year';
+  static const String _linkedinKey = 'user_linkedin';
+  static const String _githubKey = 'user_github';
+  static const String _addressKey = 'user_address';
+  static const String _avatarUrlKey = 'user_avatar_url';
 
   static SharedPreferences? _prefs;
 
@@ -38,6 +44,12 @@ class TokenService extends ChangeNotifier {
   static String? _cachedBio;
   static List<String> _cachedSkills = [];
   static String? _cachedPortfolio;
+  static String? _cachedPhone;
+  static String? _cachedGraduationYear;
+  static String? _cachedLinkedin;
+  static String? _cachedGithub;
+  static String? _cachedAddress;
+  static String? _cachedAvatarUrl;
   static Set<int> _cachedAppliedGigIds = {};
 
   static Future<SharedPreferences> get _prefsInstance async {
@@ -58,6 +70,12 @@ class TokenService extends ChangeNotifier {
   static String? getBioSync() => _cachedBio;
   static List<String> getSkillsSync() => _cachedSkills;
   static String? getPortfolioUrlSync() => _cachedPortfolio;
+  static String? getPhoneSync() => _cachedPhone;
+  static String? getGraduationYearSync() => _cachedGraduationYear;
+  static String? getLinkedinSync() => _cachedLinkedin;
+  static String? getGithubSync() => _cachedGithub;
+  static String? getAddressSync() => _cachedAddress;
+  static String? getAvatarUrlSync() => _cachedAvatarUrl;
   static Set<int> getAppliedGigIdsSync() => _cachedAppliedGigIds;
 
   // ---- Token ----
@@ -121,6 +139,12 @@ class TokenService extends ChangeNotifier {
     String? bio,
     List<String>? skills,
     String? portfolioUrl,
+    String? phone,
+    String? graduationYear,
+    String? linkedin,
+    String? github,
+    String? address,
+    String? avatarUrl,
   }) async {
     final prefs = await _prefsInstance;
     await prefs.setString(_nameKey, name);
@@ -137,6 +161,14 @@ class TokenService extends ChangeNotifier {
     if (portfolioUrl != null) {
       await prefs.setString(_portfolioKey, portfolioUrl);
     }
+    if (phone != null) await prefs.setString(_phoneKey, phone);
+    if (graduationYear != null) {
+      await prefs.setString(_graduationYearKey, graduationYear);
+    }
+    if (linkedin != null) await prefs.setString(_linkedinKey, linkedin);
+    if (github != null) await prefs.setString(_githubKey, github);
+    if (address != null) await prefs.setString(_addressKey, address);
+    if (avatarUrl != null) await prefs.setString(_avatarUrlKey, avatarUrl);
     _cachedName = name;
     _cachedId = id;
     _cachedRole = role;
@@ -147,6 +179,12 @@ class TokenService extends ChangeNotifier {
     _cachedBio = bio;
     if (skills != null) _cachedSkills = skills;
     _cachedPortfolio = portfolioUrl;
+    _cachedPhone = phone;
+    _cachedGraduationYear = graduationYear;
+    _cachedLinkedin = linkedin;
+    _cachedGithub = github;
+    _cachedAddress = address;
+    _cachedAvatarUrl = avatarUrl;
     TokenService._instance.notifyListeners();
   }
 
@@ -159,6 +197,12 @@ class TokenService extends ChangeNotifier {
     String? bio,
     List<String>? skills,
     String? portfolioUrl,
+    String? phone,
+    String? graduationYear,
+    String? linkedin,
+    String? github,
+    String? address,
+    String? avatarUrl,
   }) async {
     final prefs = await _prefsInstance;
     if (name != null) await prefs.setString(_nameKey, name);
@@ -173,6 +217,14 @@ class TokenService extends ChangeNotifier {
     if (portfolioUrl != null) {
       await prefs.setString(_portfolioKey, portfolioUrl);
     }
+    if (phone != null) await prefs.setString(_phoneKey, phone);
+    if (graduationYear != null) {
+      await prefs.setString(_graduationYearKey, graduationYear);
+    }
+    if (linkedin != null) await prefs.setString(_linkedinKey, linkedin);
+    if (github != null) await prefs.setString(_githubKey, github);
+    if (address != null) await prefs.setString(_addressKey, address);
+    if (avatarUrl != null) await prefs.setString(_avatarUrlKey, avatarUrl);
     if (name != null) _cachedName = name;
     if (location != null) _cachedLocation = location;
     if (collegeUniversity != null) _cachedCollege = collegeUniversity;
@@ -181,6 +233,12 @@ class TokenService extends ChangeNotifier {
     if (bio != null) _cachedBio = bio;
     if (skills != null) _cachedSkills = skills;
     if (portfolioUrl != null) _cachedPortfolio = portfolioUrl;
+    if (phone != null) _cachedPhone = phone;
+    if (graduationYear != null) _cachedGraduationYear = graduationYear;
+    if (linkedin != null) _cachedLinkedin = linkedin;
+    if (github != null) _cachedGithub = github;
+    if (address != null) _cachedAddress = address;
+    if (avatarUrl != null) _cachedAvatarUrl = avatarUrl;
     TokenService._instance.notifyListeners();
   }
 
@@ -239,6 +297,36 @@ class TokenService extends ChangeNotifier {
     return prefs.getString(_portfolioKey);
   }
 
+  static Future<String?> getPhone() async {
+    final prefs = await _prefsInstance;
+    return prefs.getString(_phoneKey);
+  }
+
+  static Future<String?> getGraduationYear() async {
+    final prefs = await _prefsInstance;
+    return prefs.getString(_graduationYearKey);
+  }
+
+  static Future<String?> getLinkedin() async {
+    final prefs = await _prefsInstance;
+    return prefs.getString(_linkedinKey);
+  }
+
+  static Future<String?> getGithub() async {
+    final prefs = await _prefsInstance;
+    return prefs.getString(_githubKey);
+  }
+
+  static Future<String?> getAddress() async {
+    final prefs = await _prefsInstance;
+    return prefs.getString(_addressKey);
+  }
+
+  static Future<String?> getAvatarUrl() async {
+    final prefs = await _prefsInstance;
+    return prefs.getString(_avatarUrlKey);
+  }
+
   static Future<Set<int>> getAppliedGigIds() async {
     final prefs = await _prefsInstance;
     final appliedIdsJson = prefs.getString(_appliedGigIdsKey);
@@ -287,6 +375,12 @@ class TokenService extends ChangeNotifier {
     await prefs.remove(_skillsKey);
     await prefs.remove(_portfolioKey);
     await prefs.remove(_appliedGigIdsKey);
+    await prefs.remove(_phoneKey);
+    await prefs.remove(_graduationYearKey);
+    await prefs.remove(_linkedinKey);
+    await prefs.remove(_githubKey);
+    await prefs.remove(_addressKey);
+    await prefs.remove(_avatarUrlKey);
     _cachedName = null;
     _cachedId = null;
     _cachedRole = null;
@@ -298,6 +392,12 @@ class TokenService extends ChangeNotifier {
     _cachedSkills = [];
     _cachedPortfolio = null;
     _cachedAppliedGigIds = {};
+    _cachedPhone = null;
+    _cachedGraduationYear = null;
+    _cachedLinkedin = null;
+    _cachedGithub = null;
+    _cachedAddress = null;
+    _cachedAvatarUrl = null;
     TokenService._instance.notifyListeners();
   }
 }

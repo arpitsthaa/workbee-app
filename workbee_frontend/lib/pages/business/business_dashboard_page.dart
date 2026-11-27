@@ -288,7 +288,10 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
               activeIcon: Icons.home_rounded,
               label: 'Home',
               selected: _selectedIndex == 0,
-              onTap: () => setState(() => _selectedIndex = 0),
+              onTap: () async {
+                setState(() => _selectedIndex = 0);
+                await _loadDashboard();
+              },
             ),
             _BottomNavItem(
               icon: Icons.work_outline_rounded,

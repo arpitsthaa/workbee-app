@@ -1,9 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:workbee_frontend/clients/student_client.dart';
 import 'package:workbee_frontend/constants/app_colors.dart';
 import 'package:workbee_frontend/helpers/alert_helper.dart';
 import 'package:workbee_frontend/models/api_models.dart';
 import 'package:workbee_frontend/pages/auth/login_page.dart';
+import 'package:workbee_frontend/services/supabase_service.dart';
 import 'package:workbee_frontend/services/token_service.dart';
 import 'package:workbee_frontend/widgets/error_retry_state.dart';
 import 'package:workbee_frontend/widgets/loading_state.dart';
@@ -30,6 +33,13 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
   final _aboutController = TextEditingController();
   final _skillsController = TextEditingController();
   final _portfolioController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _graduationYearController = TextEditingController();
+  final _linkedinController = TextEditingController();
+  final _githubController = TextEditingController();
+  final _addressController = TextEditingController();
+  File? _avatarFile;
+  final _picker = ImagePicker();
 
   @override
   void initState() {
@@ -46,6 +56,11 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
     _aboutController.dispose();
     _skillsController.dispose();
     _portfolioController.dispose();
+    _phoneController.dispose();
+    _graduationYearController.dispose();
+    _linkedinController.dispose();
+    _githubController.dispose();
+    _addressController.dispose();
     super.dispose();
   }
 
@@ -64,6 +79,11 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
       final skills = await TokenService.getSkills();
       _skillsController.text = skills.join(', ');
       _portfolioController.text = (await TokenService.getPortfolioUrl()) ?? '';
+      _phoneController.text = (await TokenService.getPhone()) ?? '';
+      _graduationYearController.text = (await TokenService.getGraduationYear()) ?? '';
+      _linkedinController.text = (await TokenService.getLinkedin()) ?? '';
+      _githubController.text = (await TokenService.getGithub()) ?? '';
+      _addressController.text = (await TokenService.getAddress()) ?? '';
     }
 
     final result = await StudentClient.getProfile();
@@ -80,11 +100,16 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
         _nameController.text = profile.fullName;
         _locationController.text = profile.location ?? '';
         _collegeController.text = profile.collegeUniversity ?? '';
+        _phoneController.text = profile.phone ?? '';
         _courseController.text =
             '${profile.program} · ${profile.semester}'.trim();
+        _graduationYearController.text = profile.graduationYear ?? '';
         _aboutController.text = profile.bio;
         _skillsController.text = profile.skills.join(', ');
         _portfolioController.text = profile.portfolioUrl;
+        _linkedinController.text = profile.linkedin ?? '';
+        _githubController.text = profile.github ?? '';
+        _addressController.text = profile.address ?? '';
         _isLoading = false;
       });
     }
@@ -121,12 +146,42 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
       'full_name': _nameController.text.trim(),
       'location': _locationController.text.trim(),
       'college_university': _collegeController.text.trim(),
+      'phone': _phoneController.text.trim(),
       'program': program,
       'semester': semester,
+      'graduation_year': _graduationYearController.text.trim(),
       'bio': _aboutController.text.trim(),
       'skills': skillsList,
       'portfolio_url': portfolioUrl,
+      'linkedin': _linkedinController.text.trim(),
+      'github': _githubController.text.trim(),
+      'address': _addressController.text.trim(),
     };
+
+    // Upload avatar if selected
+    if (_avatarFile != null) {
+      if (SupabaseService.isFileTooLarge(_avatarFile!.path, maxMb: 5)) {
+        if (!mounted) return;
+        showAlert(
+          context,
+          message: 'File too large. Max 5 MB allowed.',
+          isError: true,
+        );
+        return;
+      }
+      final fileName = 'avatars/${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final avatarUrl = await SupabaseService().upload(_avatarFile!.path, fileName);
+      if (avatarUrl != null) {
+        data['avatar_url'] = avatarUrl;
+      } else if (mounted) {
+        showAlert(
+          context,
+          message: 'Avatar upload failed.',
+          isError: true,
+        );
+        return;
+      }
+    }
 
     final result = await StudentClient.updateProfile(data);
     if (!mounted) return;
@@ -142,11 +197,17 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
         name: _nameController.text.trim(),
         location: _locationController.text.trim(),
         collegeUniversity: _collegeController.text.trim(),
+        phone: _phoneController.text.trim(),
         program: program,
         semester: semester,
+        graduationYear: _graduationYearController.text.trim(),
         bio: _aboutController.text.trim(),
         skills: skillsList,
         portfolioUrl: portfolioUrl,
+        linkedin: _linkedinController.text.trim(),
+        github: _githubController.text.trim(),
+        address: _addressController.text.trim(),
+        avatarUrl: data['avatar_url'] as String?,
       );
       if (!mounted) return;
       setState(() => _isEditing = false);
@@ -221,6 +282,16 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
         ),
         const SizedBox(height: 12),
         TextField(
+          controller: _phoneController,
+          decoration: const InputDecoration(labelText: 'Phone'),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _graduationYearController,
+          decoration: const InputDecoration(labelText: 'Graduation Year'),
+        ),
+        const SizedBox(height: 12),
+        TextField(
           controller: _courseController,
           decoration: const InputDecoration(
             labelText: 'Course & semester',
@@ -245,6 +316,49 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
           decoration: const InputDecoration(
             labelText: 'Portfolio link',
           ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _linkedinController,
+          decoration: const InputDecoration(labelText: 'LinkedIn URL'),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _githubController,
+          decoration: const InputDecoration(labelText: 'GitHub URL'),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _addressController,
+          decoration: const InputDecoration(labelText: 'Address'),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            const Text('Avatar: '),
+            const SizedBox(width: 8),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  final picked = await _picker.pickImage(source: ImageSource.gallery);
+                  if (picked != null) {
+                    if (SupabaseService.isFileTooLarge(picked.path, maxMb: 5)) {
+                      if (!mounted) return;
+                      showAlert(
+                        context,
+                        message: 'File too large. Max 5 MB allowed.',
+                        isError: true,
+                      );
+                      return;
+                    }
+                    setState(() => _avatarFile = File(picked.path));
+                  }
+                },
+                icon: const Icon(Icons.image, size: 18),
+                label: const Text('Choose'),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 20),
         Row(
