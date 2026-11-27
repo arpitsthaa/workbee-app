@@ -20,6 +20,8 @@ class ApiConstants {
   static const String studentWork = '/api/student/work/';
   static const String studentWorkApplications = '/api/student/work/applications/';
   static const String studentWorkProjects = '/api/student/work/projects/';
+  static const String studentWorkSubmit = '/api/student/work/projects/';
+  static const String studentWorkUpdateStatus = '/api/student/work/projects/';
   static const String studentPassport = '/api/student/passport/';
   static const String studentProfile = '/api/student/profile/';
   static const String studentApplyGigById = '/api/student/gigs/';

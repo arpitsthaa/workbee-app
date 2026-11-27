@@ -730,52 +730,48 @@ class _BusinessProjectsScreenState extends State<BusinessProjectsScreen> {
               children: [
                 Expanded(
                   child: SizedBox(
-                    height: 42,
-                    child: OutlinedButton(
-                      onPressed: () => _updateApplicationStatus(app.id, 'shortlisted'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: _primaryBlue,
-                        side: const BorderSide(color: _primaryBlue),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: const Text('Shortlist'),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: SizedBox(
-                    height: 42,
-                    child: OutlinedButton(
+                    height: 50,
+                    child: ElevatedButton(
                       onPressed: () => _updateApplicationStatus(app.id, 'accepted'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white,
+                      style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.successGreen,
-                        side: const BorderSide(color: AppColors.successGreen),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text('Accept'),
+                      child: const Text(
+                        'Accept',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
                   child: SizedBox(
-                    height: 42,
-                    child: OutlinedButton(
+                    height: 50,
+                    child: ElevatedButton(
                       onPressed: () => _updateApplicationStatus(app.id, 'rejected'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.errorRed,
-                        side: const BorderSide(color: AppColors.errorRed),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.errorRed,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text('Reject'),
+                      child: const Text(
+                        'Reject',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -815,6 +811,7 @@ class _BusinessProjectsScreenState extends State<BusinessProjectsScreen> {
       return;
     }
     _loadApplications();
+    _loadProjects();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Application $status'),
