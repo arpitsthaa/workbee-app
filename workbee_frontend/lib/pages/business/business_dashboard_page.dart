@@ -84,7 +84,8 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
 
     if (_errorMessage != null) return _buildError(context, _errorMessage!);
 
-    final displayName = _dashboard?.businessName ?? widget.businessName;
+    final rawBusinessName = _dashboard?.businessName ?? widget.businessName;
+    final displayName = rawBusinessName.contains('@') ? widget.businessName : rawBusinessName;
     final displayLocation = _dashboard?.location ?? widget.location;
     final recentApplications = _dashboard?.recentApplications ?? const [];
     final isLoading = _dashboard == null;
@@ -169,13 +170,9 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
                     ),
                   ),
                   if (isLoading)
-                    Container(
+                    const SizedBox(
                       height: 28,
                       width: 120,
-                      decoration: BoxDecoration(
-                        color: softBlueBg,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
                     )
                   else
                     Text(
@@ -194,37 +191,7 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
                 style: TextStyle(fontSize: 14.5, color: mutedText),
               ),
               const SizedBox(height: 12),
-              if (isLoading)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: softBlueBg,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 14,
-                        height: 14,
-                        decoration: BoxDecoration(
-                          color: softBlueBg,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Container(
-                        width: 100,
-                        height: 12,
-                        decoration: BoxDecoration(
-                          color: softBlueBg,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              else if (dashboard!.isVerified)
+              if (!isLoading && dashboard!.isVerified)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
@@ -405,12 +372,12 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (isLoading)
-                      Container(
-                        height: 28,
-                        width: 60,
-                        decoration: BoxDecoration(
-                          color: softBlueBg,
-                          borderRadius: BorderRadius.circular(4),
+                      Text(
+                        '0',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w800,
+                          color: primaryBlue,
                         ),
                       )
                     else
@@ -522,18 +489,20 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
             color: darkText,
           ),
         ),
-        if (isLoading)
-          Container(
-            height: 16,
-            width: 80,
-            decoration: BoxDecoration(
-              color: softBlueBg,
-              borderRadius: BorderRadius.circular(4),
-            ),
-          )
-        else if (recentApplications.isNotEmpty)
+        if (recentApplications.isNotEmpty)
           GestureDetector(
-            onTap: () => setState(() => _selectedIndex = 2),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => BusinessProjectsScreen(
+                  businessName: widget.businessName,
+                  location: widget.location,
+                  showNavBar: false,
+                  showAppBar: false,
+                  initialTab: 0,
+                ),
+              ),
+            ),
             child: Row(
               children: [
                 Text(
@@ -565,78 +534,6 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
       String Function(GigApplication) skillsAndRating,
       bool isLoading,
       ) {
-    if (isLoading) {
-      return Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: borderColor),
-        ),
-        child: Column(
-          children: List.generate(3, (index) {
-            return Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          color: softBlueBg,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              height: 15,
-                              width: 120,
-                              decoration: BoxDecoration(
-                                color: softBlueBg,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Container(
-                              height: 12.5,
-                              width: 200,
-                              decoration: BoxDecoration(
-                                color: softBlueBg,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Container(
-                              height: 12.5,
-                              width: 150,
-                              decoration: BoxDecoration(
-                                color: softBlueBg,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (index < 2)
-                    Divider(height: 1, color: borderColor),
-                ],
-              ),
-            );
-          }),
-        ),
-      );
-    }
-
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -670,6 +567,18 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
               name: app.studentName,
               skillsAndRating: skillsAndRating(app),
               gigTitle: app.gigTitle,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => BusinessProjectsScreen(
+                    businessName: widget.businessName,
+                    location: widget.location,
+                    showNavBar: false,
+                    showAppBar: false,
+                    initialTab: 0,
+                  ),
+                ),
+              ),
             ),
             if (index < recentApplications.length - 1)
               Divider(height: 1, color: borderColor),
@@ -819,7 +728,6 @@ class _MetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const softBlueBg = Color(0xFFEFF6FF);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -831,12 +739,13 @@ class _MetricCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           if (isLoading)
-            Container(
-              height: 28,
-              width: 60,
-              decoration: BoxDecoration(
-                color: softBlueBg,
-                borderRadius: BorderRadius.circular(4),
+            Text(
+              '0',
+              style: const TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF1D61E7),
+                height: 1.1,
               ),
             )
           else
@@ -877,12 +786,14 @@ class _RecentApplicationRow extends StatelessWidget {
   final String name;
   final String skillsAndRating;
   final String gigTitle;
+  final VoidCallback? onTap;
 
   const _RecentApplicationRow({
     required this.initials,
     required this.name,
     required this.skillsAndRating,
     required this.gigTitle,
+    this.onTap,
   });
 
   @override
@@ -892,7 +803,9 @@ class _RecentApplicationRow extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.all(14),
-      child: Row(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
@@ -961,7 +874,8 @@ class _RecentApplicationRow extends StatelessWidget {
           ),
         ],
       ),
-    );
+    ),
+  );
   }
 }
 

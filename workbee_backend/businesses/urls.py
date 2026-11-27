@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views import (
+    BusinessApplicationsListView,
     BusinessDashboardView,
     BusinessGigDetailView,
     BusinessGigsView,
@@ -19,6 +20,7 @@ business_patterns = [
     path("projects/", BusinessProjectsView.as_view(), name="projects"),
     path("projects/<int:pk>/review-work/", ReviewProjectWorkView.as_view(), name="review-work"),
     path("projects/<int:pk>/rate/", RateStudentProjectView.as_view(), name="rate-student"),
+    path("applications/", BusinessApplicationsListView.as_view(), name="applications-list"),
     path(
         "applications/<int:pk>/status/",
         UpdateApplicationStatusView.as_view(),
