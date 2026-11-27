@@ -12,7 +12,7 @@ import 'package:workbee_frontend/widgets/loading_state.dart';
 ///
 /// Has two tabs: Applications (gigs the student has applied to) and
 /// Projects (gigs the student is currently working on).
-/// Also includes a form to submit work for approval.
+/// Submit work form appears only when a project is tapped.
 class MyWorkPage extends StatefulWidget {
   const MyWorkPage({super.key});
 
@@ -28,6 +28,8 @@ class MyWorkPageState extends State<MyWorkPage> {
   String? _error;
   List<GigApplication> _applications = <GigApplication>[];
   List<Project> _projects = <Project>[];
+  int? _selectedProjectId;
+  int? _submittingProjectId;
 
   final TextEditingController _linkController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
@@ -151,15 +153,41 @@ class MyWorkPageState extends State<MyWorkPage> {
     return dateStr;
   }
 
-  void _handleSubmitWork() {
+  Future<void> _handleSubmitWork() async {
     final link = _linkController.text.trim();
     if (link.isEmpty) {
       showAlert(context, message: 'Please paste a Canva or Google Drive link first.', isError: true);
       return;
     }
+    if (_selectedProjectId == null) return;
+
+    setState(() => _submittingProjectId = _selectedProjectId);
+
+    final result = await StudentClient.submitProjectWork(
+      _selectedProjectId!,
+      {
+        'submission_link': link,
+        'submission_note': _noteController.text.trim(),
+      },
+    );
+
+    if (!mounted) return;
+
+    if (result.containsKey('error')) {
+      setState(() => _submittingProjectId = null);
+      showAlert(context, message: result['error'] as String? ?? 'Failed to submit work', isError: true);
+      return;
+    }
+
     _linkController.clear();
     _noteController.clear();
-    showAlert(context, message: 'Work submitted for review!');
+    setState(() {
+      _submittingProjectId = null;
+      _selectedProjectId = null;
+    });
+    await _loadWork();
+    if (!mounted) return;
+    showAlert(context, message: 'Work submitted for business approval!');
   }
 
   void _showApplicationDetails(GigApplication app) {
@@ -238,7 +266,7 @@ class MyWorkPageState extends State<MyWorkPage> {
                     const SizedBox(height: 6),
                     Text(
                       app.coverMessage,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         height: 1.5,
                         color: AppColors.labelRegister,
@@ -406,169 +434,240 @@ class MyWorkPageState extends State<MyWorkPage> {
                           ),
                           const SizedBox(height: 12),
                           ..._projects.map((project) {
+                            final isSelected = _selectedProjectId == project.id;
                             return Column(
                               children: [
-                                Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.softBlueBg,
-                                    borderRadius: BorderRadius.circular(14),
-                                    border: Border.all(color: const Color(0xFFBFDBFE)),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              project.gigTitle,
-                                              style: TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.w700,
-                                                color: AppColors.darkText,
+                                GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedProjectId = project.id;
+                                    });
+                                  },
+                                  child: Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(16),
+                                    margin: const EdgeInsets.only(bottom: 12),
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? const Color(0xFFEFF6FF)
+                                          : AppColors.softBlueBg,
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(
+                                        color: isSelected
+                                            ? AppColors.primaryBlue
+                                            : const Color(0xFFBFDBFE),
+                                      ),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                project.gigTitle,
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: AppColors.darkText,
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                          Text(
-                                            project.status.replaceAll('_', ' ').toUpperCase(),
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w600,
-                                              color: AppColors.primaryBlue,
+                                            Text(
+                                              project.status.replaceAll('_', ' ').toUpperCase(),
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w600,
+                                                color: AppColors.primaryBlue,
+                                              ),
                                             ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        '${project.businessName} · Due ${project.deadline}',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: AppColors.mutedText,
+                                          ],
                                         ),
-                                      ),
-                                      const SizedBox(height: 10),
-                                      Text(
-                                        '${formatNpr(project.budgetNpr)} · ${project.deliverables.join(', ')}',
-                                        style: TextStyle(
-                                          fontSize: 13.5,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppColors.primaryBlue,
+                                        const SizedBox(height: 6),
+                                        Row(
+                                          children: [
+                                            const Text(
+                                              'Status:',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
+                                                color: AppColors.mutedText,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            _StatusToggle(
+                                              currentStatus: project.status,
+                                              onStatusChanged: (newStatus) async {
+                                                final result = await StudentClient.updateProjectStatus(
+                                                  project.id,
+                                                  newStatus,
+                                                );
+                                                if (!mounted) return;
+                                                if (result.containsKey('error')) {
+                                                  if (!mounted) return;
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text(
+                                                        result['error'] ??
+                                                            'Failed to update status',
+                                                      ),
+                                                      backgroundColor: AppColors.errorRed,
+                                                    ),
+                                                  );
+                                                  return;
+                                                }
+                                                if (!mounted) return;
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(
+                                                        'Status updated to ${newStatus.toLowerCase()}'),
+                                                    backgroundColor: AppColors.successGreen,
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          ],
                                         ),
-                                      ),
-                                      if (project.submissionLink.isNotEmpty) ...[
-                                        const SizedBox(height: 10),
                                         Text(
-                                          'Submitted: ${project.submissionLink}',
+                                          '${project.businessName} · Due ${project.deadline}',
                                           style: TextStyle(
                                             fontSize: 13,
                                             color: AppColors.mutedText,
                                           ),
                                         ),
+                                        const SizedBox(height: 10),
+                                        Text(
+                                          '${formatNpr(project.budgetNpr)} · ${project.deliverables.join(', ')}',
+                                          style: TextStyle(
+                                            fontSize: 13.5,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.primaryBlue,
+                                          ),
+                                        ),
+                                        if (project.submissionLink.isNotEmpty) ...[
+                                          const SizedBox(height: 10),
+                                          Text(
+                                            'Submitted: ${project.submissionLink}',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: AppColors.mutedText,
+                                            ),
+                                          ),
+                                        ],
+                                        if (isSelected) ...[
+                                          const SizedBox(height: 16),
+                                          const Text(
+                                            'Submit Work',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w700,
+                                              color: AppColors.darkText,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'Paste your delivery link below.',
+                                            style: TextStyle(fontSize: 13, color: AppColors.mutedText),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          TextField(
+                                            controller: _linkController,
+                                            decoration: InputDecoration(
+                                              hintText: 'Paste Canva or Google Drive link',
+                                              hintStyle: const TextStyle(color: AppColors.hintText),
+                                              prefixIcon: const Icon(
+                                                Icons.link,
+                                                color: AppColors.mutedText,
+                                                size: 20,
+                                              ),
+                                              filled: true,
+                                              fillColor: AppColors.inputFill,
+                                              contentPadding: const EdgeInsets.symmetric(
+                                                horizontal: 14,
+                                                vertical: 14,
+                                              ),
+                                              enabledBorder: OutlineInputBorder(
+                                                borderRadius: BorderRadius.circular(12),
+                                                borderSide: const BorderSide(color: AppColors.borderColor),
+                                              ),
+                                              focusedBorder: OutlineInputBorder(
+                                                borderRadius: BorderRadius.circular(12),
+                                                borderSide: const BorderSide(
+                                                  color: AppColors.primaryBlue,
+                                                  width: 1.5,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          TextField(
+                                            controller: _noteController,
+                                            maxLines: 2,
+                                            decoration: InputDecoration(
+                                              hintText: 'Add a short note (optional)',
+                                              hintStyle: const TextStyle(color: AppColors.hintText),
+                                              filled: true,
+                                              fillColor: AppColors.inputFill,
+                                              contentPadding: const EdgeInsets.symmetric(
+                                                horizontal: 14,
+                                                vertical: 12,
+                                              ),
+                                              enabledBorder: OutlineInputBorder(
+                                                borderRadius: BorderRadius.circular(12),
+                                                borderSide: const BorderSide(color: AppColors.borderColor),
+                                              ),
+                                              focusedBorder: OutlineInputBorder(
+                                                borderRadius: BorderRadius.circular(12),
+                                                borderSide: const BorderSide(
+                                                  color: AppColors.primaryBlue,
+                                                  width: 1.5,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 16),
+                                          SizedBox(
+                                            width: double.infinity,
+                                            height: 48,
+                                            child: ElevatedButton(
+                                              onPressed: _submittingProjectId == project.id
+                                                  ? null
+                                                  : _handleSubmitWork,
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: AppColors.primaryBlue,
+                                                foregroundColor: Colors.white,
+                                                elevation: 0,
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(12),
+                                                ),
+                                              ),
+                                              child: _submittingProjectId == project.id
+                                                  ? const SizedBox(
+                                                      width: 20,
+                                                      height: 20,
+                                                      child: CircularProgressIndicator(
+                                                        strokeWidth: 2,
+                                                        color: Colors.white,
+                                                      ),
+                                                    )
+                                                  : const Text(
+                                                      'Submit for approval',
+                                                      style: TextStyle(
+                                                        fontSize: 15,
+                                                        fontWeight: FontWeight.w600,
+                                                      ),
+                                                    ),
+                                            ),
+                                          ),
+                                        ],
                                       ],
-                                    ],
+                                    ),
                                   ),
                                 ),
-                                const SizedBox(height: 14),
                               ],
                             );
                           }),
-                          const SizedBox(height: 22),
-                          const Text(
-                            'Submit work',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.darkText,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            'Paste your delivery link below.',
-                            style: TextStyle(fontSize: 13, color: AppColors.mutedText),
-                          ),
-                          const SizedBox(height: 12),
-                          TextField(
-                            controller: _linkController,
-                            decoration: InputDecoration(
-                              hintText: 'Paste Canva or Google Drive link',
-                              hintStyle: const TextStyle(color: AppColors.hintText),
-                              prefixIcon: const Icon(
-                                Icons.link,
-                                color: AppColors.mutedText,
-                                size: 20,
-                              ),
-                              filled: true,
-                              fillColor: AppColors.inputFill,
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 14,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: AppColors.borderColor),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: AppColors.primaryBlue,
-                                  width: 1.5,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          TextField(
-                            controller: _noteController,
-                            maxLines: 2,
-                            decoration: InputDecoration(
-                              hintText: 'Add a short note (optional)',
-                              hintStyle: const TextStyle(color: AppColors.hintText),
-                              filled: true,
-                              fillColor: AppColors.inputFill,
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 12,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: AppColors.borderColor),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: AppColors.primaryBlue,
-                                  width: 1.5,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          SizedBox(
-                            width: double.infinity,
-                            height: 48,
-                            child: ElevatedButton(
-                              onPressed: _handleSubmitWork,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primaryBlue,
-                                foregroundColor: Colors.white,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              child: const Text(
-                                'Submit for approval',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ),
                         ],
                       ],
                     ],
@@ -782,6 +881,124 @@ class _ProfileInfoRow extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Status toggle widget: Not Started / In Progress / Completed.
+class _StatusToggle extends StatefulWidget {
+  final String currentStatus;
+  final ValueChanged<String> onStatusChanged;
+
+  const _StatusToggle({
+    required this.currentStatus,
+    required this.onStatusChanged,
+  });
+
+  @override
+  State<_StatusToggle> createState() => _StatusToggleState();
+}
+
+class _StatusToggleState extends State<_StatusToggle> {
+  late String _selectedStatus;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedStatus = widget.currentStatus;
+  }
+
+  Color _statusColor(String status) {
+    switch (status.toUpperCase()) {
+      case 'NOT_STARTED':
+        return AppColors.mutedText;
+      case 'IN_PROGRESS':
+        return AppColors.primaryBlue;
+      case 'COMPLETED':
+        return AppColors.successGreen;
+      default:
+        return AppColors.mutedText;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _StatusChip(
+          label: 'Not Started',
+          value: 'NOT_STARTED',
+          selected: _selectedStatus.toUpperCase() == 'NOT_STARTED',
+          color: _statusColor(_selectedStatus),
+          onTap: () => _selectStatus('NOT_STARTED'),
+        ),
+        const SizedBox(width: 6),
+        _StatusChip(
+          label: 'In Progress',
+          value: 'IN_PROGRESS',
+          selected: _selectedStatus.toUpperCase() == 'IN_PROGRESS',
+          color: _statusColor(_selectedStatus),
+          onTap: () => _selectStatus('IN_PROGRESS'),
+        ),
+        const SizedBox(width: 6),
+        _StatusChip(
+          label: 'Completed',
+          value: 'COMPLETED',
+          selected: _selectedStatus.toUpperCase() == 'COMPLETED',
+          color: _statusColor(_selectedStatus),
+          onTap: () => _selectStatus('COMPLETED'),
+        ),
+      ],
+    );
+  }
+
+  void _selectStatus(String status) {
+    setState(() {
+      _selectedStatus = status;
+    });
+    widget.onStatusChanged(status);
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool selected;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _StatusChip({
+    required this.label,
+    required this.value,
+    required this.selected,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? color.withValues(alpha: 0.15) : AppColors.inputFill,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: selected ? color : AppColors.borderColor,
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: selected ? color : AppColors.mutedText,
+          ),
+        ),
       ),
     );
   }

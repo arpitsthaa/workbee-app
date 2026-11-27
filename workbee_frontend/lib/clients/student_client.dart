@@ -376,6 +376,68 @@ class StudentClient {
     }
   }
 
+  /// Submits work for a project (delivery link + note).
+  static Future<Map<String, dynamic>> submitProjectWork(
+      int projectId, Map<String, dynamic> data) async {
+    final url = Uri.parse(
+        '${ApiConstants.baseUrl}${ApiConstants.studentWorkSubmit}$projectId/submit/');
+    final headers = await _authHeaders();
+
+    try {
+      final response = await http.post(
+        url,
+        headers: headers,
+        body: jsonEncode(data),
+      ).timeout(_timeout);
+
+      final body = _decodeBody(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return body;
+      }
+
+      return {
+        'error': _errorMessage(body, response.statusCode),
+        'status': response.statusCode,
+      };
+    } on TimeoutException {
+      return {'error': 'Server took too long to respond.', 'status': 408};
+    } catch (e) {
+      return {'error': 'Connection error: $e', 'status': 0};
+    }
+  }
+
+  /// Updates a project's status (Not Started / In Progress / Completed).
+  static Future<Map<String, dynamic>> updateProjectStatus(
+      int projectId, String status) async {
+    final url = Uri.parse(
+        '${ApiConstants.baseUrl}${ApiConstants.studentWorkUpdateStatus}$projectId/status/');
+    final headers = await _authHeaders();
+
+    try {
+      final response = await http.post(
+        url,
+        headers: headers,
+        body: jsonEncode({'status': status}),
+      ).timeout(_timeout);
+
+      final body = _decodeBody(response.body);
+
+      if (response.statusCode == 200) {
+        return body;
+      }
+
+      return {
+        'error': _errorMessage(body, response.statusCode),
+        'status': response.statusCode,
+      };
+    } on TimeoutException {
+      return {'error': 'Server took too long to respond.', 'status': 408};
+    } catch (e) {
+      return {'error': 'Connection error: $e', 'status': 0};
+    }
+  }
+
   /// Fast parallel loader for work applications and projects.
   static Future<Map<String, dynamic>> loadWorkFast() async {
     final results = await Future.wait([

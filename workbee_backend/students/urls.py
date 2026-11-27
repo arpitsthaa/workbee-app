@@ -9,6 +9,7 @@ from .views import (
     StudentProfileView,
     StudentWorkView,
     SubmitProjectWorkView,
+    UpdateProjectStatusView,
     WithdrawApplicationView,
 )
 
@@ -22,4 +23,9 @@ student_patterns = [
     path("gigs/<int:pk>/apply/", ApplyForGigView.as_view(), name="apply-gig"),
     path("applications/<int:pk>/withdraw/", WithdrawApplicationView.as_view(), name="withdraw-application"),
     path("projects/<int:pk>/submit/", SubmitProjectWorkView.as_view(), name="submit-work"),
+    path(
+        "projects/<int:pk>/status/",
+        UpdateProjectStatusView.as_view(),
+        name="update-project-status",
+    ),
 ]

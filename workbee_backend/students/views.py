@@ -231,6 +231,27 @@ class SubmitProjectWorkView(APIView):
         )
 
 
+class UpdateProjectStatusView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        project = get_object_or_404(Project, pk=pk, student=request.user)
+        new_status = request.data.get("status", "").upper()
+        if new_status not in ["NOT_STARTED", "IN_PROGRESS", "COMPLETED"]:
+            return Response(
+                {"message": "Invalid status. Use NOT_STARTED, IN_PROGRESS, or COMPLETED."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        project.status = new_status
+        project.save()
+        return Response(
+            {
+                "message": f"Project status updated to {new_status.title()}.",
+                "project": ProjectSerializer(project).data,
+            }
+        )
+
+
 class CareerPassportView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
