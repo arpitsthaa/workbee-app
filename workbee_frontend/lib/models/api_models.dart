@@ -157,6 +157,15 @@ class Project {
   }
 }
 
+/// Parses a rating value that may come as a double or a String from the API.
+double _parseRating(dynamic value) {
+  if (value == null) return 0.0;
+  if (value is double) return value;
+  if (value is int) return value.toDouble();
+  if (value is String) return double.tryParse(value) ?? 0.0;
+  return 0.0;
+}
+
 class ProjectReview {
   final int id;
   final int project;
@@ -198,7 +207,7 @@ class ProjectReview {
       roleTitle: (json['role_title'] ?? '') as String,
       skills: List<String>.from(json['skills'] ?? []),
       durationDays: (json['duration_days'] ?? 0) as int,
-      rating: (json['rating'] ?? 0.0) as double,
+      rating: _parseRating(json['rating'] ?? 0.0),
       reviewComment: (json['review_comment'] ?? '') as String,
       submissionLink: json['submission_link'] as String?,
       completedAt: json['completed_at'] as String?,
@@ -230,7 +239,7 @@ class PassportResponse {
       collegeUniversity: json['college_university'] as String?,
       program: (json['program'] ?? '') as String,
       verifiedProjectsCount: (json['verified_projects_count'] ?? 0) as int,
-      averageRating: (json['average_rating'] ?? 0.0) as double,
+      averageRating: _parseRating(json['average_rating'] ?? 0.0),
       completedProjects: (json['completed_projects'] as List<dynamic>?)
               ?.map((p) => ProjectReview.fromJson(p as Map<String, dynamic>))
               .toList() ?? []
@@ -323,6 +332,10 @@ class BusinessProject {
   final List<String> deliverables;
   final String businessName;
   final String studentName;
+  final String studentCollege;
+  final List<String> studentSkills;
+  final double studentRating;
+  final int verifiedProjectsCount;
   final String status;
   final String submissionLink;
   final String submissionNote;
@@ -340,6 +353,10 @@ class BusinessProject {
     required this.deliverables,
     required this.businessName,
     required this.studentName,
+    this.studentCollege = '',
+    this.studentSkills = const [],
+    this.studentRating = 0.0,
+    this.verifiedProjectsCount = 0,
     required this.status,
     required this.submissionLink,
     required this.submissionNote,
@@ -359,6 +376,10 @@ class BusinessProject {
       deliverables: List<String>.from(json['deliverables'] ?? []),
       businessName: (json['business_name'] ?? '') as String,
       studentName: (json['student_name'] ?? '') as String,
+      studentCollege: (json['student_college'] ?? '') as String,
+      studentSkills: List<String>.from(json['student_skills'] ?? []),
+      studentRating: (json['student_rating'] ?? 0.0) as double,
+      verifiedProjectsCount: (json['verified_projects_count'] ?? 0) as int,
       status: (json['status'] ?? '') as String,
       submissionLink: (json['submission_link'] ?? '') as String,
       submissionNote: (json['submission_note'] ?? '') as String,

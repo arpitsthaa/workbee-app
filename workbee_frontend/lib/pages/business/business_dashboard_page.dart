@@ -28,6 +28,7 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
   int _selectedIndex = 0;
   String? _errorMessage;
   BusinessDashboardResponse? _dashboard;
+  final ValueNotifier<int> _projectsTabNotifier = ValueNotifier(0);
 
   String _getInitials(String name) {
     final parts = name.trim().split(RegExp(r'\s+'));
@@ -65,6 +66,12 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
   void initState() {
     super.initState();
     _loadDashboard();
+  }
+
+  @override
+  void dispose() {
+    _projectsTabNotifier.dispose();
+    super.dispose();
   }
 
   String _skillsAndRating(GigApplication app) {
@@ -124,6 +131,8 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
               location: displayLocation,
               showNavBar: false,
               showAppBar: false,
+              initialTab: 0,
+              tabNotifier: _projectsTabNotifier,
             ),
             BusinessProfilePage(
               businessName: displayName,
@@ -491,18 +500,10 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
         ),
         if (recentApplications.isNotEmpty)
           GestureDetector(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => BusinessProjectsScreen(
-                  businessName: widget.businessName,
-                  location: widget.location,
-                  showNavBar: false,
-                  showAppBar: false,
-                  initialTab: 0,
-                ),
-              ),
-            ),
+            onTap: () {
+              _projectsTabNotifier.value = 0;
+              setState(() => _selectedIndex = 2);
+            },
             child: Row(
               children: [
                 Text(
@@ -567,18 +568,10 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
               name: app.studentName,
               skillsAndRating: skillsAndRating(app),
               gigTitle: app.gigTitle,
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => BusinessProjectsScreen(
-                    businessName: widget.businessName,
-                    location: widget.location,
-                    showNavBar: false,
-                    showAppBar: false,
-                    initialTab: 0,
-                  ),
-                ),
-              ),
+              onTap: () {
+                _projectsTabNotifier.value = 0;
+                setState(() => _selectedIndex = 2);
+              },
             ),
             if (index < recentApplications.length - 1)
               Divider(height: 1, color: borderColor),

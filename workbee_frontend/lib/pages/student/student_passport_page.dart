@@ -25,16 +25,24 @@ class _StudentPassportPageState extends State<StudentPassportPage> {
   }
 
   Future<void> _loadPassport() async {
-    final result = await StudentClient.getPassport();
-    if (!mounted) return;
-    if (result.containsKey('error')) {
+    try {
+      final result = await StudentClient.getPassport();
+      if (!mounted) return;
+      if (result.containsKey('error')) {
+        setState(() {
+          _error = result['error'] as String?;
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _passport = PassportResponse.fromJson(result);
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
       setState(() {
-        _error = result['error'] as String?;
-        _isLoading = false;
-      });
-    } else {
-      setState(() {
-        _passport = PassportResponse.fromJson(result);
+        _error = 'Failed to load passport: $e';
         _isLoading = false;
       });
     }
