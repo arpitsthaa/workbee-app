@@ -25,6 +25,7 @@ class _BusinessEditGigPageState extends State<BusinessEditGigPage> {
   late final TextEditingController _locationController;
 
   bool _isSaving = false;
+  bool get _isClosed => widget.gig.status.toUpperCase() == 'CLOSED';
 
   @override
   void initState() {
@@ -261,6 +262,7 @@ class _BusinessEditGigPageState extends State<BusinessEditGigPage> {
                           label: 'Gig title',
                           controller: _titleController,
                           hint: 'e.g. Logo Design for Cafe',
+                          readOnly: _isClosed,
                         ),
                         const SizedBox(height: 12),
 
@@ -289,9 +291,10 @@ class _BusinessEditGigPageState extends State<BusinessEditGigPage> {
                                 controller: _descriptionController,
                                 maxLines: null,
                                 keyboardType: TextInputType.text,
-                                style: const TextStyle(
+                                readOnly: _isClosed,
+                                style: TextStyle(
                                   fontSize: 14.5,
-                                  color: AppColors.darkText,
+                                  color: _isClosed ? AppColors.mutedText : AppColors.darkText,
                                   fontWeight: FontWeight.w500,
                                 ),
                                 decoration: InputDecoration(
@@ -316,6 +319,7 @@ class _BusinessEditGigPageState extends State<BusinessEditGigPage> {
                           label: 'Required skills',
                           controller: _skillsController,
                           hint: 'e.g. Canva, Figma, Illustrator',
+                          readOnly: _isClosed,
                         ),
                         const SizedBox(height: 12),
 
@@ -324,61 +328,73 @@ class _BusinessEditGigPageState extends State<BusinessEditGigPage> {
                           controller: _budgetController,
                           keyboardType: TextInputType.number,
                           hint: '0',
+                          readOnly: _isClosed,
                         ),
                         const SizedBox(height: 12),
 
-                        GestureDetector(
-                          onTap: () => _selectDate(context),
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-                            decoration: BoxDecoration(
-                              color: AppColors.inputFill,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: AppColors.borderColor),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.calendar_today,
-                                  size: 20,
-                                  color: AppColors.mutedText,
+                        IgnorePointer(
+                          ignoring: _isClosed,
+                          child: GestureDetector(
+                            onTap: () => _selectDate(context),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                              decoration: BoxDecoration(
+                                color: _isClosed
+                                    ? AppColors.inputFill
+                                    : AppColors.inputFill,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: _isClosed
+                                      ? AppColors.mutedText
+                                      : AppColors.borderColor,
                                 ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        'Deadline',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: AppColors.mutedText,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        _deadlineController.text.isEmpty
-                                            ? 'Select a date'
-                                            : _deadlineController.text,
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          color: _deadlineController.text.isEmpty
-                                              ? AppColors.hintText
-                                              : AppColors.darkText,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.calendar_today,
+                                    size: 20,
+                                    color: AppColors.mutedText,
                                   ),
-                                ),
-                                const Icon(
-                                  Icons.arrow_drop_down,
-                                  size: 22,
-                                  color: AppColors.mutedText,
-                                ),
-                              ],
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'Deadline',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: AppColors.mutedText,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          _deadlineController.text.isEmpty
+                                              ? 'Select a date'
+                                              : _deadlineController.text,
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            color: _isClosed
+                                                ? AppColors.mutedText
+                                                : (_deadlineController.text.isEmpty
+                                                    ? AppColors.hintText
+                                                    : AppColors.darkText),
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const Icon(
+                                    Icons.arrow_drop_down,
+                                    size: 22,
+                                    color: AppColors.mutedText,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -388,6 +404,7 @@ class _BusinessEditGigPageState extends State<BusinessEditGigPage> {
                           label: 'Location',
                           controller: _locationController,
                           hint: 'e.g. Baneshwor, Kathmandu',
+                          readOnly: _isClosed,
                         ),
                         const SizedBox(height: 24),
                       ],
@@ -417,10 +434,16 @@ class _BusinessEditGigPageState extends State<BusinessEditGigPage> {
                       child: SizedBox(
                         height: 50,
                         child: OutlinedButton(
-                          onPressed: _isSaving ? null : _deleteGig,
+                          onPressed: _isSaving || _isClosed ? null : _deleteGig,
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.errorRed,
-                            side: const BorderSide(color: AppColors.errorRed),
+                            foregroundColor: _isClosed
+                                ? AppColors.mutedText
+                                : AppColors.errorRed,
+                            side: BorderSide(
+                              color: _isClosed
+                                  ? AppColors.mutedText
+                                  : AppColors.errorRed,
+                            ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -449,9 +472,11 @@ class _BusinessEditGigPageState extends State<BusinessEditGigPage> {
                       child: SizedBox(
                         height: 50,
                         child: ElevatedButton(
-                          onPressed: _isSaving ? null : _updateGig,
+                          onPressed: _isSaving || _isClosed ? null : _updateGig,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primaryBlue,
+                            backgroundColor: _isClosed
+                                ? AppColors.mutedText
+                                : AppColors.primaryBlue,
                             foregroundColor: Colors.white,
                             elevation: 0,
                             shape: RoundedRectangleBorder(
@@ -493,12 +518,14 @@ class _FormField extends StatelessWidget {
   final TextEditingController controller;
   final TextInputType keyboardType;
   final String hint;
+  final bool readOnly;
 
   const _FormField({
     required this.label,
     required this.controller,
     this.keyboardType = TextInputType.text,
     this.hint = '',
+    this.readOnly = false,
   });
 
   @override
@@ -527,9 +554,10 @@ class _FormField extends StatelessWidget {
             controller: controller,
             maxLines: 1,
             keyboardType: keyboardType,
+            readOnly: readOnly,
             style: TextStyle(
               fontSize: 14.5,
-              color: AppColors.darkText,
+              color: readOnly ? AppColors.mutedText : AppColors.darkText,
               fontWeight: FontWeight.w500,
             ),
             decoration: InputDecoration(

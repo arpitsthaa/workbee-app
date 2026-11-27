@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:workbee_frontend/clients/business_client.dart';
 import 'package:workbee_frontend/models/api_models.dart';
-import 'package:workbee_frontend/pages/auth/login_page.dart';
 import 'package:workbee_frontend/pages/business/business_gigs_page.dart';
 import 'package:workbee_frontend/pages/business/business_profile_screen.dart';
 import 'package:workbee_frontend/pages/business/business_projects_page.dart';
-import 'package:workbee_frontend/services/token_service.dart';
 import 'package:workbee_frontend/widgets/common_app_bar.dart';
 
 class BusinessDashboardPage extends StatefulWidget {
@@ -28,6 +26,7 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
   int _selectedIndex = 0;
   String? _errorMessage;
   BusinessDashboardResponse? _dashboard;
+  final ValueNotifier<int> _projectsTabNotifier = ValueNotifier(0);
 
   String _getInitials(String name) {
     final parts = name.trim().split(RegExp(r'\s+'));
@@ -67,6 +66,12 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
     _loadDashboard();
   }
 
+  @override
+  void dispose() {
+    _projectsTabNotifier.dispose();
+    super.dispose();
+  }
+
   String _skillsAndRating(GigApplication app) {
     final skills = app.studentSkills.isNotEmpty
         ? app.studentSkills.join(' · ')
@@ -95,7 +100,7 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
       appBar: CommonAppBar(
         displayName: displayName,
         role: 'business',
-        onAvatarTap: _logout,
+        onAvatarTap: () => setState(() => _selectedIndex = 3),
       ),
       body: SafeArea(
         child: IndexedStack(
@@ -124,6 +129,8 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
               location: displayLocation,
               showNavBar: false,
               showAppBar: false,
+              initialTab: 0,
+              tabNotifier: _projectsTabNotifier,
             ),
             BusinessProfilePage(
               businessName: displayName,
@@ -491,18 +498,10 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
         ),
         if (recentApplications.isNotEmpty)
           GestureDetector(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => BusinessProjectsScreen(
-                  businessName: widget.businessName,
-                  location: widget.location,
-                  showNavBar: false,
-                  showAppBar: false,
-                  initialTab: 0,
-                ),
-              ),
-            ),
+            onTap: () {
+              _projectsTabNotifier.value = 0;
+              setState(() => _selectedIndex = 2);
+            },
             child: Row(
               children: [
                 Text(
@@ -567,18 +566,10 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
               name: app.studentName,
               skillsAndRating: skillsAndRating(app),
               gigTitle: app.gigTitle,
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => BusinessProjectsScreen(
-                    businessName: widget.businessName,
-                    location: widget.location,
-                    showNavBar: false,
-                    showAppBar: false,
-                    initialTab: 0,
-                  ),
-                ),
-              ),
+              onTap: () {
+                _projectsTabNotifier.value = 0;
+                setState(() => _selectedIndex = 2);
+              },
             ),
             if (index < recentApplications.length - 1)
               Divider(height: 1, color: borderColor),
@@ -697,16 +688,6 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
         ),
       ),
       bottomNavigationBar: _bottomNav(),
-    );
-  }
-
-  Future<void> _logout() async {
-    await TokenService.clear();
-    if (!mounted) return;
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (context) => const LoginPage()),
-      (route) => false,
     );
   }
 }

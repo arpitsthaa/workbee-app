@@ -222,9 +222,9 @@ class BusinessClient {
   /// Updates the business profile.
   static Future<Map<String, dynamic>> updateProfile(Map<String, dynamic> data) async {
     final url = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.businessProfile}');
-    final headers = await _authHeaders();
 
     try {
+      final headers = await _authHeaders();
       final response = await http
           .put(
         url,

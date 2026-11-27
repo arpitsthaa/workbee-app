@@ -51,6 +51,7 @@ class StudentProfileSerializer(serializers.ModelSerializer):
 
 class BusinessProfileSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source="user.email", read_only=True)
+    full_name = serializers.CharField(source="user.full_name", required=False)
     location = serializers.CharField(source="user.location", required=False)
 
     class Meta:
@@ -58,6 +59,7 @@ class BusinessProfileSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "email",
+            "full_name",
             "location",
             "business_type",
             "about",
