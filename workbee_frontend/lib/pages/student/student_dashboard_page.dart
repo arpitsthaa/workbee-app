@@ -8,6 +8,7 @@ import 'package:workbee_frontend/pages/student/my_work_page.dart';
 import 'package:workbee_frontend/pages/student/student_passport_page.dart';
 import 'package:workbee_frontend/pages/student/student_profile_page.dart';
 import 'package:workbee_frontend/services/token_service.dart';
+import 'package:workbee_frontend/widgets/common_app_bar.dart';
 import 'package:workbee_frontend/widgets/stat_card.dart';
 
 class StudentDashboardPage extends StatefulWidget {
@@ -280,7 +281,11 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
     return SafeArea(
       child: Column(
         children: [
-          _StudentAppBar(onAvatarTap: _onAvatarTapped),
+          CommonAppBar(
+            displayName: TokenService.getNameSync() ?? 'Student',
+            role: 'student',
+            onAvatarTap: _onAvatarTapped,
+          ),
           const SizedBox(height: 24),
           Expanded(
             child: ConstrainedBox(
@@ -490,105 +495,6 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
   }
 }
 
-/// Student app bar widget (used only by student dashboard).
-class _StudentAppBar extends StatelessWidget {
-  final VoidCallback onAvatarTap;
-
-  const _StudentAppBar({required this.onAvatarTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: TokenService(),
-      builder: (context, _) {
-        final studentName = TokenService.getNameSync() ?? '';
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          child: Row(
-            children: [
-              Row(
-                children: [
-                  Image.asset(
-                    'assets/workbee_logo.png',
-                    width: 44,
-                    height: 44,
-                    fit: BoxFit.contain,
-                  ),
-                  const SizedBox(width: 12),
-                  const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'WorkBee',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.darkText,
-                          height: 1.1,
-                        ),
-                      ),
-                      Text(
-                        'Bee Busy Be Paid',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.mutedText,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const Spacer(),
-              IconButton(
-                onPressed: onAvatarTap,
-                icon: _DashboardAvatar(
-                  studentName: studentName,
-                  isVerified: false,
-                ),
-                splashRadius: 24,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-/// Dashboard avatar widget (used only by student dashboard).
-class _DashboardAvatar extends StatelessWidget {
-  final String studentName;
-  final bool isVerified;
-
-  const _DashboardAvatar({
-    required this.studentName,
-    required this.isVerified,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: const BoxDecoration(
-        color: AppColors.softBlueBg,
-        shape: BoxShape.circle,
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        studentName.isNotEmpty ? studentName[0].toUpperCase() : 'S',
-        style: const TextStyle(
-          color: AppColors.primaryBlue,
-          fontWeight: FontWeight.w700,
-          fontSize: 14,
-        ),
-      ),
-    );
-  }
-}
-
 /// Gig card widget (used only by student dashboard).
 class _GigCard extends StatelessWidget {
   final String title;
@@ -775,7 +681,7 @@ class _VerifiedBadgeSkeleton extends StatelessWidget {
   }
 }
 
-/// Wrapper that adds the student app bar above any page body.
+/// Wrapper that adds the app bar above any page body.
 class _ScreenWithAppBar extends StatelessWidget {
   final Widget body;
   final VoidCallback onAvatarTap;
@@ -791,7 +697,11 @@ class _ScreenWithAppBar extends StatelessWidget {
       bottom: false,
       child: Column(
         children: [
-          _StudentAppBar(onAvatarTap: onAvatarTap),
+          CommonAppBar(
+            displayName: TokenService.getNameSync() ?? 'Student',
+            role: 'student',
+            onAvatarTap: onAvatarTap,
+          ),
           Expanded(child: body),
         ],
       ),

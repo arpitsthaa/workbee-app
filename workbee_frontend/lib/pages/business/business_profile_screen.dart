@@ -1,15 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:workbee_frontend/clients/business_client.dart';
+import 'package:workbee_frontend/constants/app_colors.dart';
+import 'package:workbee_frontend/models/api_models.dart';
+import 'package:workbee_frontend/services/token_service.dart';
+import 'package:workbee_frontend/widgets/common_app_bar.dart';
 
 class BusinessProfilePage extends StatefulWidget {
   final String businessName;
   final String location;
   final bool showNavBar;
+  final bool showAppBar;
 
   const BusinessProfilePage({
     super.key,
-    this.businessName = 'Momo Junction',
-    this.location = 'Baneshwor, Kathmandu',
+    this.businessName = 'My Business',
+    this.location = '',
     this.showNavBar = true,
+    this.showAppBar = true,
   });
 
   @override
@@ -17,48 +24,97 @@ class BusinessProfilePage extends StatefulWidget {
 }
 
 class _BusinessProfilePageState extends State<BusinessProfilePage> {
-  static const _primaryBlue = Color(0xFF1D61E7);
-  static const _softBlueBg = Color(0xFFEFF6FF);
-  static const _darkText = Color(0xFF0F172A);
-  static const _mutedText = Color(0xFF64748B);
-  static const _borderColor = Color(0xFFE2E8F0);
+  static const _primaryBlue = AppColors.primaryBlue;
+  static const _softBlueBg = AppColors.softBlueBg;
+  static const _darkText = AppColors.darkText;
+  static const _mutedText = AppColors.mutedText;
+  static const _borderColor = AppColors.borderColor;
 
-  late String _businessName;
-  late String _category;
-  late String _aboutText;
-  late String _location;
-  late String _email;
-  late String _phone;
+  BusinessProfileResponse? _profile;
+  bool _isLoading = true;
   int _selectedNavIndex = 3;
-
-  @override
-  void initState() {
-    super.initState();
-    _businessName = widget.businessName;
-    _category = 'Restaurant · Local business';
-    _aboutText =
-    'Your neighbourhood momo restaurant in Baneshwor. We serve fresh, handmade momos and work with local students to bring our food and stories to life online.';
-    _location = widget.location.contains('Nepal')
-        ? widget.location
-        : '${widget.location}, Nepal';
-    _email = 'hello@momojunction.com.np';
-    _phone = '+977 9801234567';
-  }
 
   String _getInitials(String name) {
     final parts = name.trim().split(RegExp(r'\s+'));
-    if (parts.isEmpty || parts.first.isEmpty) return 'MJ';
+    if (parts.isEmpty || parts.first.isEmpty) return 'B';
     if (parts.length == 1) return parts.first[0].toUpperCase();
     return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
   }
 
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final result = await BusinessClient.getProfile();
+
+      if (!mounted) return;
+
+      if (result.containsKey('error')) {
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+
+      final profile = BusinessProfileResponse.fromJson(result);
+      setState(() {
+        _profile = profile;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _updateProfileFromDialog(Map<String, dynamic> data) async {
+    final result = await BusinessClient.updateProfile(data);
+
+    if (!mounted) return;
+
+    if (result.containsKey('error')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['error'] as String? ?? 'Update failed'),
+          backgroundColor: AppColors.errorRed,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _profile = BusinessProfileResponse.fromJson(result);
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Profile updated'),
+        backgroundColor: AppColors.successGreen,
+      ),
+    );
+
+    Navigator.pop(context);
+  }
+
   void _openEditProfileDialog() {
-    final nameCtrl = TextEditingController(text: _businessName);
-    final categoryCtrl = TextEditingController(text: _category);
-    final aboutCtrl = TextEditingController(text: _aboutText);
-    final locationCtrl = TextEditingController(text: _location);
-    final emailCtrl = TextEditingController(text: _email);
-    final phoneCtrl = TextEditingController(text: _phone);
+    if (_profile == null) return;
+
+    final nameCtrl = TextEditingController(
+      text: TokenService.getNameSync() ?? _profile!.email.split('@').first,
+    );
+    final categoryCtrl = TextEditingController(text: _profile!.businessType ?? '');
+    final aboutCtrl = TextEditingController(text: _profile!.about ?? '');
+    final locationCtrl = TextEditingController(text: _profile!.location ?? '');
 
     showDialog<void>(
       context: context,
@@ -77,21 +133,26 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _DialogInput(label: 'Business Name', controller: nameCtrl),
-              const SizedBox(height: 10),
-              _DialogInput(label: 'Category', controller: categoryCtrl),
-              const SizedBox(height: 10),
+              _DialogInput(
+                label: 'Business Name',
+                controller: nameCtrl,
+              ),
+              const SizedBox(height: 12),
+              _DialogInput(
+                label: 'Category',
+                controller: categoryCtrl,
+              ),
+              const SizedBox(height: 12),
               _DialogInput(
                 label: 'About the business',
                 controller: aboutCtrl,
                 maxLines: 3,
               ),
-              const SizedBox(height: 10),
-              _DialogInput(label: 'Location', controller: locationCtrl),
-              const SizedBox(height: 10),
-              _DialogInput(label: 'Email', controller: emailCtrl),
-              const SizedBox(height: 10),
-              _DialogInput(label: 'Phone', controller: phoneCtrl),
+              const SizedBox(height: 12),
+              _DialogInput(
+                label: 'Location',
+                controller: locationCtrl,
+              ),
             ],
           ),
         ),
@@ -100,35 +161,20 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
             onPressed: () => Navigator.pop(context),
             child: const Text(
               'Cancel',
-              style: TextStyle(color: _mutedText, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: _mutedText,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           ElevatedButton(
             onPressed: () {
-              setState(() {
-                if (nameCtrl.text.trim().isNotEmpty) {
-                  _businessName = nameCtrl.text.trim();
-                }
-                if (categoryCtrl.text.trim().isNotEmpty) {
-                  _category = categoryCtrl.text.trim();
-                }
-                if (aboutCtrl.text.trim().isNotEmpty) {
-                  _aboutText = aboutCtrl.text.trim();
-                }
-                if (locationCtrl.text.trim().isNotEmpty) {
-                  _location = locationCtrl.text.trim();
-                }
-                if (emailCtrl.text.trim().isNotEmpty) {
-                  _email = emailCtrl.text.trim();
-                }
-                if (phoneCtrl.text.trim().isNotEmpty) {
-                  _phone = phoneCtrl.text.trim();
-                }
+              _updateProfileFromDialog({
+                'full_name': nameCtrl.text.trim(),
+                'business_type': categoryCtrl.text.trim(),
+                'about': aboutCtrl.text.trim(),
+                'location': locationCtrl.text.trim(),
               });
-              Navigator.pop(context);
-              ScaffoldMessenger.of(this.context).showSnackBar(
-                const SnackBar(content: Text('Business profile updated')),
-              );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: _primaryBlue,
@@ -147,35 +193,38 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return _buildProfileSkeleton();
+    }
+
+    final displayName =
+        _profile != null
+            ? (TokenService.getNameSync()?.isNotEmpty ?? false
+                ? TokenService.getNameSync()!
+                : _profile!.email.split('@').first)
+            : widget.businessName;
+    final displayLocation = _profile?.location ?? widget.location;
+    final isVerified = _profile?.isVerified ?? false;
+
     return Scaffold(
       backgroundColor: Colors.white,
+      appBar: widget.showAppBar
+          ? CommonAppBar(
+              displayName: displayName,
+              role: 'business',
+              onAvatarTap: _openEditProfileDialog,
+            )
+          : null,
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 480),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header
-                  const Text(
-                    'Business Profile',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      color: _darkText,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Build trust with student talent.',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: _mutedText,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
 
                   // Logo Box + Business Title + Verified Badge
                   Row(
@@ -192,7 +241,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              _getInitials(_businessName),
+                              _getInitials(displayName),
                               style: const TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.w800,
@@ -219,7 +268,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              _businessName,
+                              displayName,
                               style: const TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.w800,
@@ -227,13 +276,15 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                               ),
                             ),
                             const SizedBox(height: 3),
-                            Text(
-                              _category,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: _mutedText,
+                            if (_profile?.businessType != null &&
+                                _profile!.businessType!.isNotEmpty)
+                              Text(
+                                _profile!.businessType!,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: _mutedText,
+                                ),
                               ),
-                            ),
                             const SizedBox(height: 10),
                             Container(
                               padding: const EdgeInsets.symmetric(
@@ -244,17 +295,17 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                                 color: _softBlueBg,
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: const Row(
+                              child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(
+                                  const Icon(
                                     Icons.check,
                                     size: 14,
                                     color: _primaryBlue,
                                   ),
-                                  SizedBox(width: 5),
+                                  const SizedBox(width: 5),
                                   Text(
-                                    'Business verified',
+                                    isVerified ? 'Business verified' : 'Verify business',
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w700,
@@ -282,10 +333,14 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    _aboutText,
-                    style: const TextStyle(
+                    _profile?.about?.isNotEmpty == true
+                        ? _profile!.about!
+                        : 'No description yet. Edit your profile to add one.',
+                    style: TextStyle(
                       fontSize: 13.5,
-                      color: _mutedText,
+                      color: _profile?.about?.isNotEmpty == true
+                          ? _mutedText
+                          : AppColors.hintText,
                       height: 1.45,
                     ),
                   ),
@@ -321,7 +376,9 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          _location,
+                          displayLocation.isNotEmpty
+                              ? displayLocation
+                              : 'Not set',
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
@@ -338,33 +395,12 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          _email,
+                          _profile?.email ?? 'Not set',
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                             color: _primaryBlue,
                           ),
-                        ),
-                        const SizedBox(height: 14),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Phone',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: _mutedText,
-                              ),
-                            ),
-                            Text(
-                              _phone,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                color: _darkText,
-                              ),
-                            ),
-                          ],
                         ),
                       ],
                     ),
@@ -425,7 +461,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                     width: double.infinity,
                     height: 48,
                     child: ElevatedButton(
-                      onPressed: _openEditProfileDialog,
+                      onPressed: _isLoading ? null : _openEditProfileDialog,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _primaryBlue,
                         foregroundColor: Colors.white,
@@ -443,6 +479,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 20),
                 ],
               ),
             ),
@@ -451,49 +488,341 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
       ),
       bottomNavigationBar: widget.showNavBar
           ? SafeArea(
-        top: false,
-        child: Container(
-          height: 68,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            border: Border(
-              top: BorderSide(color: _borderColor, width: 1),
+              top: false,
+              child: Container(
+                height: 68,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  border: Border(
+                    top: BorderSide(color: _borderColor, width: 1),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    _BottomNavItem(
+                      icon: Icons.home_outlined,
+                      activeIcon: Icons.home_rounded,
+                      label: 'Home',
+                      selected: _selectedNavIndex == 0,
+                      onTap: () => setState(() => _selectedNavIndex = 0),
+                    ),
+                    _BottomNavItem(
+                      icon: Icons.work_outline_rounded,
+                      activeIcon: Icons.work_rounded,
+                      label: 'Gigs',
+                      selected: _selectedNavIndex == 1,
+                      onTap: () => setState(() => _selectedNavIndex = 1),
+                    ),
+                    _BottomNavItem(
+                      icon: Icons.assignment_outlined,
+                      activeIcon: Icons.assignment_rounded,
+                      label: 'Projects',
+                      selected: _selectedNavIndex == 2,
+                      onTap: () => setState(() => _selectedNavIndex = 2),
+                    ),
+                    _BottomNavItem(
+                      icon: Icons.person_outline_rounded,
+                      activeIcon: Icons.person_rounded,
+                      label: 'Profile',
+                      selected: _selectedNavIndex == 3,
+                      onTap: () => setState(() => _selectedNavIndex = 3),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : null,
+    );
+  }
+
+  Widget _buildProfileSkeleton() {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header skeleton
+                  Container(
+                    height: 28,
+                    width: 200,
+                    decoration: BoxDecoration(
+                      color: _softBlueBg,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    height: 14,
+                    width: 150,
+                    decoration: BoxDecoration(
+                      color: _softBlueBg,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Logo + Name + Category skeleton
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 72,
+                        height: 72,
+                        decoration: BoxDecoration(
+                          color: _softBlueBg,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              height: 22,
+                              width: 180,
+                              decoration: BoxDecoration(
+                                color: _softBlueBg,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Container(
+                              height: 13,
+                              width: 120,
+                              decoration: BoxDecoration(
+                                color: _softBlueBg,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _softBlueBg,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 14,
+                                    height: 14,
+                                    decoration: BoxDecoration(
+                                      color: _softBlueBg,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Container(
+                                    width: 120,
+                                    height: 12,
+                                    decoration: BoxDecoration(
+                                      color: _softBlueBg,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // About section skeleton
+                  Container(
+                    height: 16,
+                    width: 140,
+                    decoration: BoxDecoration(
+                      color: _softBlueBg,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    height: 100,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: _softBlueBg,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+
+                  // Business details card skeleton
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: _borderColor),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          height: 12,
+                          width: 80,
+                          decoration: BoxDecoration(
+                            color: _softBlueBg,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Container(
+                          height: 14,
+                          width: 120,
+                          decoration: BoxDecoration(
+                            color: _softBlueBg,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Container(
+                          height: 12,
+                          width: 60,
+                          decoration: BoxDecoration(
+                            color: _softBlueBg,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Container(
+                          height: 14,
+                          width: 160,
+                          decoration: BoxDecoration(
+                            color: _softBlueBg,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Verified card skeleton
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: _softBlueBg,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 22,
+                          height: 22,
+                          decoration: BoxDecoration(
+                            color: _softBlueBg,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                height: 14,
+                                width: 150,
+                                decoration: BoxDecoration(
+                                  color: _softBlueBg,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Container(
+                                height: 12.5,
+                                width: 250,
+                                decoration: BoxDecoration(
+                                  color: _softBlueBg,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+
+                  // Edit button skeleton
+                  Container(
+                    width: double.infinity,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: _softBlueBg,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
             ),
           ),
-          child: Row(
-            children: [
-              _BottomNavItem(
-                icon: Icons.home_outlined,
-                activeIcon: Icons.home_rounded,
-                label: 'Home',
-                selected: _selectedNavIndex == 0,
-                onTap: () => setState(() => _selectedNavIndex = 0),
-              ),
-              _BottomNavItem(
-                icon: Icons.work_outline_rounded,
-                activeIcon: Icons.work_rounded,
-                label: 'Gigs',
-                selected: _selectedNavIndex == 1,
-                onTap: () => setState(() => _selectedNavIndex = 1),
-              ),
-              _BottomNavItem(
-                icon: Icons.assignment_outlined,
-                activeIcon: Icons.assignment_rounded,
-                label: 'Projects',
-                selected: _selectedNavIndex == 2,
-                onTap: () => setState(() => _selectedNavIndex = 2),
-              ),
-              _BottomNavItem(
-                icon: Icons.person_outline_rounded,
-                activeIcon: Icons.person_rounded,
-                label: 'Profile',
-                selected: _selectedNavIndex == 3,
-                onTap: () => setState(() => _selectedNavIndex = 3),
-              ),
-            ],
-          ),
         ),
-      )
+      ),
+      bottomNavigationBar: widget.showNavBar
+          ? SafeArea(
+              top: false,
+              child: Container(
+                height: 68,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  border: Border(
+                    top: BorderSide(color: _borderColor, width: 1),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    _BottomNavItem(
+                      icon: Icons.home_outlined,
+                      activeIcon: Icons.home_rounded,
+                      label: 'Home',
+                      selected: _selectedNavIndex == 0,
+                      onTap: () => setState(() => _selectedNavIndex = 0),
+                    ),
+                    _BottomNavItem(
+                      icon: Icons.work_outline_rounded,
+                      activeIcon: Icons.work_rounded,
+                      label: 'Gigs',
+                      selected: _selectedNavIndex == 1,
+                      onTap: () => setState(() => _selectedNavIndex = 1),
+                    ),
+                    _BottomNavItem(
+                      icon: Icons.assignment_outlined,
+                      activeIcon: Icons.assignment_rounded,
+                      label: 'Projects',
+                      selected: _selectedNavIndex == 2,
+                      onTap: () => setState(() => _selectedNavIndex = 2),
+                    ),
+                    _BottomNavItem(
+                      icon: Icons.person_outline_rounded,
+                      activeIcon: Icons.person_rounded,
+                      label: 'Profile',
+                      selected: _selectedNavIndex == 3,
+                      onTap: () => setState(() => _selectedNavIndex = 3),
+                    ),
+                  ],
+                ),
+              ),
+            )
           : null,
     );
   }
@@ -518,14 +847,14 @@ class _DialogInput extends StatelessWidget {
       decoration: InputDecoration(
         labelText: label,
         filled: true,
-        fillColor: const Color(0xFFF8FAFC),
+        fillColor: AppColors.inputFill,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+          borderSide: const BorderSide(color: AppColors.borderColor),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+          borderSide: const BorderSide(color: AppColors.borderColor),
         ),
       ),
     );
@@ -549,7 +878,7 @@ class _BottomNavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const blue = Color(0xFF2563EB);
+    const blue = AppColors.primaryBlue;
 
     return Expanded(
       child: GestureDetector(

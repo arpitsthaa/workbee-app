@@ -27,9 +27,13 @@ class ApiConstants {
 
   /// Business endpoints
   static const String businessDashboard = '/api/business/dashboard/';
+  static const String businessProfile = '/api/business/profile/';
   static const String businessGigs = '/api/business/gigs/';
   static const String businessGigById = '/api/business/gigs/';
+  static const String businessProjects = '/api/business/projects/';
   static const String businessApplicationsStatus = '/api/business/applications/';
+  static const String businessReviewWork = '/api/business/projects/';
+  static const String businessRateStudent = '/api/business/projects/';
 
   /// Health check
   static const String health = '/api/health/';

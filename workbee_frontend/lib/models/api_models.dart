@@ -285,6 +285,91 @@ class ProfileResponse {
   }
 }
 
+class BusinessProfileResponse {
+  final int id;
+  final String email;
+  final String? location;
+  final String? businessType;
+  final String? about;
+  final bool isVerified;
+
+  BusinessProfileResponse({
+    required this.id,
+    required this.email,
+    this.location,
+    this.businessType,
+    this.about,
+    required this.isVerified,
+  });
+
+  factory BusinessProfileResponse.fromJson(Map<String, dynamic> json) {
+    return BusinessProfileResponse(
+      id: json['id'] ?? 0,
+      email: (json['email'] ?? '') as String,
+      location: json['location'] as String?,
+      businessType: json['business_type'] as String?,
+      about: json['about'] as String?,
+      isVerified: json['is_verified'] ?? false,
+    );
+  }
+}
+
+class BusinessProject {
+  final int id;
+  final int gig;
+  final String gigTitle;
+  final int budgetNpr;
+  final String deadline;
+  final List<String> deliverables;
+  final String businessName;
+  final String studentName;
+  final String status;
+  final String submissionLink;
+  final String submissionNote;
+  final String? submittedAt;
+  final String? completedAt;
+  final bool hasReview;
+  final String createdAt;
+
+  BusinessProject({
+    required this.id,
+    required this.gig,
+    required this.gigTitle,
+    required this.budgetNpr,
+    required this.deadline,
+    required this.deliverables,
+    required this.businessName,
+    required this.studentName,
+    required this.status,
+    required this.submissionLink,
+    required this.submissionNote,
+    this.submittedAt,
+    this.completedAt,
+    required this.hasReview,
+    required this.createdAt,
+  });
+
+  factory BusinessProject.fromJson(Map<String, dynamic> json) {
+    return BusinessProject(
+      id: json['id'] ?? 0,
+      gig: json['gig'] ?? 0,
+      gigTitle: (json['gig_title'] ?? '') as String,
+      budgetNpr: (json['budget_npr'] ?? 0) as int,
+      deadline: (json['deadline'] ?? '') as String,
+      deliverables: List<String>.from(json['deliverables'] ?? []),
+      businessName: (json['business_name'] ?? '') as String,
+      studentName: (json['student_name'] ?? '') as String,
+      status: (json['status'] ?? '') as String,
+      submissionLink: (json['submission_link'] ?? '') as String,
+      submissionNote: (json['submission_note'] ?? '') as String,
+      submittedAt: json['submitted_at'] as String?,
+      completedAt: json['completed_at'] as String?,
+      hasReview: json['has_review'] ?? false,
+      createdAt: (json['created_at'] ?? '') as String,
+    );
+  }
+}
+
 class BusinessDashboardResponse {
   final String businessName;
   final String location;
