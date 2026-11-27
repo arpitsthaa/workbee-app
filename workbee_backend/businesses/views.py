@@ -33,7 +33,7 @@ class BusinessDashboardView(APIView):
 
         return Response(
             {
-                "business_name": user.full_name or user.email or "Business Workspace",
+                "business_name": user.email or "Business Workspace",
                 "location": user.location or "",
                 "is_verified": profile.is_verified,
                 "stats": {

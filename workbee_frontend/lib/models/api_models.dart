@@ -253,17 +253,11 @@ class ProfileResponse {
   final String email;
   final String? collegeUniversity;
   final String? location;
-  final String? phone;
   final String program;
   final String semester;
-  final String? graduationYear;
   final String bio;
   final List<String> skills;
   final String portfolioUrl;
-  final String? linkedin;
-  final String? github;
-  final String? address;
-  final String? avatarUrl;
   final bool isVerified;
   final int profileCompletion;
 
@@ -273,17 +267,11 @@ class ProfileResponse {
     required this.email,
     this.collegeUniversity,
     this.location,
-    this.phone,
     required this.program,
     required this.semester,
-    this.graduationYear,
     required this.bio,
     required this.skills,
     required this.portfolioUrl,
-    this.linkedin,
-    this.github,
-    this.address,
-    this.avatarUrl,
     required this.isVerified,
     required this.profileCompletion,
   });
@@ -295,17 +283,11 @@ class ProfileResponse {
       email: (json['email'] ?? '') as String,
       collegeUniversity: json['college_university'] as String?,
       location: json['location'] as String?,
-      phone: json['phone'] as String?,
       program: (json['program'] ?? '') as String,
       semester: (json['semester'] ?? '') as String,
-      graduationYear: json['graduation_year'] as String?,
       bio: (json['bio'] ?? '') as String,
       skills: List<String>.from(json['skills'] ?? []),
       portfolioUrl: (json['portfolio_url'] ?? '') as String,
-      linkedin: json['linkedin'] as String?,
-      github: json['github'] as String?,
-      address: json['address'] as String?,
-      avatarUrl: json['avatar_url'] as String?,
       isVerified: json['is_verified'] ?? false,
       profileCompletion: (json['profile_completion'] ?? 0) as int,
     );
@@ -315,57 +297,27 @@ class ProfileResponse {
 class BusinessProfileResponse {
   final int id;
   final String email;
-  final String? fullName;
   final String? location;
-  final String? phone;
   final String? businessType;
   final String? about;
-  final String? website;
-  final String? registrationNumber;
-  final String? foundedYear;
-  final String? teamSize;
-  final Map<String, dynamic>? socialLinks;
-  final String? logoUrl;
   final bool isVerified;
 
   BusinessProfileResponse({
     required this.id,
     required this.email,
-    this.fullName,
     this.location,
-    this.phone,
     this.businessType,
     this.about,
-    this.website,
-    this.registrationNumber,
-    this.foundedYear,
-    this.teamSize,
-    this.socialLinks,
-    this.logoUrl,
     required this.isVerified,
   });
-
-  /// Display name: full name if available, otherwise the part before '@' in the email.
-  String get displayName {
-    if (fullName != null && fullName!.isNotEmpty) return fullName!;
-    return email.isNotEmpty ? email.split('@').first : email;
-  }
 
   factory BusinessProfileResponse.fromJson(Map<String, dynamic> json) {
     return BusinessProfileResponse(
       id: json['id'] ?? 0,
       email: (json['email'] ?? '') as String,
-      fullName: json['full_name'] as String?,
       location: json['location'] as String?,
-      phone: json['phone'] as String?,
       businessType: json['business_type'] as String?,
       about: json['about'] as String?,
-      website: json['website'] as String?,
-      registrationNumber: json['registration_number'] as String?,
-      foundedYear: json['founded_year'] as String?,
-      teamSize: json['team_size'] as String?,
-      socialLinks: json['social_links'] as Map<String, dynamic>?,
-      logoUrl: json['logo_url'] as String?,
       isVerified: json['is_verified'] ?? false,
     );
   }

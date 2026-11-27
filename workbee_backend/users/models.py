@@ -34,7 +34,6 @@ class User(AbstractUser):
     full_name = models.CharField(max_length=150, blank=True, null=True)
     college_university = models.CharField(max_length=200, blank=True, null=True)
     location = models.CharField(max_length=150, blank=True, null=True)
-    phone = models.CharField(max_length=20, blank=True, null=True)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []

@@ -86,5 +86,4 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "full_name",
             "college_university",
             "location",
-            "phone",
         ]

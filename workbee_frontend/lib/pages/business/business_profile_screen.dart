@@ -1,11 +1,8 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:workbee_frontend/clients/business_client.dart';
 import 'package:workbee_frontend/constants/app_colors.dart';
 import 'package:workbee_frontend/models/api_models.dart';
 import 'package:workbee_frontend/pages/auth/login_page.dart';
-import 'package:workbee_frontend/services/supabase_service.dart';
 import 'package:workbee_frontend/services/token_service.dart';
 import 'package:workbee_frontend/widgets/common_app_bar.dart';
 
@@ -82,44 +79,23 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
   }
 
   Future<void> _updateProfileFromDialog(Map<String, dynamic> data) async {
-    Map<String, dynamic> result;
-    try {
-      result = await BusinessClient.updateProfile(data);
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Update failed: $e'),
-          backgroundColor: AppColors.errorRed,
-        ),
-      );
-      return;
-    }
+    final result = await BusinessClient.updateProfile(data);
 
     if (!mounted) return;
 
-    // A failed/empty response must not wipe the existing profile.
-    if (result.containsKey('error') || !result.containsKey('id')) {
+    if (result.containsKey('error')) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            result['error'] as String? ?? 'Update failed. Please try again.',
-          ),
+          content: Text(result['error'] as String? ?? 'Update failed'),
           backgroundColor: AppColors.errorRed,
         ),
       );
       return;
     }
 
-    final profile = BusinessProfileResponse.fromJson(result);
     setState(() {
-      _profile = profile;
+      _profile = BusinessProfileResponse.fromJson(result);
     });
-
-    // Keep the cached display name in sync with the saved profile.
-    if (profile.displayName.isNotEmpty) {
-      TokenService.updateProfile(name: profile.displayName);
-    }
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -148,13 +124,6 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
     final categoryCtrl = TextEditingController(text: _profile!.businessType ?? '');
     final aboutCtrl = TextEditingController(text: _profile!.about ?? '');
     final locationCtrl = TextEditingController(text: _profile!.location ?? '');
-    final phoneCtrl = TextEditingController(text: _profile!.phone ?? '');
-    final websiteCtrl = TextEditingController(text: _profile!.website ?? '');
-    final regCtrl = TextEditingController(text: _profile!.registrationNumber ?? '');
-    final foundedCtrl = TextEditingController(text: _profile!.foundedYear ?? '');
-    final teamCtrl = TextEditingController(text: _profile!.teamSize ?? '');
-    File? logoFile;
-    final picker = ImagePicker();
 
     showDialog<void>(
       context: context,
@@ -193,60 +162,6 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                 label: 'Location',
                 controller: locationCtrl,
               ),
-              const SizedBox(height: 12),
-              _DialogInput(
-                label: 'Phone',
-                controller: phoneCtrl,
-              ),
-              const SizedBox(height: 12),
-              _DialogInput(
-                label: 'Website',
-                controller: websiteCtrl,
-              ),
-              const SizedBox(height: 12),
-              _DialogInput(
-                label: 'Registration Number',
-                controller: regCtrl,
-              ),
-              const SizedBox(height: 12),
-              _DialogInput(
-                label: 'Founded Year',
-                controller: foundedCtrl,
-              ),
-              const SizedBox(height: 12),
-              _DialogInput(
-                label: 'Team Size',
-                controller: teamCtrl,
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  const Text('Logo: '),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
-                        final picked = await picker.pickImage(source: ImageSource.gallery);
-                        if (picked != null) {
-                          if (SupabaseService.isFileTooLarge(picked.path, maxMb: 5)) {
-                            if (!context.mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('File too large. Max 5 MB allowed.'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                            return;
-                          }
-                          logoFile = File(picked.path);
-                        }
-                      },
-                      icon: const Icon(Icons.image, size: 18),
-                      label: const Text('Choose'),
-                    ),
-                  ),
-                ],
-              ),
             ],
           ),
         ),
@@ -263,32 +178,12 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
           ),
           ElevatedButton(
             onPressed: () async {
-              String? logoUrl;
-              if (logoFile != null) {
-                final fileName = 'logos/${DateTime.now().millisecondsSinceEpoch}.jpg';
-                logoUrl = await SupabaseService().upload(logoFile!.path, fileName);
-                if (logoUrl == null && context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Logo upload failed.'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                  return;
-                }
-              }
               final dialogContext = context;
               await _updateProfileFromDialog({
                 'full_name': nameCtrl.text.trim(),
                 'business_type': categoryCtrl.text.trim(),
                 'about': aboutCtrl.text.trim(),
                 'location': locationCtrl.text.trim(),
-                'phone': phoneCtrl.text.trim(),
-                'website': websiteCtrl.text.trim(),
-                'registration_number': regCtrl.text.trim(),
-                'founded_year': foundedCtrl.text.trim(),
-                'team_size': teamCtrl.text.trim(),
-                if (logoUrl != null) 'logo_url': logoUrl,
               });
               if (dialogContext.mounted) Navigator.pop(dialogContext);
             },
