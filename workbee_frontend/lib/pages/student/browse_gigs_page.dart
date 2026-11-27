@@ -639,6 +639,7 @@ class FilterChipButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
         decoration: BoxDecoration(
           color: isActive ? AppColors.softBlueBg : Colors.white,
+          borderRadius: BorderRadius.circular(8),
                     border: Border.all(
             color: isActive ? AppColors.borderLight : AppColors.borderColor,
           ),
@@ -692,7 +693,8 @@ class GigPostCard extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
-                border: Border.all(color: borderColor),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

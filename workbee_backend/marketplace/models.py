@@ -75,6 +75,7 @@ class Gig(models.Model):
     location = models.CharField(max_length=150)
     is_remote = models.BooleanField(default=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="OPEN")
+    proposal_link = models.URLField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

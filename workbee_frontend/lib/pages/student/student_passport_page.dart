@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:workbee_frontend/clients/student_client.dart';
 import 'package:workbee_frontend/constants/app_colors.dart';
+import 'package:workbee_frontend/format_utils.dart';
 import 'package:workbee_frontend/models/api_models.dart';
 import 'package:workbee_frontend/services/token_service.dart';
 import 'package:workbee_frontend/widgets/student_profile_header.dart';
@@ -22,6 +23,15 @@ class _StudentPassportPageState extends State<StudentPassportPage> {
   void initState() {
     super.initState();
     _loadPassport();
+  }
+
+  Future<void> _refreshPassport() async {
+    setState(() {
+      _passport = null;
+      _isLoading = true;
+      _error = null;
+    });
+    await _loadPassport();
   }
 
   Future<void> _loadPassport() async {
@@ -74,11 +84,15 @@ class _StudentPassportPageState extends State<StudentPassportPage> {
     return SafeArea(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 480),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+        child: RefreshIndicator(
+          onRefresh: _refreshPassport,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               StudentProfileHeader(
                 displayName: TokenService.getNameSync() ?? _passport?.fullName ?? 'Student',
                 collegeProgram: TokenService.getCollegeUniversitySync() ??
@@ -169,7 +183,7 @@ class _StudentPassportPageState extends State<StudentPassportPage> {
                             '${review.businessName} · ${review.businessLocation}',
                         roleAndSkills:
                             '${review.roleTitle} · ${review.skills.join(', ')}',
-                        dateText: 'Completed ${review.completedAt ?? review.createdAt}',
+                        dateText: 'Completed ${formatDateDmy(review.completedAt ?? review.createdAt)}',
                         ratingText: '${review.rating.toStringAsFixed(1)}/5',
                         feedback: review.reviewComment,
                         borderColor: AppColors.borderColor,
@@ -182,7 +196,9 @@ class _StudentPassportPageState extends State<StudentPassportPage> {
           ),
         ),
       ),
-    );
+    ),
+    ),
+  );
   }
 }
 
@@ -298,6 +314,8 @@ class VerifiedProjectCard extends StatelessWidget {
               Text(
                 dateText,
                 style: const TextStyle(fontSize: 12.5, color: AppColors.mutedText),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
               ),
             ],
           ),

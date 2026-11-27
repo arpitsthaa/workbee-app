@@ -3,6 +3,7 @@ import 'package:workbee_frontend/clients/business_client.dart';
 import 'package:workbee_frontend/constants/app_colors.dart';
 import 'package:workbee_frontend/models/api_models.dart';
 import 'package:workbee_frontend/pages/auth/login_page.dart';
+import 'package:workbee_frontend/pages/business/business_edit_profile_page.dart';
 import 'package:workbee_frontend/services/token_service.dart';
 import 'package:workbee_frontend/widgets/common_app_bar.dart';
 
@@ -78,33 +79,6 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
     }
   }
 
-  Future<void> _updateProfileFromDialog(Map<String, dynamic> data) async {
-    final result = await BusinessClient.updateProfile(data);
-
-    if (!mounted) return;
-
-    if (result.containsKey('error')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result['error'] as String? ?? 'Update failed'),
-          backgroundColor: AppColors.errorRed,
-        ),
-      );
-      return;
-    }
-
-    setState(() {
-      _profile = BusinessProfileResponse.fromJson(result);
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Profile updated'),
-        backgroundColor: AppColors.successGreen,
-      ),
-    );
-  }
-
   Future<void> _logout() async {
     await TokenService.clear();
     if (!mounted) return;
@@ -115,91 +89,17 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
     );
   }
 
-  void _openEditProfileDialog() {
-    if (_profile == null) return;
-
-    final nameCtrl = TextEditingController(
-      text: TokenService.getNameSync() ?? _profile!.email.split('@').first,
-    );
-    final categoryCtrl = TextEditingController(text: _profile!.businessType ?? '');
-    final aboutCtrl = TextEditingController(text: _profile!.about ?? '');
-    final locationCtrl = TextEditingController(text: _profile!.location ?? '');
-
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: const Text(
-          'Edit Business Profile',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
-            color: _darkText,
-          ),
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _DialogInput(
-                label: 'Business Name',
-                controller: nameCtrl,
-              ),
-              const SizedBox(height: 12),
-              _DialogInput(
-                label: 'Category',
-                controller: categoryCtrl,
-              ),
-              const SizedBox(height: 12),
-              _DialogInput(
-                label: 'About the business',
-                controller: aboutCtrl,
-                maxLines: 3,
-              ),
-              const SizedBox(height: 12),
-              _DialogInput(
-                label: 'Location',
-                controller: locationCtrl,
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(
-                color: _mutedText,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final dialogContext = context;
-              await _updateProfileFromDialog({
-                'full_name': nameCtrl.text.trim(),
-                'business_type': categoryCtrl.text.trim(),
-                'about': aboutCtrl.text.trim(),
-                'location': locationCtrl.text.trim(),
-              });
-              if (dialogContext.mounted) Navigator.pop(dialogContext);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _primaryBlue,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: const Text('Save'),
-          ),
-        ],
+  void _openEditProfilePage() {
+    Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BusinessEditProfilePage(),
       ),
-    );
+    ).then((saved) {
+      if (saved == true) {
+        _loadProfile();
+      }
+    });
   }
 
   @override
@@ -223,7 +123,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
           ? CommonAppBar(
               displayName: displayName,
               role: 'business',
-              onAvatarTap: _openEditProfileDialog,
+              onAvatarTap: _openEditProfilePage,
             )
           : null,
       body: SafeArea(
@@ -472,7 +372,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                     width: double.infinity,
                     height: 48,
                     child: ElevatedButton(
-                      onPressed: _isLoading ? null : _openEditProfileDialog,
+                      onPressed: _isLoading ? null : _openEditProfilePage,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _primaryBlue,
                         foregroundColor: Colors.white,
@@ -857,39 +757,6 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
               ),
             )
           : null,
-    );
-  }
-}
-
-class _DialogInput extends StatelessWidget {
-  final String label;
-  final TextEditingController controller;
-  final int maxLines;
-
-  const _DialogInput({
-    required this.label,
-    required this.controller,
-    this.maxLines = 1,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      maxLines: maxLines,
-      decoration: InputDecoration(
-        labelText: label,
-        filled: true,
-        fillColor: AppColors.inputFill,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: AppColors.borderColor),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: AppColors.borderColor),
-        ),
-      ),
     );
   }
 }

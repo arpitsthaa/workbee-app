@@ -94,7 +94,7 @@ class _StudentProjectCardState extends State<StudentProjectCard> {
             ),
             const SizedBox(height: 6),
             Text(
-              '${p.businessName} · Due ${p.deadline}',
+              '${p.businessName} · Due ${formatDateDmy(p.deadline)}',
               style: const TextStyle(fontSize: 13, color: AppColors.mutedText),
             ),
             const SizedBox(height: 10),
@@ -106,6 +106,28 @@ class _StudentProjectCardState extends State<StudentProjectCard> {
                 color: AppColors.primaryBlue,
               ),
             ),
+            if (p.proposalLink.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  const Icon(Icons.description, size: 16, color: AppColors.primaryBlue),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      p.proposalLink,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.primaryBlue,
+                        fontWeight: FontWeight.w600,
+                        decoration: TextDecoration.underline,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ),
+                ],
+              ),
+            ],
             if (p.submissionLink.isNotEmpty) ...[
               const SizedBox(height: 10),
               Text(

@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:workbee_frontend/clients/business_client.dart';
 import 'package:workbee_frontend/constants/app_colors.dart';
+import 'package:workbee_frontend/format_utils.dart';
 import 'package:workbee_frontend/models/api_models.dart';
 import 'package:workbee_frontend/pages/auth/login_page.dart';
 import 'package:workbee_frontend/pages/business/business_edit_gig_page.dart';
 import 'package:workbee_frontend/pages/business/business_post_gig_page.dart';
 import 'package:workbee_frontend/services/token_service.dart';
 import 'package:workbee_frontend/widgets/common_app_bar.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class BusinessGigsPage extends StatefulWidget {
   final String businessName;
@@ -31,7 +33,7 @@ class _BusinessGigsPageState extends State<BusinessGigsPage> {
   bool _isLoading = true;
   String? _errorMessage;
   List<Gig> _gigs = [];
-  String _filter = 'All';
+  String _filter = 'Open';
 
   @override
   void initState() {
@@ -272,13 +274,14 @@ class _BusinessGigsPageState extends State<BusinessGigsPage> {
                                   _GigCard(
                                     title: gig.title,
                                     meta:
-                                        'NPR ${gig.budgetNpr} · ${gig.isRemote ? 'Remote' : 'On-site'} · ${gig.durationDays} days · Due ${gig.deadline}',
+                                        'NPR ${gig.budgetNpr} · ${gig.isRemote ? 'Remote' : 'On-site'} · ${gig.durationDays} days · Due ${formatDateDmy(gig.deadline)}',
                                     statusText: statusLabel,
                                     statusBg: bgColor,
                                     statusColor: textColor,
+                                    proposalLink: gig.proposalLink,
                                     onManage: () => _openEditGig(gig),
                                   ),
-                                  const SizedBox(height: 12),
+                                  const SizedBox(height: 8),
                                 ],
                               );
                             }),
@@ -501,6 +504,7 @@ class _GigCard extends StatelessWidget {
   final String statusText;
   final Color statusBg;
   final Color statusColor;
+  final String proposalLink;
   final VoidCallback onManage;
 
   const _GigCard({
@@ -509,6 +513,7 @@ class _GigCard extends StatelessWidget {
     required this.statusText,
     required this.statusBg,
     required this.statusColor,
+    required this.proposalLink,
     required this.onManage,
   });
 
@@ -521,6 +526,13 @@ class _GigCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.borderColor),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -528,89 +540,124 @@ class _GigCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.darkText,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
-                  color: statusBg,
-                  borderRadius: BorderRadius.circular(8),
+                  color: AppColors.softBlueBg,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.primaryBlue, width: 2),
                 ),
-                child: Text(
-                  statusText,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: statusColor,
+                alignment: Alignment.center,
+                child: const Icon(Icons.work_outline, size: 20, color: AppColors.primaryBlue),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.darkText,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: statusBg,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            statusText,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: statusColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(Icons.schedule, size: 13, color: AppColors.mutedText),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            meta,
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              color: AppColors.mutedText,
+                              height: 1.4,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 42,
+            child: OutlinedButton.icon(
+              onPressed: onManage,
+              icon: const Icon(Icons.arrow_forward, size: 16),
+              label: const Text(
+                'Manage',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.primaryBlue,
+                side: const BorderSide(color: AppColors.primaryBlue),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ),
+          if (proposalLink.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              height: 42,
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  final url = Uri.parse(proposalLink);
+                  if (await canLaunchUrl(url)) {
+                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                  }
+                },
+                icon: const Icon(Icons.description, size: 16),
+                label: const Text(
+                  'View Proposal',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primaryBlue,
+                  side: const BorderSide(color: AppColors.primaryBlue),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
                   ),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            meta,
-            style: const TextStyle(
-              fontSize: 12.5,
-              color: AppColors.mutedText,
-              height: 1.4,
             ),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              _ActionLink(
-                label: 'Manage',
-                icon: Icons.arrow_forward,
-                onTap: onManage,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ActionLink extends StatelessWidget {
-  final String label;
-  final IconData? icon;
-  final VoidCallback onTap;
-
-  const _ActionLink({
-    required this.label,
-    this.icon,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: AppColors.primaryBlue,
-            ),
-          ),
-          if (icon != null) ...[
-            const SizedBox(width: 4),
-            Icon(icon, size: 14, color: AppColors.primaryBlue),
           ],
         ],
       ),

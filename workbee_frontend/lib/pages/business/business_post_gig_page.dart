@@ -24,6 +24,7 @@ class _PostGigPageState extends State<PostGigPage> {
   final TextEditingController _budgetController = TextEditingController();
   final TextEditingController _deadlineController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
+  final TextEditingController _proposalLinkController = TextEditingController();
 
   bool _isPosting = false;
 
@@ -35,6 +36,7 @@ class _PostGigPageState extends State<PostGigPage> {
     _budgetController.dispose();
     _deadlineController.dispose();
     _locationController.dispose();
+    _proposalLinkController.dispose();
     super.dispose();
   }
 
@@ -166,6 +168,7 @@ class _PostGigPageState extends State<PostGigPage> {
         'is_remote': true,
         'category': 'Design & creative',
         'deliverables': [],
+        'proposal_link': _proposalLinkController.text.trim(),
       });
 
       if (!mounted) return;
@@ -188,6 +191,7 @@ class _PostGigPageState extends State<PostGigPage> {
       _budgetController.clear();
       _deadlineController.clear();
       _locationController.clear();
+      _proposalLinkController.clear();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -376,6 +380,13 @@ class _PostGigPageState extends State<PostGigPage> {
                     label: 'Location',
                     controller: _locationController,
                     hint: 'e.g. Baneshwor, Kathmandu',
+                  ),
+                  const SizedBox(height: 12),
+
+                  _FormField(
+                    label: 'Proposal / Document link',
+                    controller: _proposalLinkController,
+                    hint: 'e.g. https://docs.google.com/document/...',
                   ),
                   const SizedBox(height: 20),
 

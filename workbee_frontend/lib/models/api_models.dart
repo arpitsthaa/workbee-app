@@ -13,6 +13,7 @@ class Gig {
   final int applicantsCount;
   final bool hasApplied;
   final String createdAt;
+  final String proposalLink;
 
   Gig({
     required this.id,
@@ -29,6 +30,7 @@ class Gig {
     required this.applicantsCount,
     required this.hasApplied,
     required this.createdAt,
+    this.proposalLink = '',
   });
 
   factory Gig.fromJson(Map<String, dynamic> json) {
@@ -47,6 +49,7 @@ class Gig {
       applicantsCount: (json['applicants_count'] ?? 0) as int,
       hasApplied: json['has_applied'] ?? false,
       createdAt: (json['created_at'] ?? '') as String,
+      proposalLink: (json['proposal_link'] ?? '') as String,
     );
   }
 }
@@ -117,6 +120,7 @@ class Project {
   final String? completedAt;
   final bool hasReview;
   final String createdAt;
+  final String proposalLink;
 
   Project({
     required this.id,
@@ -134,6 +138,7 @@ class Project {
     this.completedAt,
     required this.hasReview,
     required this.createdAt,
+    this.proposalLink = '',
   });
 
   factory Project.fromJson(Map<String, dynamic> json) {
@@ -153,6 +158,7 @@ class Project {
       completedAt: json['completed_at'] as String?,
       hasReview: json['has_review'] ?? false,
       createdAt: (json['created_at'] ?? '') as String,
+      proposalLink: (json['proposal_link'] ?? '') as String,
     );
   }
 }
@@ -343,6 +349,7 @@ class BusinessProject {
   final String? completedAt;
   final bool hasReview;
   final String createdAt;
+  final String proposalLink;
 
   BusinessProject({
     required this.id,
@@ -364,6 +371,7 @@ class BusinessProject {
     this.completedAt,
     required this.hasReview,
     required this.createdAt,
+    this.proposalLink = '',
   });
 
   factory BusinessProject.fromJson(Map<String, dynamic> json) {
@@ -387,6 +395,7 @@ class BusinessProject {
       completedAt: json['completed_at'] as String?,
       hasReview: json['has_review'] ?? false,
       createdAt: (json['created_at'] ?? '') as String,
+      proposalLink: (json['proposal_link'] ?? '') as String,
     );
   }
 }

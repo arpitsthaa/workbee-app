@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:workbee_frontend/clients/student_client.dart';
 import 'package:workbee_frontend/constants/app_colors.dart';
-import 'package:workbee_frontend/helpers/alert_helper.dart';
 import 'package:workbee_frontend/models/api_models.dart';
 import 'package:workbee_frontend/pages/auth/login_page.dart';
+import 'package:workbee_frontend/pages/student/student_edit_profile_page.dart';
+import 'package:workbee_frontend/pages/student/student_passport_page.dart';
 import 'package:workbee_frontend/services/token_service.dart';
 import 'package:workbee_frontend/widgets/error_retry_state.dart';
 import 'package:workbee_frontend/widgets/loading_state.dart';
@@ -18,18 +19,9 @@ class StudentProfilePage extends StatefulWidget {
 }
 
 class _StudentProfilePageState extends State<StudentProfilePage> {
-  bool _isEditing = false;
   bool _isLoading = true;
   String? _error;
   ProfileResponse? _profile;
-
-  final _nameController = TextEditingController();
-  final _locationController = TextEditingController();
-  final _collegeController = TextEditingController();
-  final _courseController = TextEditingController();
-  final _aboutController = TextEditingController();
-  final _skillsController = TextEditingController();
-  final _portfolioController = TextEditingController();
 
   @override
   void initState() {
@@ -37,35 +29,7 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
     _loadProfile();
   }
 
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _locationController.dispose();
-    _collegeController.dispose();
-    _courseController.dispose();
-    _aboutController.dispose();
-    _skillsController.dispose();
-    _portfolioController.dispose();
-    super.dispose();
-  }
-
   Future<void> _loadProfile() async {
-    final session = TokenService();
-    if (await _isInitialized(session)) {
-      _nameController.text = (await TokenService.getName()) ?? '';
-      _locationController.text = (await TokenService.getLocation()) ?? '';
-      _collegeController.text = (await TokenService.getCollegeUniversity()) ?? '';
-      final program = await TokenService.getProgram() ?? '';
-      final semester = await TokenService.getSemester() ?? '';
-      _courseController.text = (program.isNotEmpty && semester.isNotEmpty)
-          ? '$program · $semester'
-          : (program.isNotEmpty ? program : (semester.isNotEmpty ? semester : ''));
-      _aboutController.text = (await TokenService.getBio()) ?? '';
-      final skills = await TokenService.getSkills();
-      _skillsController.text = skills.join(', ');
-      _portfolioController.text = (await TokenService.getPortfolioUrl()) ?? '';
-    }
-
     final result = await StudentClient.getProfile();
     if (!mounted) return;
     if (result.containsKey('error')) {
@@ -77,89 +41,9 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
       final profile = ProfileResponse.fromJson(result);
       setState(() {
         _profile = profile;
-        _nameController.text = profile.fullName;
-        _locationController.text = profile.location ?? '';
-        _collegeController.text = profile.collegeUniversity ?? '';
-        _courseController.text =
-            '${profile.program} · ${profile.semester}'.trim();
-        _aboutController.text = profile.bio;
-        _skillsController.text = profile.skills.join(', ');
-        _portfolioController.text = profile.portfolioUrl;
         _isLoading = false;
       });
     }
-  }
-
-  static Future<bool> _isInitialized(TokenService session) async {
-    return true;
-  }
-
-  Future<void> _saveProfile() async {
-    final portfolioUrl = _portfolioController.text.trim();
-
-    if (portfolioUrl.isNotEmpty && !_isValidUrl(portfolioUrl)) {
-      if (!mounted) return;
-      showAlert(
-        context,
-        message: 'Please enter a valid URL (e.g., example.com or https://example.com)',
-        isError: true,
-      );
-      return;
-    }
-
-    final courseText = _courseController.text.trim();
-    final courseParts = courseText.split(' · ');
-    final program = courseParts.isNotEmpty ? courseParts.first : '';
-    final semester = courseParts.length > 1 ? courseParts.last : '';
-
-    final skillsList = _skillsController.text.trim().split(',')
-        .where((s) => s.trim().isNotEmpty)
-        .map((s) => s.trim())
-        .toList();
-
-    final data = {
-      'full_name': _nameController.text.trim(),
-      'location': _locationController.text.trim(),
-      'college_university': _collegeController.text.trim(),
-      'program': program,
-      'semester': semester,
-      'bio': _aboutController.text.trim(),
-      'skills': skillsList,
-      'portfolio_url': portfolioUrl,
-    };
-
-    final result = await StudentClient.updateProfile(data);
-    if (!mounted) return;
-
-    if (result.containsKey('error')) {
-      showAlert(
-        context,
-        message: result['error'] as String? ?? 'Save failed',
-        isError: true,
-      );
-    } else {
-      await TokenService.updateProfile(
-        name: _nameController.text.trim(),
-        location: _locationController.text.trim(),
-        collegeUniversity: _collegeController.text.trim(),
-        program: program,
-        semester: semester,
-        bio: _aboutController.text.trim(),
-        skills: skillsList,
-        portfolioUrl: portfolioUrl,
-      );
-      if (!mounted) return;
-      setState(() => _isEditing = false);
-      showAlert(context, message: 'Profile saved');
-    }
-  }
-
-  bool _isValidUrl(String url) {
-    final regex = RegExp(
-      r'^(https?://)?([\w-]+\.)+[\w-]+(/[\w-./?%&=]*)?$',
-      caseSensitive: false,
-    );
-    return regex.hasMatch(url);
   }
 
   Future<void> _handleLogout() async {
@@ -189,86 +73,13 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 480),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (_isEditing) _buildEditForm() else _buildViewMode(),
-            ],
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: _buildViewMode(),
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildEditForm() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TextField(
-          controller: _nameController,
-          decoration: const InputDecoration(labelText: 'Full name'),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _locationController,
-          decoration: const InputDecoration(labelText: 'Location'),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _collegeController,
-          decoration: const InputDecoration(labelText: 'College'),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _courseController,
-          decoration: const InputDecoration(
-            labelText: 'Course & semester',
-          ),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _aboutController,
-          maxLines: 3,
-          decoration: const InputDecoration(labelText: 'About me'),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _skillsController,
-          decoration: const InputDecoration(
-            labelText: 'Skills (separate with commas)',
-          ),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _portfolioController,
-          decoration: const InputDecoration(
-            labelText: 'Portfolio link',
-          ),
-        ),
-        const SizedBox(height: 20),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () => setState(() => _isEditing = false),
-                child: const Text('Cancel'),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: ElevatedButton(
-                onPressed: _saveProfile,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryBlue,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('Save'),
-              ),
-            ),
-          ],
-        ),
-      ],
     );
   }
 
@@ -300,13 +111,21 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
   }
 
   Widget _buildSectionTitle(String text) {
-    return Text(
-      text,
-      style: const TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w700,
-        color: AppColors.darkText,
-      ),
+    return Row(
+      children: [
+        const Icon(Icons.circle, size: 8, color: AppColors.primaryBlue),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: AppColors.darkText,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -358,8 +177,24 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
   }
 
   Widget _buildAboutSection() {
+    final bio = TokenService.getBioSync() ?? _profile?.bio ?? '';
+    if (bio.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.cardLight,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.borderColor),
+        ),
+        child: const Text(
+          'No bio yet. Add a short introduction in your profile.',
+          style: TextStyle(fontSize: 13, color: AppColors.mutedText),
+        ),
+      );
+    }
     return Text(
-      TokenService.getBioSync() ?? _profile?.bio ?? '',
+      bio,
       style: const TextStyle(fontSize: 14, color: AppColors.mutedText),
     );
   }
@@ -368,6 +203,21 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
     final skills = TokenService.getSkillsSync().isNotEmpty
         ? TokenService.getSkillsSync()
         : _profile?.skills ?? [];
+    if (skills.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.cardLight,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.borderColor),
+        ),
+        child: const Text(
+          'No skills added yet. Add skills to showcase your expertise.',
+          style: TextStyle(fontSize: 13, color: AppColors.mutedText),
+        ),
+      );
+    }
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -390,6 +240,37 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
   }
 
   Widget _buildPortfolioSection() {
+    final portfolioUrl =
+        TokenService.getPortfolioUrlSync() ?? _profile?.portfolioUrl ?? '';
+    if (portfolioUrl.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.cardLight,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.borderColor),
+        ),
+        child: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Portfolio',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: AppColors.darkText,
+              ),
+            ),
+            SizedBox(height: 4),
+            Text(
+              'No portfolio link yet.',
+              style: TextStyle(fontSize: 13, color: AppColors.mutedText),
+            ),
+          ],
+        ),
+      );
+    }
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
@@ -410,11 +291,13 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
           ),
           const SizedBox(height: 4),
           Text(
-            TokenService.getPortfolioUrlSync() ?? _profile?.portfolioUrl ?? '',
+            portfolioUrl,
             style: const TextStyle(
               fontSize: 13.5,
               color: AppColors.primaryBlue,
             ),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
           ),
         ],
       ),
@@ -450,7 +333,14 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
                     ),
                   ),
                   TextButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const StudentPassportPage(),
+                        ),
+                      );
+                    },
                     child: const Text(
                       'View all',
                       style: TextStyle(
@@ -482,7 +372,17 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
       width: double.infinity,
       height: 48,
       child: ElevatedButton(
-        onPressed: () => setState(() => _isEditing = true),
+        onPressed: () async {
+          final saved = await Navigator.push<bool>(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const StudentEditProfilePage(),
+            ),
+          );
+          if (saved == true) {
+            _loadProfile();
+          }
+        },
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primaryBlue,
           foregroundColor: Colors.white,

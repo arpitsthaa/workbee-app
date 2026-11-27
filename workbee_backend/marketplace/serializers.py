@@ -101,6 +101,7 @@ class GigSerializer(serializers.ModelSerializer):
             "location",
             "is_remote",
             "status",
+            "proposal_link",
             "applicants_count",
             "has_applied",
             "created_at",
@@ -201,6 +202,7 @@ class ProjectSerializer(serializers.ModelSerializer):
     budget_npr = serializers.IntegerField(source="gig.budget_npr", read_only=True)
     deadline = serializers.DateField(source="gig.deadline", read_only=True)
     deliverables = serializers.JSONField(source="gig.deliverables", read_only=True)
+    proposal_link = serializers.URLField(source="gig.proposal_link", read_only=True)
     business_name = serializers.CharField(
         source="business.email", read_only=True
     )
@@ -216,6 +218,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             "budget_npr",
             "deadline",
             "deliverables",
+            "proposal_link",
             "business_name",
             "student_name",
             "status",

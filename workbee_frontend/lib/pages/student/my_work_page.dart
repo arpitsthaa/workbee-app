@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:workbee_frontend/clients/student_client.dart';
 import 'package:workbee_frontend/constants/app_colors.dart';
+import 'package:workbee_frontend/format_utils.dart';
 import 'package:workbee_frontend/helpers/alert_helper.dart';
 import 'package:workbee_frontend/models/api_models.dart';
 import 'package:workbee_frontend/services/token_service.dart';
@@ -138,7 +139,7 @@ class MyWorkPageState extends State<MyWorkPage> {
 
   String _formatDate(String? dateStr) {
     if (dateStr == null || dateStr.isEmpty) return 'recently';
-    return dateStr;
+    return formatDateDmy(dateStr);
   }
 
   bool _canWithdraw(String status) {

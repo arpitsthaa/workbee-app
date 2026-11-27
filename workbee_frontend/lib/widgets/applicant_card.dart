@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:workbee_frontend/constants/app_colors.dart';
+import 'package:workbee_frontend/format_utils.dart';
 import 'package:workbee_frontend/models/api_models.dart';
 import 'package:workbee_frontend/widgets/status_badge.dart';
 
@@ -40,8 +41,26 @@ class ApplicantCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.softBlueBg,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.primaryBlue, width: 2),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    app.studentName.isNotEmpty ? app.studentName[0].toUpperCase() : 'S',
+                    style: const TextStyle(
+                      color: AppColors.primaryBlue,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -55,12 +74,19 @@ class ApplicantCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        '${app.gigTitle} · Applied ${app.appliedAt}',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppColors.mutedText,
-                        ),
+                      Row(
+                        children: [
+                          const Icon(Icons.school, size: 12, color: AppColors.mutedText),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${app.gigTitle} · Applied ${formatDateDmy(app.appliedAt)}',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: AppColors.mutedText,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -131,6 +157,9 @@ class ApplicantInfoBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final skills = app.studentSkills.where((s) => s.isNotEmpty).toList();
+    final hasCover = app.coverMessage.isNotEmpty;
+
     return SafeArea(
       child: SingleChildScrollView(
         child: Padding(
@@ -139,26 +168,28 @@ class ApplicantInfoBottomSheet extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Header: avatar + name + college
               Row(
                 children: [
                   Container(
-                    width: 42,
-                    height: 42,
-                    decoration: const BoxDecoration(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
                       color: AppColors.softBlueBg,
                       shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.primaryBlue, width: 2),
                     ),
                     alignment: Alignment.center,
                     child: Text(
                       app.studentName.isNotEmpty ? app.studentName[0].toUpperCase() : 'S',
                       style: const TextStyle(
                         color: AppColors.primaryBlue,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 18,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -166,19 +197,28 @@ class ApplicantInfoBottomSheet extends StatelessWidget {
                         Text(
                           app.studentName,
                           style: const TextStyle(
-                            fontSize: 16,
+                            fontSize: 18,
                             fontWeight: FontWeight.w800,
                             color: AppColors.darkText,
                           ),
                         ),
                         if (app.studentCollege.isNotEmpty) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            app.studentCollege,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: AppColors.mutedText,
-                            ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              const Icon(Icons.school, size: 14, color: AppColors.mutedText),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  app.studentCollege,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: AppColors.mutedText,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ],
@@ -186,33 +226,48 @@ class ApplicantInfoBottomSheet extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
+
+              // Quick info chips
               Row(
                 children: [
                   _InfoChip(label: 'Rating', value: '${app.studentRating.toStringAsFixed(1)} / 5'),
                   const SizedBox(width: 8),
                   _InfoChip(label: 'Projects', value: app.verifiedProjectsCount.toString()),
-                  if (app.studentSkills.isNotEmpty) ...[
+                  if (skills.isNotEmpty) ...[
                     const SizedBox(width: 8),
-                    _InfoChip(label: 'Skills', value: app.studentSkills.join(', ')),
+                    _InfoChip(label: 'Skills', value: skills.join(', ')),
                   ],
                 ],
               ),
-              const SizedBox(height: 16),
-              const Text(
-                'Application Details',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.darkText,
-                ),
+              const SizedBox(height: 20),
+
+              // Application details section
+              Row(
+                children: [
+                  const Icon(Icons.description, size: 18, color: AppColors.primaryBlue),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Application Details',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.darkText,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               _DetailRow(label: 'Gig', value: app.gigTitle),
-              _DetailRow(label: 'Status', value: app.status.replaceAll('_', ' ').toUpperCase()),
+              _DetailRow(
+                label: 'Status',
+                value: app.status.replaceAll('_', ' ').toUpperCase(),
+              ),
               _DetailRow(label: 'Applied', value: app.appliedAt),
-              if (app.coverMessage.isNotEmpty) ...[
-                const SizedBox(height: 16),
+              const SizedBox(height: 20),
+
+              // Cover message
+              if (hasCover) ...[
                 const Text(
                   'Cover Message',
                   style: TextStyle(
@@ -222,12 +277,26 @@ class ApplicantInfoBottomSheet extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  app.coverMessage,
-                  style: const TextStyle(fontSize: 13, height: 1.4, color: AppColors.mutedText),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.softBlueBg,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    app.coverMessage,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      height: 1.5,
+                      color: AppColors.darkText,
+                    ),
+                  ),
                 ),
+                const SizedBox(height: 20),
               ],
-              const SizedBox(height: 24),
+
+              const SizedBox(height: 16),
             ],
           ),
         ),
