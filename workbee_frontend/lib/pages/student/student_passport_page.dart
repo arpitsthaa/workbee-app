@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workbee_frontend/clients/student_client.dart';
 import 'package:workbee_frontend/constants/app_colors.dart';
 import 'package:workbee_frontend/format_utils.dart';
@@ -19,10 +20,34 @@ class _StudentPassportPageState extends State<StudentPassportPage> {
   bool _isLoading = true;
   String? _error;
 
+  static const String _paidKey = 'paid_payout_projects';
+  final Set<int> _paidProjects = {};
+  final Set<int> _payingProjects = {};
+
   @override
   void initState() {
     super.initState();
+    _loadPaidProjects();
     _loadPassport();
+  }
+
+  Future<void> _loadPaidProjects() async {
+    final prefs = await SharedPreferences.getInstance();
+    final stored = prefs.getStringList(_paidKey) ?? const <String>[];
+    if (!mounted) return;
+    setState(() {
+      _paidProjects
+        ..clear()
+        ..addAll(stored.map((e) => int.tryParse(e)).whereType<int>());
+    });
+  }
+
+  Future<void> _persistPaid() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(
+      _paidKey,
+      _paidProjects.map((e) => e.toString()).toList(),
+    );
   }
 
   Future<void> _refreshPassport() async {
@@ -91,17 +116,21 @@ class _StudentPassportPageState extends State<StudentPassportPage> {
       );
       return;
     }
-    final res = await StudentClient.requestPayout(projectId, result);
-    if (!mounted) return;
-    if (res.containsKey('error')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(res['error'] as String? ?? 'Failed')),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Payout request submitted')),
-      );
+    if (_paidProjects.contains(projectId) || _payingProjects.contains(projectId)) {
+      return;
     }
+    setState(() => _payingProjects.add(projectId));
+    await Future.delayed(const Duration(seconds: 3));
+    if (!mounted) return;
+    setState(() {
+      _payingProjects.remove(projectId);
+      _paidProjects.add(projectId);
+    });
+    await _persistPaid();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Marked as paid')),
+    );
   }
 
   @override
@@ -233,8 +262,10 @@ class _StudentPassportPageState extends State<StudentPassportPage> {
                          ratingText: '${review.rating.toStringAsFixed(1)}/5',
                          feedback: review.reviewComment,
                          borderColor: AppColors.borderColor,
-                         projectId: review.project,
-                         onRequestPayout: () => _requestPayout(review.project),
+                          projectId: review.project,
+                          isPaid: _paidProjects.contains(review.project),
+                          isPaying: _payingProjects.contains(review.project),
+                          onRequestPayout: () => _requestPayout(review.project),
                        ),
                        const SizedBox(height: 14),
                      ],
@@ -260,6 +291,8 @@ class VerifiedProjectCard extends StatelessWidget {
   final String feedback;
   final Color borderColor;
   final int projectId;
+  final bool isPaid;
+  final bool isPaying;
   final VoidCallback onRequestPayout;
 
   const VerifiedProjectCard({
@@ -271,6 +304,8 @@ class VerifiedProjectCard extends StatelessWidget {
     required this.ratingText,
     required this.projectId,
     required this.onRequestPayout,
+    this.isPaid = false,
+    this.isPaying = false,
     required this.feedback,
     required this.borderColor,
   });
@@ -375,10 +410,36 @@ class VerifiedProjectCard extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             height: 40,
-            child: OutlinedButton(
-              onPressed: onRequestPayout,
-              child: const Text('Request Payout'),
-            ),
+            child: isPaid
+                ? OutlinedButton.icon(
+                    onPressed: null,
+                    icon: const Icon(Icons.check_circle, size: 16),
+                    label: const Text('Paid'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.successGreen,
+                      side: const BorderSide(color: AppColors.successGreen),
+                    ),
+                  )
+                : isPaying
+                    ? OutlinedButton(
+                        onPressed: null,
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                            SizedBox(width: 8),
+                            Text('Processing...'),
+                          ],
+                        ),
+                      )
+                    : OutlinedButton(
+                        onPressed: onRequestPayout,
+                        child: const Text('Request Payout'),
+                      ),
           ),
           const SizedBox(height: 10),
           Text(

@@ -12,7 +12,6 @@ class BusinessProjectCard extends StatelessWidget {
   final BusinessProject project;
   final bool canReview;
   final bool canRate;
-  final VoidCallback onApprove;
   final VoidCallback onRequestChanges;
   final void Function(double rating, String comment) onSubmitRating;
   final VoidCallback onProjectTap;
@@ -22,7 +21,6 @@ class BusinessProjectCard extends StatelessWidget {
     required this.project,
     required this.canReview,
     required this.canRate,
-    required this.onApprove,
     required this.onRequestChanges,
     required this.onSubmitRating,
     required this.onProjectTap,
@@ -308,47 +306,6 @@ class BusinessProjectCard extends StatelessWidget {
                 const SizedBox(height: 14),
               ],
             ],
-            if (canReview) ...[
-              Row(
-                children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: 42,
-                      child: ElevatedButton(
-                        onPressed: onApprove,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryBlue,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        child: const Text('Approve Work'),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: SizedBox(
-                      height: 42,
-                      child: OutlinedButton(
-                        onPressed: onRequestChanges,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.primaryBlue,
-                          side: const BorderSide(color: AppColors.borderColor),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        child: const Text('Request Changes'),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-            ],
             if (canRate) ...[
               const Text(
                 'Rate Student',
@@ -362,6 +319,24 @@ class BusinessProjectCard extends StatelessWidget {
               _StarRating(
                 onSubmitRating: (rating, comment) =>
                     onSubmitRating(rating, comment),
+              ),
+              const SizedBox(height: 14),
+            ],
+            if (canReview) ...[
+              SizedBox(
+                width: double.infinity,
+                height: 42,
+                child: OutlinedButton(
+                  onPressed: onRequestChanges,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primaryBlue,
+                    side: const BorderSide(color: AppColors.borderColor),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: const Text('Request Changes'),
+                ),
               ),
             ],
           ],

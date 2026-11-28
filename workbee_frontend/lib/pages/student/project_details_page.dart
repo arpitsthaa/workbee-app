@@ -23,6 +23,8 @@ class ProjectDetailsPage extends StatefulWidget {
 }
 
 class _ProjectDetailsPageState extends State<ProjectDetailsPage> {
+  static const List<String> _statuses = ['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED'];
+
   late String _status;
   final TextEditingController _linkController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
@@ -31,7 +33,7 @@ class _ProjectDetailsPageState extends State<ProjectDetailsPage> {
   void initState() {
     super.initState();
     _status = widget.project.status.toUpperCase();
-    if (!['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED'].contains(_status)) {
+    if (!_statuses.contains(_status)) {
       _status = 'NOT_STARTED';
     }
     if (widget.project.submissionLink.isNotEmpty) {
@@ -47,6 +49,17 @@ class _ProjectDetailsPageState extends State<ProjectDetailsPage> {
     super.dispose();
   }
 
+  String _prettyStatus(String s) {
+    final text = s.toLowerCase().replaceAll('_', ' ');
+    return text.isEmpty ? text : text[0].toUpperCase() + text.substring(1);
+  }
+
+  void _onStatusChanged(String? value) {
+    if (value == null || value == _status) return;
+    setState(() => _status = value);
+    widget.onStatusChanged(value);
+  }
+
   @override
   Widget build(BuildContext context) {
     final p = widget.project;
@@ -60,7 +73,7 @@ class _ProjectDetailsPageState extends State<ProjectDetailsPage> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -77,7 +90,7 @@ class _ProjectDetailsPageState extends State<ProjectDetailsPage> {
                 p.businessName,
                 style: const TextStyle(fontSize: 14, color: AppColors.mutedText),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               Text(
                 '${formatNpr(p.budgetNpr)} · Due ${formatDateDmy(p.deadline)}',
                 style: const TextStyle(
@@ -86,151 +99,162 @@ class _ProjectDetailsPageState extends State<ProjectDetailsPage> {
                   color: AppColors.primaryBlue,
                 ),
               ),
-              if (p.proposalLink.isNotEmpty) ...[
+              if (p.description.isNotEmpty) ...[
                 const SizedBox(height: 16),
-                const Text(
-                  'Business Proposal',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
+                _SectionLabel('Description'),
+                const SizedBox(height: 6),
+                Text(
+                  p.description,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    height: 1.5,
                     color: AppColors.darkText,
                   ),
                 ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        p.proposalLink,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppColors.primaryBlue,
-                          decoration: TextDecoration.underline,
+              ],
+              if (p.deliverables.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                _SectionLabel('Deliverables'),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: p.deliverables
+                      .map(
+                        (d) => Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: AppColors.softBlueBg,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            d,
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primaryBlue,
+                            ),
+                          ),
                         ),
-                        overflow: TextOverflow.ellipsis,
+                      )
+                      .toList(),
+                ),
+              ],
+              if (p.proposalLink.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                _SectionLabel('Business Proposal'),
+                const SizedBox(height: 6),
+                SizedBox(
+                  width: double.infinity,
+                  height: 44,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      await Clipboard.setData(
+                        ClipboardData(text: p.proposalLink),
+                      );
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Link copied')),
+                      );
+                    },
+                    icon: const Icon(Icons.copy, size: 16),
+                    label: const Text('Copy Proposal Link'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primaryBlue,
+                      side: const BorderSide(color: AppColors.primaryBlue),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.copy, size: 18),
-                      onPressed: () async {
-                        await Clipboard.setData(ClipboardData(text: p.proposalLink));
-                        if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Link copied')),
-                        );
-                      },
-                    ),
-                  ],
+                  ),
                 ),
               ],
               const SizedBox(height: 24),
-              const Text(
-                'Status',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.darkText,
-                ),
-              ),
+              _SectionLabel('Status'),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 initialValue: _status,
-                items: const [
-                  DropdownMenuItem(value: 'NOT_STARTED', child: Text('Not Started')),
-                  DropdownMenuItem(value: 'IN_PROGRESS', child: Text('In Progress')),
-                  DropdownMenuItem(value: 'COMPLETED', child: Text('Completed')),
-                ],
-                onChanged: (v) {
-                  if (v != null) setState(() => _status = v);
-                },
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                ),
+                items: _statuses
+                    .map(
+                      (s) => DropdownMenuItem(
+                        value: s,
+                        child: Text(_prettyStatus(s)),
+                      ),
+                    )
+                    .toList(),
+                onChanged: _onStatusChanged,
+                decoration: const InputDecoration(border: OutlineInputBorder()),
               ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                height: 44,
-                child: ElevatedButton(
-                  onPressed: () {
-                    if (_status == 'COMPLETED' &&
-                        _linkController.text.trim().isEmpty &&
-                        widget.project.submissionLink.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Please submit a link before completing.',
-                          ),
-                        ),
-                      );
-                      return;
-                    }
-                    widget.onStatusChanged(_status);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryBlue,
-                    foregroundColor: Colors.white,
+              if (_status == 'COMPLETED') ...[
+                const SizedBox(height: 24),
+                _SectionLabel('Submit Work'),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _linkController,
+                  decoration: const InputDecoration(
+                    hintText: 'Paste Canva or Google Drive link',
+                    prefixIcon: Icon(Icons.link),
+                    filled: true,
                   ),
-                  child: const Text('Save Status'),
                 ),
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                'Submit Work',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.darkText,
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _linkController,
-                decoration: const InputDecoration(
-                  hintText: 'Paste Canva or Google Drive link',
-                  prefixIcon: Icon(Icons.link),
-                  filled: true,
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _noteController,
-                maxLines: 2,
-                decoration: const InputDecoration(
-                  hintText: 'Add a short note (optional)',
-                  filled: true,
-                ),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: widget.isSubmitting
-                      ? null
-                      : () => widget.onSubmitWork(
-                            _linkController.text.trim(),
-                            _noteController.text.trim(),
-                          ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryBlue,
-                    foregroundColor: Colors.white,
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _noteController,
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    hintText: 'Add a short note (optional)',
+                    filled: true,
                   ),
-                  child: widget.isSubmitting
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text('Submit for approval'),
                 ),
-              ),
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: widget.isSubmitting
+                        ? null
+                        : () => widget.onSubmitWork(
+                              _linkController.text.trim(),
+                              _noteController.text.trim(),
+                            ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryBlue,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: widget.isSubmitting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text('Submit for approval'),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  final String text;
+  const _SectionLabel(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 15,
+        fontWeight: FontWeight.w700,
+        color: AppColors.darkText,
       ),
     );
   }

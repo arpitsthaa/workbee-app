@@ -111,6 +111,7 @@ class Project {
   final int id;
   final int gig;
   final String gigTitle;
+  final String description;
   final int budgetNpr;
   final String deadline;
   final List<String> deliverables;
@@ -142,6 +143,7 @@ class Project {
     required this.hasReview,
     required this.createdAt,
     this.proposalLink = '',
+    this.description = '',
   });
 
   factory Project.fromJson(Map<String, dynamic> json) {
@@ -149,6 +151,7 @@ class Project {
       id: json['id'] ?? 0,
       gig: json['gig'] ?? 0,
       gigTitle: (json['gig_title'] ?? '') as String,
+      description: (json['gig_description'] ?? '') as String,
       budgetNpr: (json['budget_npr'] ?? 0) as int,
       deadline: (json['deadline'] ?? '') as String,
       deliverables: List<String>.from(json['deliverables'] ?? []),

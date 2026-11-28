@@ -199,6 +199,7 @@ class ProjectReviewSerializer(serializers.ModelSerializer):
 
 class ProjectSerializer(serializers.ModelSerializer):
     gig_title = serializers.CharField(source="gig.title", read_only=True)
+    gig_description = serializers.CharField(source="gig.description", read_only=True)
     budget_npr = serializers.IntegerField(source="gig.budget_npr", read_only=True)
     deadline = serializers.DateField(source="gig.deadline", read_only=True)
     deliverables = serializers.JSONField(source="gig.deliverables", read_only=True)
@@ -215,6 +216,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             "id",
             "gig",
             "gig_title",
+            "gig_description",
             "budget_npr",
             "deadline",
             "deliverables",

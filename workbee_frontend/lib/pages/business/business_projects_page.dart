@@ -134,31 +134,6 @@ class _BusinessProjectsScreenState extends State<BusinessProjectsScreen> {
     }
   }
 
-  Future<void> _approveProject(int projectId) async {
-    final result = await BusinessClient.reviewProjectWork(projectId, 'approve');
-
-    if (!mounted) return;
-
-    if (result.containsKey('error')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result['error'] as String? ?? 'Failed to approve'),
-          backgroundColor: AppColors.errorRed,
-        ),
-      );
-      return;
-    }
-
-    _loadProjects();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Project approved'),
-        backgroundColor: AppColors.successGreen,
-      ),
-    );
-  }
-
   Future<void> _requestChanges(int projectId) async {
     final result = await BusinessClient.reviewProjectWork(
       projectId,
@@ -434,7 +409,6 @@ class _BusinessProjectsScreenState extends State<BusinessProjectsScreen> {
                                       project: project,
                                       canReview: canReview,
                                       canRate: canRate,
-                                      onApprove: () => _approveProject(project.id),
                                       onRequestChanges: () =>
                                           _requestChanges(project.id),
                                       onSubmitRating: (rating, comment) =>
