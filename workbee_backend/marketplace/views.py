@@ -304,7 +304,10 @@ class BusinessGigsView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Gig.objects.filter(business=self.request.user)
+        return (
+            Gig.objects.filter(business=self.request.user)
+            .select_related("project__review", "project__student")
+        )
 
     def perform_create(self, serializer):
         serializer.save(business=self.request.user)

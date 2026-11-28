@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:workbee_frontend/constants/app_colors.dart';
-import 'package:workbee_frontend/format_utils.dart';
 import 'package:workbee_frontend/models/api_models.dart';
 import 'package:workbee_frontend/widgets/status_badge.dart';
 
@@ -26,6 +25,7 @@ class ApplicantCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final skills = app.studentSkills.where((s) => s.isNotEmpty).toList();
     return GestureDetector(
       onTap: onApplicantTap,
       child: Container(
@@ -36,15 +36,23 @@ class ApplicantCard extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: AppColors.borderColor),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0F000000),
+              blurRadius: 8,
+              offset: Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  width: 44,
-                  height: 44,
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
                     color: AppColors.softBlueBg,
                     shape: BoxShape.circle,
@@ -56,7 +64,7 @@ class ApplicantCard extends StatelessWidget {
                     style: const TextStyle(
                       color: AppColors.primaryBlue,
                       fontWeight: FontWeight.w800,
-                      fontSize: 16,
+                      fontSize: 15,
                     ),
                   ),
                 ),
@@ -68,39 +76,66 @@ class ApplicantCard extends StatelessWidget {
                       Text(
                         app.studentName,
                         style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
                           color: AppColors.darkText,
                         ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                       ),
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          const Icon(Icons.school, size: 12, color: AppColors.mutedText),
-                          const SizedBox(width: 6),
+                          const Icon(Icons.star, size: 13, color: AppColors.beeGold),
+                          const SizedBox(width: 4),
                           Text(
-                            '${app.gigTitle} · Applied ${formatDateDmy(app.appliedAt)}',
+                            app.studentRating.toStringAsFixed(1),
                             style: const TextStyle(
-                              fontSize: 13,
-                              color: AppColors.mutedText,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.darkText,
                             ),
-                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              app.gigTitle,
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                color: AppColors.mutedText,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
                           ),
                         ],
                       ),
+                      if (skills.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          skills.join(', '),
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            color: AppColors.labelRegister,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 2,
+                        ),
+                      ],
                     ],
                   ),
                 ),
+                const SizedBox(width: 8),
                 StatusBadge(status: app.status),
               ],
             ),
             if (canUpdate) ...[
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
                     child: SizedBox(
-                      height: 50,
+                      height: 40,
                       child: ElevatedButton(
                         onPressed: isUpdating ? null : () => onUpdateStatus('accepted'),
                         style: ElevatedButton.styleFrom(
@@ -108,20 +143,20 @@ class ApplicantCard extends StatelessWidget {
                           foregroundColor: Colors.white,
                           elevation: 0,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(10),
                           ),
                         ),
                         child: const Text(
                           'Accept',
-                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: SizedBox(
-                      height: 50,
+                      height: 40,
                       child: ElevatedButton(
                         onPressed: isUpdating ? null : () => onUpdateStatus('rejected'),
                         style: ElevatedButton.styleFrom(
@@ -129,12 +164,12 @@ class ApplicantCard extends StatelessWidget {
                           foregroundColor: Colors.white,
                           elevation: 0,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(10),
                           ),
                         ),
                         child: const Text(
                           'Reject',
-                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
                         ),
                       ),
                     ),

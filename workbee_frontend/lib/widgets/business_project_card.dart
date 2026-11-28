@@ -44,8 +44,8 @@ class BusinessProjectCard extends StatelessWidget {
           border: Border.all(color: AppColors.borderColor),
           boxShadow: const [
             BoxShadow(
-              color: Colors.black12,
-              blurRadius: 6,
+              color: Color(0x0F000000),
+              blurRadius: 8,
               offset: Offset(0, 2),
             ),
           ],
@@ -54,10 +54,11 @@ class BusinessProjectCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  width: 44,
-                  height: 44,
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
                     color: AppColors.softBlueBg,
                     shape: BoxShape.circle,
@@ -69,7 +70,7 @@ class BusinessProjectCard extends StatelessWidget {
                     style: const TextStyle(
                       color: AppColors.primaryBlue,
                       fontWeight: FontWeight.w800,
-                      fontSize: 16,
+                      fontSize: 15,
                     ),
                   ),
                 ),
@@ -78,57 +79,78 @@ class BusinessProjectCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.baseline,
-                        textBaseline: TextBaseline.alphabetic,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              p.gigTitle,
-                              style: const TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.darkText,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          StatusBadge(status: p.status),
-                        ],
+                      Text(
+                        p.studentName,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.darkText,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                       ),
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 12,
-                        runSpacing: 4,
+                      const SizedBox(height: 4),
+                      Row(
                         children: [
+                          const Icon(Icons.star, size: 13, color: AppColors.beeGold),
+                          const SizedBox(width: 4),
                           Text(
-                            'NPR ${p.budgetNpr}',
+                            p.studentRating.toStringAsFixed(1),
                             style: const TextStyle(
-                              fontSize: 13,
+                              fontSize: 12.5,
                               fontWeight: FontWeight.w700,
                               color: AppColors.darkText,
                             ),
                           ),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.schedule, size: 13, color: AppColors.mutedText),
-                              const SizedBox(width: 6),
-                              Text(
-                                p.deadline.isNotEmpty
-                                    ? 'Due ${formatDateDmy(p.deadline)}'
-                                    : '—',
-                                style: const TextStyle(
-                                  fontSize: 12.5,
-                                  color: AppColors.mutedText,
-                                ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              p.gigTitle,
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                color: AppColors.mutedText,
                               ),
-                            ],
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
                           ),
                         ],
                       ),
                     ],
                   ),
+                ),
+                const SizedBox(width: 8),
+                StatusBadge(status: p.status),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 12,
+              runSpacing: 4,
+              children: [
+                Text(
+                  'NPR ${p.budgetNpr}',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.darkText,
+                  ),
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.schedule, size: 13, color: AppColors.mutedText),
+                    const SizedBox(width: 6),
+                    Text(
+                      p.deadline.isNotEmpty
+                          ? 'Due ${formatDateDmy(p.deadline)}'
+                          : '—',
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        color: AppColors.mutedText,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -458,11 +480,22 @@ class StudentInfoBottomSheet extends StatelessWidget {
     return SafeArea(
       child: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.borderColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
               Row(
                 children: [
                   Container(

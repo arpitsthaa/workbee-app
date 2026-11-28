@@ -83,6 +83,11 @@ class GigSerializer(serializers.ModelSerializer):
     )
     applicants_count = serializers.IntegerField(read_only=True)
     has_applied = serializers.BooleanField(read_only=True)
+    has_review = serializers.SerializerMethodField()
+    rating = serializers.SerializerMethodField()
+    review_comment = serializers.SerializerMethodField()
+    submission_link = serializers.SerializerMethodField()
+    student_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Gig
@@ -104,9 +109,38 @@ class GigSerializer(serializers.ModelSerializer):
             "proposal_link",
             "applicants_count",
             "has_applied",
+            "has_review",
+            "rating",
+            "review_comment",
+            "submission_link",
+            "student_name",
             "created_at",
         ]
         read_only_fields = ["business", "status", "created_at"]
+
+    def get_has_review(self, obj):
+        project = getattr(obj, "project", None)
+        return project is not None and hasattr(project, "review")
+
+    def get_rating(self, obj):
+        project = getattr(obj, "project", None)
+        review = getattr(project, "review", None) if project else None
+        return float(review.rating) if review else 0.0
+
+    def get_review_comment(self, obj):
+        project = getattr(obj, "project", None)
+        review = getattr(project, "review", None) if project else None
+        return review.review_comment if review else ""
+
+    def get_submission_link(self, obj):
+        project = getattr(obj, "project", None)
+        return project.submission_link if project else ""
+
+    def get_student_name(self, obj):
+        project = getattr(obj, "project", None)
+        if project is None:
+            return ""
+        return project.student.full_name or ""
 
 
 class GigApplicationSerializer(serializers.ModelSerializer):

@@ -15,6 +15,11 @@ class Gig {
   final bool hasApplied;
   final String createdAt;
   final String proposalLink;
+  final bool hasReview;
+  final double rating;
+  final String reviewComment;
+  final String submissionLink;
+  final String studentName;
 
   Gig({
     required this.id,
@@ -33,6 +38,11 @@ class Gig {
     required this.hasApplied,
     required this.createdAt,
     this.proposalLink = '',
+    this.hasReview = false,
+    this.rating = 0.0,
+    this.reviewComment = '',
+    this.submissionLink = '',
+    this.studentName = '',
   });
 
   factory Gig.fromJson(Map<String, dynamic> json) {
@@ -53,6 +63,11 @@ class Gig {
       hasApplied: json['has_applied'] ?? false,
       createdAt: (json['created_at'] ?? '') as String,
       proposalLink: (json['proposal_link'] ?? '') as String,
+      hasReview: json['has_review'] ?? false,
+      rating: _parseRating(json['rating'] ?? 0.0),
+      reviewComment: (json['review_comment'] ?? '') as String,
+      submissionLink: (json['submission_link'] ?? '') as String,
+      studentName: (json['student_name'] ?? '') as String,
     );
   }
 }

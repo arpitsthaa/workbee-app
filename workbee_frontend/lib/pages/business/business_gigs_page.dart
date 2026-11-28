@@ -95,6 +95,9 @@ class _BusinessGigsPageState extends State<BusinessGigsPage> {
     if (_filter == 'Closed') {
       return _gigs.where((g) => g.status.toUpperCase() == 'CLOSED').toList();
     }
+    if (_filter == 'Rated') {
+      return _gigs.where((g) => g.hasReview).toList();
+    }
     return _gigs.where((g) => g.status.toUpperCase() == _filter.toUpperCase()).toList();
   }
 
@@ -156,6 +159,18 @@ class _BusinessGigsPageState extends State<BusinessGigsPage> {
     );
   }
 
+  void _showReviewSheet(Gig gig) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => _ReviewSheet(gig: gig),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     const darkText = AppColors.darkText;
@@ -211,7 +226,7 @@ class _BusinessGigsPageState extends State<BusinessGigsPage> {
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
-                        children: ['All', 'Open', 'Closed']
+                        children: ['All', 'Open', 'Closed', 'Rated']
                             .map((f) => Padding(
                                   padding: const EdgeInsets.only(right: 10),
                                   child: GestureDetector(
@@ -301,9 +316,15 @@ class _BusinessGigsPageState extends State<BusinessGigsPage> {
                             ..._filteredGigs.map((gig) {
                               final (bgColor, textColor) =
                                   _statusStyle(gig.status);
-                              final statusLabel =
-                                  gig.status[0].toUpperCase() +
+                              final statusLabel = gig.hasReview
+                                  ? 'Rated'
+                                  : gig.status[0].toUpperCase() +
                                       gig.status.substring(1);
+                              final badgeBg =
+                                  gig.hasReview ? AppColors.successGreen : bgColor;
+                              final badgeColor = gig.hasReview
+                                  ? Colors.white
+                                  : textColor;
                               return Column(
                                 children: [
                                   _GigCard(
@@ -311,12 +332,18 @@ class _BusinessGigsPageState extends State<BusinessGigsPage> {
                                     meta:
                                         'NPR ${gig.budgetNpr} · ${gig.isRemote ? 'Remote' : 'On-site'} · ${gig.durationDays} days · Due ${formatDateDmy(gig.deadline)}',
                                     statusText: statusLabel,
-                                    statusBg: bgColor,
-                                    statusColor: textColor,
+                                    statusBg: badgeBg,
+                                    statusColor: badgeColor,
                                     proposalLink: gig.proposalLink,
+                                    hasReview: gig.hasReview,
+                                    rating: gig.rating,
+                                    reviewComment: gig.reviewComment,
+                                    submissionLink: gig.submissionLink,
+                                    studentName: gig.studentName,
                                     onManage: () => _openEditGig(gig),
                                     onViewProposal: () =>
                                         _openProposal(gig.proposalLink),
+                                    onViewReview: () => _showReviewSheet(gig),
                                   ),
                                   const SizedBox(height: 8),
                                 ],
@@ -536,8 +563,14 @@ class _GigCard extends StatelessWidget {
   final Color statusBg;
   final Color statusColor;
   final String proposalLink;
+  final bool hasReview;
+  final double rating;
+  final String reviewComment;
+  final String submissionLink;
+  final String studentName;
   final VoidCallback onManage;
   final VoidCallback onViewProposal;
+  final VoidCallback onViewReview;
 
   const _GigCard({
     required this.title,
@@ -546,8 +579,14 @@ class _GigCard extends StatelessWidget {
     required this.statusBg,
     required this.statusColor,
     required this.proposalLink,
+    required this.hasReview,
+    required this.rating,
+    required this.reviewComment,
+    required this.submissionLink,
+    required this.studentName,
     required this.onManage,
     required this.onViewProposal,
+    required this.onViewReview,
   });
 
   @override
@@ -687,7 +726,188 @@ class _GigCard extends StatelessWidget {
               ),
             ),
           ],
+          if (hasReview) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              height: 42,
+              child: OutlinedButton.icon(
+                onPressed: onViewReview,
+                icon: const Icon(Icons.star_rate, size: 16),
+                label: const Text(
+                  'View Review',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.successGreen,
+                  side: const BorderSide(color: AppColors.successGreen),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+/// Bottom sheet showing the submitted file, rating, and comment for a rated gig.
+class _ReviewSheet extends StatelessWidget {
+  final Gig gig;
+
+  const _ReviewSheet({required this.gig});
+
+  static const Color _starGold = Color(0xFFF59E0B);
+
+  @override
+  Widget build(BuildContext context) {
+    final filledStars = gig.rating.round();
+    return SafeArea(
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.borderColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                gig.title,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.darkText,
+                ),
+              ),
+              if (gig.studentName.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  gig.studentName,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AppColors.mutedText,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  ...List.generate(
+                    5,
+                    (index) => Icon(
+                      index < filledStars ? Icons.star : Icons.star_border,
+                      color: index < filledStars ? _starGold : AppColors.mutedText,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    gig.rating.toStringAsFixed(1),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.darkText,
+                    ),
+                  ),
+                ],
+              ),
+              if (gig.reviewComment.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                const Text(
+                  'Review',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.darkText,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.softBlueBg,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    gig.reviewComment,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      height: 1.5,
+                      color: AppColors.darkText,
+                    ),
+                  ),
+                ),
+              ],
+              if (gig.submissionLink.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                const Text(
+                  'Project File',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.darkText,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  height: 42,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      final trimmed = gig.submissionLink.trim();
+                      var text = trimmed;
+                      final uri = Uri.tryParse(trimmed);
+                      if (uri == null || uri.scheme.isEmpty) {
+                        text = 'https://$trimmed';
+                      }
+                      await Clipboard.setData(ClipboardData(text: text));
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Link copied'),
+                          backgroundColor: AppColors.successGreen,
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.description, size: 16),
+                    label: Text(
+                      gig.submissionLink,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.primaryBlue,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primaryBlue,
+                      side: const BorderSide(color: AppColors.primaryBlue),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
       ),
     );
   }

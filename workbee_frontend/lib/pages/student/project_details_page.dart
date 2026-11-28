@@ -2,20 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:workbee_frontend/constants/app_colors.dart';
 import 'package:workbee_frontend/format_utils.dart';
+import 'package:workbee_frontend/helpers/alert_helper.dart';
 import 'package:workbee_frontend/models/api_models.dart';
 
 class ProjectDetailsPage extends StatefulWidget {
   final Project project;
-  final ValueChanged<String> onStatusChanged;
-  final Future<void> Function(String link, String note) onSubmitWork;
-  final bool isSubmitting;
+  final Future<bool> Function(String status, {bool silent}) onStatusChanged;
+  final Future<bool> Function(String link, String note) onSubmitWork;
 
   const ProjectDetailsPage({
     super.key,
     required this.project,
     required this.onStatusChanged,
     required this.onSubmitWork,
-    this.isSubmitting = false,
   });
 
   @override
@@ -26,6 +25,7 @@ class _ProjectDetailsPageState extends State<ProjectDetailsPage> {
   static const List<String> _statuses = ['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED'];
 
   late String _status;
+  bool _busy = false;
   final TextEditingController _linkController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
 
@@ -57,7 +57,33 @@ class _ProjectDetailsPageState extends State<ProjectDetailsPage> {
   void _onStatusChanged(String? value) {
     if (value == null || value == _status) return;
     setState(() => _status = value);
-    widget.onStatusChanged(value);
+  }
+
+  Future<void> _onSave() async {
+    setState(() => _busy = true);
+    final ok = await widget.onStatusChanged(_status);
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (ok) Navigator.of(context).pop();
+  }
+
+  Future<void> _onSaveAndSubmit() async {
+    final link = _linkController.text.trim();
+    if (link.isEmpty) {
+      showAlert(
+        context,
+        message: 'Please paste a Canva or Google Drive link first.',
+        isError: true,
+      );
+      return;
+    }
+    setState(() => _busy = true);
+    final statusOk = await widget.onStatusChanged(_status, silent: true);
+    final submitOk =
+        await widget.onSubmitWork(link, _noteController.text.trim());
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (statusOk && submitOk) Navigator.of(context).pop();
   }
 
   @override
@@ -173,18 +199,53 @@ class _ProjectDetailsPageState extends State<ProjectDetailsPage> {
               const SizedBox(height: 24),
               _SectionLabel('Status'),
               const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                initialValue: _status,
-                items: _statuses
-                    .map(
-                      (s) => DropdownMenuItem(
-                        value: s,
-                        child: Text(_prettyStatus(s)),
+              Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _status,
+                      items: _statuses
+                          .map(
+                            (s) => DropdownMenuItem(
+                              value: s,
+                              child: Text(_prettyStatus(s)),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: _onStatusChanged,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
                       ),
-                    )
-                    .toList(),
-                onChanged: _onStatusChanged,
-                decoration: const InputDecoration(border: OutlineInputBorder()),
+                    ),
+                  ),
+                  if (_status != 'COMPLETED') ...[
+                    const SizedBox(width: 12),
+                    SizedBox(
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: _busy ? null : _onSave,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryBlue,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: _busy
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text('Save'),
+                      ),
+                    ),
+                  ],
+                ],
               ),
               if (_status == 'COMPLETED') ...[
                 const SizedBox(height: 24),
@@ -212,17 +273,12 @@ class _ProjectDetailsPageState extends State<ProjectDetailsPage> {
                   width: double.infinity,
                   height: 48,
                   child: ElevatedButton(
-                    onPressed: widget.isSubmitting
-                        ? null
-                        : () => widget.onSubmitWork(
-                              _linkController.text.trim(),
-                              _noteController.text.trim(),
-                            ),
+                    onPressed: _busy ? null : _onSaveAndSubmit,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primaryBlue,
                       foregroundColor: Colors.white,
                     ),
-                    child: widget.isSubmitting
+                    child: _busy
                         ? const SizedBox(
                             width: 20,
                             height: 20,
@@ -231,7 +287,7 @@ class _ProjectDetailsPageState extends State<ProjectDetailsPage> {
                               color: Colors.white,
                             ),
                           )
-                        : const Text('Submit for approval'),
+                        : const Text('Save & Submit'),
                   ),
                 ),
               ],
