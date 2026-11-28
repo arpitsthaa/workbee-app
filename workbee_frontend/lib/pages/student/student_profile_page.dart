@@ -6,8 +6,6 @@ import 'package:workbee_frontend/pages/auth/login_page.dart';
 import 'package:workbee_frontend/pages/student/student_edit_profile_page.dart';
 import 'package:workbee_frontend/pages/student/student_passport_page.dart';
 import 'package:workbee_frontend/services/token_service.dart';
-import 'package:workbee_frontend/widgets/error_retry_state.dart';
-import 'package:workbee_frontend/widgets/loading_state.dart';
 import 'package:workbee_frontend/widgets/student_profile_header.dart';
 
 /// Student profile page showing read-only info with an editable form.
@@ -19,7 +17,6 @@ class StudentProfilePage extends StatefulWidget {
 }
 
 class _StudentProfilePageState extends State<StudentProfilePage> {
-  bool _isLoading = true;
   String? _error;
   ProfileResponse? _profile;
 
@@ -35,15 +32,19 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
     if (result.containsKey('error')) {
       setState(() {
         _error = result['error'] as String?;
-        _isLoading = false;
       });
     } else {
       final profile = ProfileResponse.fromJson(result);
       setState(() {
         _profile = profile;
-        _isLoading = false;
+        _error = null;
       });
     }
+  }
+
+  Future<void> _refreshProfile() async {
+    setState(() => _error = null);
+    await _loadProfile();
   }
 
   Future<void> _handleLogout() async {
@@ -58,25 +59,18 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const LoadingState();
-    }
-
-    if (_error != null) {
-      return ErrorRetryState(
-        error: _error!,
-        onRetry: _loadProfile,
-      );
-    }
-
     return SafeArea(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 480),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
-            child: _buildViewMode(),
+        child: RefreshIndicator(
+          onRefresh: _refreshProfile,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: _buildViewMode(),
+            ),
           ),
         ),
       ),
@@ -87,6 +81,10 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (_error != null) ...[
+          _InlineError(message: _error!, onRetry: _loadProfile),
+          const SizedBox(height: 12),
+        ],
         _buildProfileHeader(),
         const SizedBox(height: 18),
         _buildCollegeInfoCard(),
@@ -423,6 +421,40 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
             borderRadius: BorderRadius.circular(12),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Inline error banner with a Retry action.
+class _InlineError extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+
+  const _InlineError({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.cardLight,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.errorRedLight),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.error_outline, size: 20, color: AppColors.errorRed),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(fontSize: 13, color: AppColors.darkText),
+            ),
+          ),
+          TextButton(onPressed: onRetry, child: const Text('Retry')),
+        ],
       ),
     );
   }

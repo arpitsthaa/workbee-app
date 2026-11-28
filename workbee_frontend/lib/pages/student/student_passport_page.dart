@@ -135,33 +135,13 @@ class _StudentPassportPageState extends State<StudentPassportPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_error != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text('Error: $_error',
-                style: const TextStyle(color: Colors.red)),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: _loadPassport,
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
-      );
-    }
-
     return SafeArea(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 480),
         child: RefreshIndicator(
           onRefresh: _refreshPassport,
           child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 480),
@@ -240,7 +220,14 @@ class _StudentPassportPageState extends State<StudentPassportPage> {
                 ),
               ),
               const SizedBox(height: 12),
-              if (_passport?.completedProjects.isEmpty ?? true)
+              if (_isLoading && _passport == null)
+                const Padding(
+                  padding: EdgeInsets.only(top: 40),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (_error != null)
+                _InlineError(message: _error!, onRetry: _loadPassport)
+              else if (_passport?.completedProjects.isEmpty ?? true)
                 const Text(
                   'No verified projects yet. Complete gigs to build your passport.',
                   style: TextStyle(
@@ -451,6 +438,34 @@ class VerifiedProjectCard extends StatelessWidget {
               color: AppColors.mutedText,
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Inline error message with a Retry action, used inside dynamic regions.
+class _InlineError extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+
+  const _InlineError({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 32),
+      child: Column(
+        children: [
+          const Icon(Icons.error_outline, size: 40, color: AppColors.errorRed),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 14, color: AppColors.mutedText),
+          ),
+          const SizedBox(height: 8),
+          TextButton(onPressed: onRetry, child: const Text('Retry')),
         ],
       ),
     );
