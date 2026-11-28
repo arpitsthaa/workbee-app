@@ -246,7 +246,9 @@ class _BusinessProjectsScreenState extends State<BusinessProjectsScreen> {
   List<BusinessProject> get _visibleProjects => _projects
       .where((p) {
         final s = p.status.toUpperCase();
-        return s != 'COMPLETED' && s != 'APPROVED';
+        if (s == 'COMPLETED') return false;
+        if (s == 'APPROVED' && p.hasReview) return false;
+        return true;
       })
       .toList();
 
@@ -417,12 +419,15 @@ class _BusinessProjectsScreenState extends State<BusinessProjectsScreen> {
                                )
                              else
                                ..._visibleProjects.map((project) {
-                                final canReview =
-                                    project.status.toUpperCase() == 'COMPLETED' &&
-                                    project.submissionLink.isNotEmpty;
-                                final canRate =
-                                    project.status.toUpperCase() == 'APPROVED' &&
-                                        !project.hasReview;
+                                 final canReview =
+                                     (project.status.toUpperCase() == 'SUBMITTED' ||
+                                         project.status.toUpperCase() == 'COMPLETED') &&
+                                     project.submissionLink.isNotEmpty;
+                                 final canRate =
+                                     (project.status.toUpperCase() == 'SUBMITTED' ||
+                                         project.status.toUpperCase() == 'COMPLETED' ||
+                                         project.status.toUpperCase() == 'APPROVED') &&
+                                     !project.hasReview;
                                 return Column(
                                   children: [
                                     BusinessProjectCard(
