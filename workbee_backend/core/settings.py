@@ -43,6 +43,8 @@ INSTALLED_APPS = [
     'corsheaders',
     'users',
     'marketplace',
+    'students',
+    'businesses',
 ]
 
 MIDDLEWARE = [
@@ -133,6 +135,15 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+
+# Email
+# https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
+
+MAILERS = {
+    'default': {
+        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
+    },
+}
 
 AUTH_USER_MODEL = 'users.User'
 

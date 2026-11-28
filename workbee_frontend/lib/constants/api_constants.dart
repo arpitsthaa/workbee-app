@@ -15,6 +15,7 @@ class ApiConstants {
   static const String studentDashboardGigs = '/api/student/dashboard/gigs/';
   static const String studentDashboardSummary = '/api/student/dashboard/summary/';
   static const String studentGigs = '/api/student/gigs/';
+  static const String studentGigDetail = '/api/student/gigs/';
   static const String studentApplyGig = '/api/student/gigs/';
   static const String studentWork = '/api/student/work/';
   static const String studentWorkApplications = '/api/student/work/applications/';
