@@ -407,9 +407,9 @@ class RateStudentProjectView(APIView):
     def post(self, request, pk):
         project = get_object_or_404(Project, pk=pk, business=request.user)
 
-        if project.status != "APPROVED":
+        if project.status not in ("SUBMITTED", "COMPLETED", "APPROVED"):
             return Response(
-                {"message": "You must approve the project before rating the student."},
+                {"message": "You can only rate the student after work is submitted."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -426,6 +426,13 @@ class RateStudentProjectView(APIView):
             student=project.student,
             business=request.user,
         )
+
+        if project.status != "APPROVED":
+            project.status = "APPROVED"
+            project.completed_at = timezone.now()
+            project.gig.status = "CLOSED"
+            project.gig.save()
+            project.save()
 
         return Response(
             {

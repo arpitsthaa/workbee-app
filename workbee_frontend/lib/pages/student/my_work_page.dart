@@ -1,11 +1,11 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:workbee_frontend/clients/student_client.dart';
 import 'package:workbee_frontend/constants/app_colors.dart';
+import 'package:workbee_frontend/format_utils.dart';
 import 'package:workbee_frontend/helpers/alert_helper.dart';
 import 'package:workbee_frontend/models/api_models.dart';
 import 'package:workbee_frontend/services/token_service.dart';
-import 'package:workbee_frontend/widgets/error_retry_state.dart';
-import 'package:workbee_frontend/widgets/loading_state.dart';
+import 'package:workbee_frontend/pages/student/project_details_page.dart';
 import 'package:workbee_frontend/widgets/student_project_card.dart';
 
 /// My Work page showing the student's applications and projects.
@@ -66,9 +66,10 @@ class MyWorkPageState extends State<MyWorkPage> {
               ?.map((a) => GigApplication.fromJson(a as Map<String, dynamic>))
               .toList() ??
           <GigApplication>[];
-      _projects = (result['projects'] as List<dynamic>?)
-              ?.map((p) => Project.fromJson(p as Map<String, dynamic>))
-              .toList() ?? <Project>[];
+      _projects = (result['projects'] as List<dynamic>? ?? const <dynamic>[])
+              .map((p) => Project.fromJson(p as Map<String, dynamic>))
+              .where((p) => !p.hasReview)
+              .toList();
       _applicationsLoading = false;
       _projectsLoading = false;
     });
@@ -138,7 +139,7 @@ class MyWorkPageState extends State<MyWorkPage> {
 
   String _formatDate(String? dateStr) {
     if (dateStr == null || dateStr.isEmpty) return 'recently';
-    return dateStr;
+    return formatDateDmy(dateStr);
   }
 
   bool _canWithdraw(String status) {
@@ -316,17 +317,6 @@ class MyWorkPageState extends State<MyWorkPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_applicationsLoading && _projectsLoading) {
-      return const LoadingState();
-    }
-
-    if (_error != null) {
-      return ErrorRetryState(
-        error: _error!,
-        onRetry: _loadWork,
-      );
-    }
-
     return SafeArea(
       child: Column(
         children: [
@@ -378,16 +368,34 @@ class MyWorkPageState extends State<MyWorkPage> {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        if (_applications.isEmpty)
-                          const Text(
-                            'No applications yet.',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: AppColors.mutedText,
-                            ),
+                        if (_applicationsLoading)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 40),
+                            child: Center(child: CircularProgressIndicator()),
+                          )
+                        else if (_error != null)
+                          _InlineError(
+                            message: _error!,
+                            onRetry: _loadWork,
+                          )
+                        else if (_applications.isEmpty)
+                          Column(
+                            children: const [
+                              Icon(Icons.inbox_outlined, size: 48, color: AppColors.borderLight),
+                              SizedBox(height: 8),
+                              Text(
+                                'No applications yet.',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: AppColors.mutedText,
+                                ),
+                              ),
+                            ],
                           )
                         else
-                          ..._applications.map((app) {
+                          ..._applications
+                              .where((a) => a.status.toUpperCase() != 'ACCEPTED')
+                              .map((app) {
                             final canWithdraw = _canWithdraw(app.status);
                             return Column(
                               children: [
@@ -426,7 +434,17 @@ class MyWorkPageState extends State<MyWorkPage> {
                             );
                           }),
                       ] else ...[
-                        if (_projects.isEmpty)
+                        if (_projectsLoading)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 40),
+                            child: Center(child: CircularProgressIndicator()),
+                          )
+                        else if (_error != null)
+                          _InlineError(
+                            message: _error!,
+                            onRetry: _loadWork,
+                          )
+                        else if (_projects.isEmpty)
                           const Text(
                             'No projects yet. Get shortlisted for a gig to start working!',
                             style: TextStyle(
@@ -453,11 +471,26 @@ class MyWorkPageState extends State<MyWorkPage> {
                                 StudentProjectCard(
                                   project: project,
                                   isSelected: isSelected,
-                                  onSelect: () {
-                                    setState(() {
-                                      _selectedProjectId = project.id;
-                                    });
-                                  },
+                                   onSelect: () {
+                                     Navigator.push(
+                                       context,
+                                       MaterialPageRoute(
+                                         builder: (_) => ProjectDetailsPage(
+                                           project: project,
+                                           onStatusChanged: (newStatus) {
+                                             _handleSaveStatus(project, newStatus);
+                                           },
+                                           onSubmitWork: (link, note) async {
+                                             _linkController.text = link;
+                                             _noteController.text = note;
+                                             await _handleSubmitWork(project);
+                                           },
+                                           isSubmitting:
+                                               _submittingProjectId == project.id,
+                                         ),
+                                       ),
+                                     ).then((_) => _loadWork());
+                                   },
                                   onStatusChanged: (newStatus) {
                                     setState(() {
                                       _selectedStatuses[project.id] = newStatus;
@@ -662,6 +695,34 @@ class _InfoRow extends StatelessWidget {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Inline error message with a Retry action, used inside dynamic regions.
+class _InlineError extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+
+  const _InlineError({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 32),
+      child: Column(
+        children: [
+          const Icon(Icons.error_outline, size: 40, color: AppColors.errorRed),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 14, color: AppColors.mutedText),
+          ),
+          const SizedBox(height: 8),
+          TextButton(onPressed: onRetry, child: const Text('Retry')),
         ],
       ),
     );

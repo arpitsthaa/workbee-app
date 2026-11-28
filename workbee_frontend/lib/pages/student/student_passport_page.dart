@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workbee_frontend/clients/student_client.dart';
 import 'package:workbee_frontend/constants/app_colors.dart';
+import 'package:workbee_frontend/format_utils.dart';
 import 'package:workbee_frontend/models/api_models.dart';
 import 'package:workbee_frontend/services/token_service.dart';
 import 'package:workbee_frontend/widgets/student_profile_header.dart';
@@ -18,10 +20,43 @@ class _StudentPassportPageState extends State<StudentPassportPage> {
   bool _isLoading = true;
   String? _error;
 
+  static const String _paidKey = 'paid_payout_projects';
+  final Set<int> _paidProjects = {};
+  final Set<int> _payingProjects = {};
+
   @override
   void initState() {
     super.initState();
+    _loadPaidProjects();
     _loadPassport();
+  }
+
+  Future<void> _loadPaidProjects() async {
+    final prefs = await SharedPreferences.getInstance();
+    final stored = prefs.getStringList(_paidKey) ?? const <String>[];
+    if (!mounted) return;
+    setState(() {
+      _paidProjects
+        ..clear()
+        ..addAll(stored.map((e) => int.tryParse(e)).whereType<int>());
+    });
+  }
+
+  Future<void> _persistPaid() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(
+      _paidKey,
+      _paidProjects.map((e) => e.toString()).toList(),
+    );
+  }
+
+  Future<void> _refreshPassport() async {
+    setState(() {
+      _passport = null;
+      _isLoading = true;
+      _error = null;
+    });
+    await _loadPassport();
   }
 
   Future<void> _loadPassport() async {
@@ -48,37 +83,71 @@ class _StudentPassportPageState extends State<StudentPassportPage> {
     }
   }
 
+  Future<void> _requestPayout(int projectId) async {
+    final controller = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Request Payout'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.phone,
+          decoration: const InputDecoration(
+            hintText: 'eSewa phone number',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('Submit'),
+          ),
+        ],
+      ),
+    );
+    if (result == null || result.isEmpty) return;
+    if (result.length != 10) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid 10-digit phone number')),
+      );
+      return;
+    }
+    if (_paidProjects.contains(projectId) || _payingProjects.contains(projectId)) {
+      return;
+    }
+    setState(() => _payingProjects.add(projectId));
+    await Future.delayed(const Duration(seconds: 3));
+    if (!mounted) return;
+    setState(() {
+      _payingProjects.remove(projectId);
+      _paidProjects.add(projectId);
+    });
+    await _persistPaid();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Marked as paid')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_error != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text('Error: $_error',
-                style: const TextStyle(color: Colors.red)),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: _loadPassport,
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
-      );
-    }
-
     return SafeArea(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 480),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+        child: RefreshIndicator(
+          onRefresh: _refreshPassport,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               StudentProfileHeader(
                 displayName: TokenService.getNameSync() ?? _passport?.fullName ?? 'Student',
                 collegeProgram: TokenService.getCollegeUniversitySync() ??
@@ -151,7 +220,14 @@ class _StudentPassportPageState extends State<StudentPassportPage> {
                 ),
               ),
               const SizedBox(height: 12),
-              if (_passport?.completedProjects.isEmpty ?? true)
+              if (_isLoading && _passport == null)
+                const Padding(
+                  padding: EdgeInsets.only(top: 40),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (_error != null)
+                _InlineError(message: _error!, onRetry: _loadPassport)
+              else if (_passport?.completedProjects.isEmpty ?? true)
                 const Text(
                   'No verified projects yet. Complete gigs to build your passport.',
                   style: TextStyle(
@@ -160,29 +236,35 @@ class _StudentPassportPageState extends State<StudentPassportPage> {
                   ),
                 )
               else
-                ...(_passport?.completedProjects ?? []).map((review) {
-                  return Column(
-                    children: [
-                      VerifiedProjectCard(
-                        title: review.gigTitle,
-                        businessAndLocation:
-                            '${review.businessName} · ${review.businessLocation}',
-                        roleAndSkills:
-                            '${review.roleTitle} · ${review.skills.join(', ')}',
-                        dateText: 'Completed ${review.completedAt ?? review.createdAt}',
-                        ratingText: '${review.rating.toStringAsFixed(1)}/5',
-                        feedback: review.reviewComment,
-                        borderColor: AppColors.borderColor,
-                      ),
-                      const SizedBox(height: 14),
-                    ],
-                  );
-                }),
+                 ...(_passport?.completedProjects ?? []).map((review) {
+                   return Column(
+                     children: [
+                       VerifiedProjectCard(
+                         title: review.gigTitle,
+                         businessAndLocation:
+                             '${review.businessName} · ${review.businessLocation}',
+                         roleAndSkills:
+                             '${review.roleTitle} · ${review.skills.join(', ')}',
+                         dateText: 'Completed ${formatDateDmy(review.completedAt ?? review.createdAt)}',
+                         ratingText: '${review.rating.toStringAsFixed(1)}/5',
+                         feedback: review.reviewComment,
+                         borderColor: AppColors.borderColor,
+                          projectId: review.project,
+                          isPaid: _paidProjects.contains(review.project),
+                          isPaying: _payingProjects.contains(review.project),
+                          onRequestPayout: () => _requestPayout(review.project),
+                       ),
+                       const SizedBox(height: 14),
+                     ],
+                   );
+                 }),
             ],
           ),
         ),
       ),
-    );
+    ),
+    ),
+  );
   }
 }
 
@@ -195,6 +277,10 @@ class VerifiedProjectCard extends StatelessWidget {
   final String ratingText;
   final String feedback;
   final Color borderColor;
+  final int projectId;
+  final bool isPaid;
+  final bool isPaying;
+  final VoidCallback onRequestPayout;
 
   const VerifiedProjectCard({
     super.key,
@@ -203,6 +289,10 @@ class VerifiedProjectCard extends StatelessWidget {
     required this.roleAndSkills,
     required this.dateText,
     required this.ratingText,
+    required this.projectId,
+    required this.onRequestPayout,
+    this.isPaid = false,
+    this.isPaying = false,
     required this.feedback,
     required this.borderColor,
   });
@@ -298,8 +388,45 @@ class VerifiedProjectCard extends StatelessWidget {
               Text(
                 dateText,
                 style: const TextStyle(fontSize: 12.5, color: AppColors.mutedText),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
               ),
             ],
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            height: 40,
+            child: isPaid
+                ? OutlinedButton.icon(
+                    onPressed: null,
+                    icon: const Icon(Icons.check_circle, size: 16),
+                    label: const Text('Paid'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.successGreen,
+                      side: const BorderSide(color: AppColors.successGreen),
+                    ),
+                  )
+                : isPaying
+                    ? OutlinedButton(
+                        onPressed: null,
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                            SizedBox(width: 8),
+                            Text('Processing...'),
+                          ],
+                        ),
+                      )
+                    : OutlinedButton(
+                        onPressed: onRequestPayout,
+                        child: const Text('Request Payout'),
+                      ),
           ),
           const SizedBox(height: 10),
           Text(
@@ -311,6 +438,34 @@ class VerifiedProjectCard extends StatelessWidget {
               color: AppColors.mutedText,
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Inline error message with a Retry action, used inside dynamic regions.
+class _InlineError extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+
+  const _InlineError({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 32),
+      child: Column(
+        children: [
+          const Icon(Icons.error_outline, size: 40, color: AppColors.errorRed),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 14, color: AppColors.mutedText),
+          ),
+          const SizedBox(height: 8),
+          TextButton(onPressed: onRetry, child: const Text('Retry')),
         ],
       ),
     );

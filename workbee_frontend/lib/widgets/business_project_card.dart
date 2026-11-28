@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:workbee_frontend/constants/app_colors.dart';
+import 'package:workbee_frontend/format_utils.dart';
 import 'package:workbee_frontend/models/api_models.dart';
 import 'package:workbee_frontend/widgets/status_badge.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Business's project card: shows project info, status badge, submission
 /// details, Approve / Request Changes buttons, and a rating section.
@@ -10,7 +12,6 @@ class BusinessProjectCard extends StatelessWidget {
   final BusinessProject project;
   final bool canReview;
   final bool canRate;
-  final VoidCallback onApprove;
   final VoidCallback onRequestChanges;
   final void Function(double rating, String comment) onSubmitRating;
   final VoidCallback onProjectTap;
@@ -20,7 +21,6 @@ class BusinessProjectCard extends StatelessWidget {
     required this.project,
     required this.canReview,
     required this.canRate,
-    required this.onApprove,
     required this.onRequestChanges,
     required this.onSubmitRating,
     required this.onProjectTap,
@@ -37,42 +37,99 @@ class BusinessProjectCard extends StatelessWidget {
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(16),
-        margin: const EdgeInsets.only(bottom: 16),
+        margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: AppColors.borderColor),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 6,
+              offset: Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.softBlueBg,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.primaryBlue, width: 2),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    p.studentName.isNotEmpty ? p.studentName[0].toUpperCase() : 'S',
+                    style: const TextStyle(
+                      color: AppColors.primaryBlue,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        p.gigTitle,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.darkText,
-                        ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              p.gigTitle,
+                              style: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.darkText,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          StatusBadge(status: p.status),
+                        ],
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${p.studentName} · NPR ${p.budgetNpr}',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppColors.mutedText,
-                        ),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 4,
+                        children: [
+                          Text(
+                            'NPR ${p.budgetNpr}',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.darkText,
+                            ),
+                          ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.schedule, size: 13, color: AppColors.mutedText),
+                              const SizedBox(width: 6),
+                              Text(
+                                p.deadline.isNotEmpty
+                                    ? 'Due ${formatDateDmy(p.deadline)}'
+                                    : '—',
+                                style: const TextStyle(
+                                  fontSize: 12.5,
+                                  color: AppColors.mutedText,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-                StatusBadge(status: p.status),
               ],
             ),
             const SizedBox(height: 10),
@@ -112,11 +169,52 @@ class BusinessProjectCard extends StatelessWidget {
                     )
                     .toList(),
               ),
+              if (p.proposalLink.isNotEmpty) ...[
+                const Text(
+                  'Proposal / Document',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.mutedText,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                SizedBox(
+                  width: double.infinity,
+                  height: 42,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      final url = Uri.parse(p.proposalLink);
+                      if (await canLaunchUrl(url)) {
+                        await launchUrl(url, mode: LaunchMode.externalApplication);
+                      }
+                    },
+                    icon: const Icon(Icons.description, size: 16),
+                    label: Text(
+                      p.proposalLink,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.primaryBlue,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primaryBlue,
+                      side: const BorderSide(color: AppColors.primaryBlue),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 14),
             ],
             if (isCompleted && p.submissionLink.isNotEmpty) ...[
               const Text(
-                'Project File (submitted by student)',
+                'Project File',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -124,28 +222,29 @@ class BusinessProjectCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 4),
-              GestureDetector(
-                onTap: () {},
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.link,
-                      size: 16,
+              SizedBox(
+                width: double.infinity,
+                height: 42,
+                child: OutlinedButton.icon(
+                  onPressed: () {},
+                  icon: const Icon(Icons.description, size: 16),
+                  label: Text(
+                    p.submissionLink,
+                    style: const TextStyle(
+                      fontSize: 13,
                       color: AppColors.primaryBlue,
+                      fontWeight: FontWeight.w600,
                     ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        p.submissionLink,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppColors.primaryBlue,
-                          decoration: TextDecoration.underline,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primaryBlue,
+                    side: const BorderSide(color: AppColors.primaryBlue),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                  ],
+                  ),
                 ),
               ),
               const SizedBox(height: 14),
@@ -179,73 +278,33 @@ class BusinessProjectCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                GestureDetector(
-                  onTap: () {},
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.link,
-                        size: 16,
+                SizedBox(
+                  width: double.infinity,
+                  height: 42,
+                  child: OutlinedButton.icon(
+                    onPressed: () {},
+                    icon: const Icon(Icons.link, size: 16),
+                    label: Text(
+                      p.submissionLink,
+                      style: const TextStyle(
+                        fontSize: 13,
                         color: AppColors.primaryBlue,
+                        fontWeight: FontWeight.w600,
                       ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          p.submissionLink,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: AppColors.primaryBlue,
-                            decoration: TextDecoration.underline,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primaryBlue,
+                      side: const BorderSide(color: AppColors.primaryBlue),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                    ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 14),
               ],
-            ],
-            if (canReview) ...[
-              Row(
-                children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: 42,
-                      child: ElevatedButton(
-                        onPressed: onApprove,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryBlue,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        child: const Text('Approve Work'),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: SizedBox(
-                      height: 42,
-                      child: OutlinedButton(
-                        onPressed: onRequestChanges,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.primaryBlue,
-                          side: const BorderSide(color: AppColors.borderColor),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        child: const Text('Request Changes'),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
             ],
             if (canRate) ...[
               const Text(
@@ -260,6 +319,24 @@ class BusinessProjectCard extends StatelessWidget {
               _StarRating(
                 onSubmitRating: (rating, comment) =>
                     onSubmitRating(rating, comment),
+              ),
+              const SizedBox(height: 14),
+            ],
+            if (canReview) ...[
+              SizedBox(
+                width: double.infinity,
+                height: 42,
+                child: OutlinedButton(
+                  onPressed: onRequestChanges,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primaryBlue,
+                    side: const BorderSide(color: AppColors.borderColor),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: const Text('Request Changes'),
+                ),
               ),
             ],
           ],
@@ -389,23 +466,24 @@ class StudentInfoBottomSheet extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    width: 42,
-                    height: 42,
-                    decoration: const BoxDecoration(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
                       color: AppColors.softBlueBg,
                       shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.primaryBlue, width: 2),
                     ),
                     alignment: Alignment.center,
                     child: Text(
                       p.studentName.isNotEmpty ? p.studentName[0].toUpperCase() : 'S',
                       style: const TextStyle(
                         color: AppColors.primaryBlue,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 18,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -413,19 +491,28 @@ class StudentInfoBottomSheet extends StatelessWidget {
                         Text(
                           p.studentName,
                           style: const TextStyle(
-                            fontSize: 16,
+                            fontSize: 18,
                             fontWeight: FontWeight.w800,
                             color: AppColors.darkText,
                           ),
                         ),
                         if (p.studentCollege.isNotEmpty) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            p.studentCollege,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: AppColors.mutedText,
-                            ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              const Icon(Icons.school, size: 14, color: AppColors.mutedText),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  p.studentCollege,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: AppColors.mutedText,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ],
@@ -433,28 +520,33 @@ class StudentInfoBottomSheet extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
+               Wrap(
+                 spacing: 8,
+                 runSpacing: 8,
+                 children: [
+                   _InfoChip(label: 'Rating', value: '${p.studentRating.toStringAsFixed(1)} / 5'),
+                   _InfoChip(label: 'Projects', value: p.verifiedProjectsCount.toString()),
+                   if (p.studentSkills.isNotEmpty)
+                     _InfoChip(label: 'Skills', value: p.studentSkills.join(', ')),
+                 ],
+               ),
+              const SizedBox(height: 20),
               Row(
                 children: [
-                  _InfoChip(label: 'Rating', value: '${p.studentRating.toStringAsFixed(1)} / 5'),
+                  const Icon(Icons.description, size: 18, color: AppColors.primaryBlue),
                   const SizedBox(width: 8),
-                  _InfoChip(label: 'Projects', value: p.verifiedProjectsCount.toString()),
-                  if (p.studentSkills.isNotEmpty) ...[
-                    const SizedBox(width: 8),
-                    _InfoChip(label: 'Skills', value: p.studentSkills.join(', ')),
-                  ],
+                  Text(
+                    'Project Details',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.darkText,
+                    ),
+                  ),
                 ],
               ),
-              const SizedBox(height: 16),
-              const Text(
-                'Project Details',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.darkText,
-                ),
-              ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               _DetailRow(label: 'Gig', value: p.gigTitle),
               _DetailRow(label: 'Budget', value: 'NPR ${p.budgetNpr}'),
               _DetailRow(label: 'Deadline', value: p.deadline),
@@ -472,28 +564,29 @@ class StudentInfoBottomSheet extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                GestureDetector(
-                  onTap: () {},
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.description,
-                        size: 18,
+                SizedBox(
+                  width: double.infinity,
+                  height: 42,
+                  child: OutlinedButton.icon(
+                    onPressed: () {},
+                    icon: const Icon(Icons.description, size: 16),
+                    label: Text(
+                      p.submissionLink,
+                      style: const TextStyle(
+                        fontSize: 13,
                         color: AppColors.primaryBlue,
+                        fontWeight: FontWeight.w600,
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          p.submissionLink,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: AppColors.primaryBlue,
-                            decoration: TextDecoration.underline,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primaryBlue,
+                      side: const BorderSide(color: AppColors.primaryBlue),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ],
@@ -508,9 +601,21 @@ class StudentInfoBottomSheet extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  p.submissionNote,
-                  style: const TextStyle(fontSize: 13, color: AppColors.darkText),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.softBlueBg,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    p.submissionNote,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      height: 1.5,
+                      color: AppColors.darkText,
+                    ),
+                  ),
                 ),
               ],
               const SizedBox(height: 24),

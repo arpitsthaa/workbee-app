@@ -522,7 +522,8 @@ class _GigCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
-                    border: Border.all(color: AppColors.borderColor),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.borderColor),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

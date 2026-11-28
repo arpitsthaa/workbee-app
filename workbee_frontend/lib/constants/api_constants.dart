@@ -23,6 +23,7 @@ class ApiConstants {
   static const String studentWorkSubmit = '/api/student/projects/';
   static const String studentWorkUpdateStatus = '/api/student/projects/';
   static const String studentPassport = '/api/student/passport/';
+  static const String studentPayout = '/api/student/payout/';
   static const String studentProfile = '/api/student/profile/';
   static const String studentApplyGigById = '/api/student/gigs/';
   static const String studentWithdrawApplication = '/api/student/applications/';

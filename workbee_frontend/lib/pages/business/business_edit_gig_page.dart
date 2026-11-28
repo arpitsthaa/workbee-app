@@ -19,10 +19,14 @@ class BusinessEditGigPage extends StatefulWidget {
 class _BusinessEditGigPageState extends State<BusinessEditGigPage> {
   late final TextEditingController _titleController;
   late final TextEditingController _descriptionController;
+  late final TextEditingController _categoryController;
   late final TextEditingController _skillsController;
   late final TextEditingController _budgetController;
+  late final TextEditingController _durationController;
   late final TextEditingController _deadlineController;
   late final TextEditingController _locationController;
+  late final TextEditingController _proposalLinkController;
+  late bool _isRemote;
 
   bool _isSaving = false;
   bool get _isClosed => widget.gig.status.toUpperCase() == 'CLOSED';
@@ -31,22 +35,42 @@ class _BusinessEditGigPageState extends State<BusinessEditGigPage> {
   void initState() {
     super.initState();
     _titleController = TextEditingController(text: widget.gig.title);
-    _descriptionController = TextEditingController(text: widget.gig.title.isNotEmpty ? '' : '');
-    _skillsController = TextEditingController(text: widget.gig.requiredSkills.join(', '));
-    _budgetController = TextEditingController(text: widget.gig.budgetNpr.toString());
+    _descriptionController =
+        TextEditingController(text: widget.gig.description);
+    _categoryController = TextEditingController(text: widget.gig.category);
+    _skillsController =
+        TextEditingController(text: widget.gig.requiredSkills.join(', '));
+    _budgetController =
+        TextEditingController(text: widget.gig.budgetNpr.toString());
+    _durationController = TextEditingController(
+        text: widget.gig.durationDays > 0 ? widget.gig.durationDays.toString() : '');
     _deadlineController = TextEditingController(text: widget.gig.deadline);
     _locationController = TextEditingController(text: widget.gig.location);
+    _proposalLinkController =
+        TextEditingController(text: widget.gig.proposalLink);
+    _isRemote = widget.gig.isRemote;
   }
 
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
+    _categoryController.dispose();
     _skillsController.dispose();
     _budgetController.dispose();
+    _durationController.dispose();
     _deadlineController.dispose();
     _locationController.dispose();
+    _proposalLinkController.dispose();
     super.dispose();
+  }
+
+  bool _isValidUrl(String url) {
+    final regex = RegExp(
+      r'^(https?://)?([\w-]+\.)+[\w-]+(/[\w-./?%&=]*)?$',
+      caseSensitive: false,
+    );
+    return regex.hasMatch(url);
   }
 
   List<String> _parseSkills(String raw) {
@@ -104,13 +128,20 @@ class _BusinessEditGigPageState extends State<BusinessEditGigPage> {
   Future<void> _updateGig() async {
     final title = _titleController.text.trim();
     final description = _descriptionController.text.trim();
+    final category = _categoryController.text.trim();
     final skillsRaw = _skillsController.text.trim();
     final budgetRaw = _budgetController.text.trim().replaceAll(',', '');
+    final durationRaw = _durationController.text.trim();
     final deadlineRaw = _deadlineController.text.trim();
     final locationRaw = _locationController.text.trim();
+    final proposalLink = _proposalLinkController.text.trim();
 
     if (title.isEmpty) {
       _showError('Please enter a gig title.');
+      return;
+    }
+    if (category.isEmpty) {
+      _showError('Please enter a category.');
       return;
     }
     if (skillsRaw.isEmpty) {
@@ -123,6 +154,15 @@ class _BusinessEditGigPageState extends State<BusinessEditGigPage> {
     }
     if (budgetRaw.isEmpty || int.tryParse(budgetRaw) == null) {
       _showError('Please enter a valid budget (NPR).');
+      return;
+    }
+    if (durationRaw.isNotEmpty && int.tryParse(durationRaw) == null) {
+      _showError('Please enter a valid duration in days.');
+      return;
+    }
+    if (proposalLink.isNotEmpty && !_isValidUrl(proposalLink)) {
+      _showError(
+          'Please enter a valid URL (e.g., example.com or https://example.com)');
       return;
     }
     if (deadlineRaw.isEmpty) {
@@ -144,10 +184,14 @@ class _BusinessEditGigPageState extends State<BusinessEditGigPage> {
         {
           'title': title,
           'description': description,
+          'category': category,
           'required_skills': _parseSkills(skillsRaw),
           'budget_npr': int.parse(budgetRaw),
+          'duration_days': durationRaw.isNotEmpty ? int.parse(durationRaw) : 0,
           'deadline': deadline,
           'location': locationRaw,
+          'is_remote': _isRemote,
+          'proposal_link': proposalLink,
         },
       );
 
@@ -236,7 +280,7 @@ class _BusinessEditGigPageState extends State<BusinessEditGigPage> {
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
-          'Edit Gig',
+          'Manage Gigs',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w800,
@@ -258,10 +302,50 @@ class _BusinessEditGigPageState extends State<BusinessEditGigPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Row(
+                          children: [
+                            const Text(
+                              'Status',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.mutedText,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: AppColors.softBlueBg,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                widget.gig.status.isEmpty
+                                    ? 'Unknown'
+                                    : widget.gig.status,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.primaryBlue,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
                         _FormField(
                           label: 'Gig title',
                           controller: _titleController,
                           hint: 'e.g. Logo Design for Cafe',
+                          readOnly: _isClosed,
+                        ),
+                        const SizedBox(height: 12),
+
+                        _FormField(
+                          label: 'Category',
+                          controller: _categoryController,
+                          hint: 'e.g. Design & creative',
                           readOnly: _isClosed,
                         ),
                         const SizedBox(height: 12),
@@ -328,6 +412,15 @@ class _BusinessEditGigPageState extends State<BusinessEditGigPage> {
                           controller: _budgetController,
                           keyboardType: TextInputType.number,
                           hint: '0',
+                          readOnly: _isClosed,
+                        ),
+                        const SizedBox(height: 12),
+
+                        _FormField(
+                          label: 'Duration (days)',
+                          controller: _durationController,
+                          keyboardType: TextInputType.number,
+                          hint: 'e.g. 7',
                           readOnly: _isClosed,
                         ),
                         const SizedBox(height: 12),
@@ -405,6 +498,38 @@ class _BusinessEditGigPageState extends State<BusinessEditGigPage> {
                           controller: _locationController,
                           hint: 'e.g. Baneshwor, Kathmandu',
                           readOnly: _isClosed,
+                        ),
+                        const SizedBox(height: 12),
+
+                        _FormField(
+                          label: 'Proposal / Document link',
+                          controller: _proposalLinkController,
+                          hint: 'e.g. https://docs.google.com/document/...',
+                          readOnly: _isClosed,
+                        ),
+                        const SizedBox(height: 8),
+
+                        SwitchListTile(
+                          value: _isRemote,
+                          onChanged:
+                              _isClosed ? null : (v) => setState(() => _isRemote = v),
+                          activeThumbColor: AppColors.primaryBlue,
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text(
+                            'Remote',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.darkText,
+                            ),
+                          ),
+                          subtitle: const Text(
+                            'Allow remote applicants',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.mutedText,
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 24),
                       ],

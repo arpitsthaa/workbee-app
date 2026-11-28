@@ -3,6 +3,7 @@ class Gig {
   final String businessName;
   final String title;
   final String category;
+  final String description;
   final List<String> requiredSkills;
   final int budgetNpr;
   final int durationDays;
@@ -13,12 +14,14 @@ class Gig {
   final int applicantsCount;
   final bool hasApplied;
   final String createdAt;
+  final String proposalLink;
 
   Gig({
     required this.id,
     required this.businessName,
     required this.title,
     required this.category,
+    this.description = '',
     required this.requiredSkills,
     required this.budgetNpr,
     required this.durationDays,
@@ -29,6 +32,7 @@ class Gig {
     required this.applicantsCount,
     required this.hasApplied,
     required this.createdAt,
+    this.proposalLink = '',
   });
 
   factory Gig.fromJson(Map<String, dynamic> json) {
@@ -37,6 +41,7 @@ class Gig {
       businessName: (json['business_name'] ?? '') as String,
       title: (json['title'] ?? '') as String,
       category: (json['category'] ?? '') as String,
+      description: (json['description'] ?? '') as String,
       requiredSkills: List<String>.from(json['required_skills'] ?? []),
       budgetNpr: (json['budget_npr'] ?? 0) as int,
       durationDays: (json['duration_days'] ?? 0) as int,
@@ -47,6 +52,7 @@ class Gig {
       applicantsCount: (json['applicants_count'] ?? 0) as int,
       hasApplied: json['has_applied'] ?? false,
       createdAt: (json['created_at'] ?? '') as String,
+      proposalLink: (json['proposal_link'] ?? '') as String,
     );
   }
 }
@@ -105,6 +111,7 @@ class Project {
   final int id;
   final int gig;
   final String gigTitle;
+  final String description;
   final int budgetNpr;
   final String deadline;
   final List<String> deliverables;
@@ -117,6 +124,7 @@ class Project {
   final String? completedAt;
   final bool hasReview;
   final String createdAt;
+  final String proposalLink;
 
   Project({
     required this.id,
@@ -134,6 +142,8 @@ class Project {
     this.completedAt,
     required this.hasReview,
     required this.createdAt,
+    this.proposalLink = '',
+    this.description = '',
   });
 
   factory Project.fromJson(Map<String, dynamic> json) {
@@ -141,6 +151,7 @@ class Project {
       id: json['id'] ?? 0,
       gig: json['gig'] ?? 0,
       gigTitle: (json['gig_title'] ?? '') as String,
+      description: (json['gig_description'] ?? '') as String,
       budgetNpr: (json['budget_npr'] ?? 0) as int,
       deadline: (json['deadline'] ?? '') as String,
       deliverables: List<String>.from(json['deliverables'] ?? []),
@@ -153,6 +164,7 @@ class Project {
       completedAt: json['completed_at'] as String?,
       hasReview: json['has_review'] ?? false,
       createdAt: (json['created_at'] ?? '') as String,
+      proposalLink: (json['proposal_link'] ?? '') as String,
     );
   }
 }
@@ -297,7 +309,6 @@ class ProfileResponse {
 class BusinessProfileResponse {
   final int id;
   final String email;
-  final String? fullName;
   final String? location;
   final String? businessType;
   final String? about;
@@ -306,24 +317,16 @@ class BusinessProfileResponse {
   BusinessProfileResponse({
     required this.id,
     required this.email,
-    this.fullName,
     this.location,
     this.businessType,
     this.about,
     required this.isVerified,
   });
 
-  /// Display name: full name if available, otherwise the part before '@' in the email.
-  String get displayName {
-    if (fullName != null && fullName!.isNotEmpty) return fullName!;
-    return email.isNotEmpty ? email.split('@').first : email;
-  }
-
   factory BusinessProfileResponse.fromJson(Map<String, dynamic> json) {
     return BusinessProfileResponse(
       id: json['id'] ?? 0,
       email: (json['email'] ?? '') as String,
-      fullName: json['full_name'] as String?,
       location: json['location'] as String?,
       businessType: json['business_type'] as String?,
       about: json['about'] as String?,
@@ -352,6 +355,7 @@ class BusinessProject {
   final String? completedAt;
   final bool hasReview;
   final String createdAt;
+  final String proposalLink;
 
   BusinessProject({
     required this.id,
@@ -373,6 +377,7 @@ class BusinessProject {
     this.completedAt,
     required this.hasReview,
     required this.createdAt,
+    this.proposalLink = '',
   });
 
   factory BusinessProject.fromJson(Map<String, dynamic> json) {
@@ -396,6 +401,7 @@ class BusinessProject {
       completedAt: json['completed_at'] as String?,
       hasReview: json['has_review'] ?? false,
       createdAt: (json['created_at'] ?? '') as String,
+      proposalLink: (json['proposal_link'] ?? '') as String,
     );
   }
 }

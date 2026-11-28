@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:workbee_frontend/clients/business_client.dart';
 import 'package:workbee_frontend/constants/app_colors.dart';
+import 'package:workbee_frontend/format_utils.dart';
 import 'package:workbee_frontend/models/api_models.dart';
 import 'package:workbee_frontend/pages/auth/login_page.dart';
 import 'package:workbee_frontend/pages/business/business_edit_gig_page.dart';
 import 'package:workbee_frontend/pages/business/business_post_gig_page.dart';
 import 'package:workbee_frontend/services/token_service.dart';
 import 'package:workbee_frontend/widgets/common_app_bar.dart';
+import 'package:flutter/services.dart';
 
 class BusinessGigsPage extends StatefulWidget {
   final String businessName;
@@ -31,7 +33,7 @@ class _BusinessGigsPageState extends State<BusinessGigsPage> {
   bool _isLoading = true;
   String? _errorMessage;
   List<Gig> _gigs = [];
-  String _filter = 'All';
+  String _filter = 'Open';
 
   @override
   void initState() {
@@ -87,9 +89,13 @@ class _BusinessGigsPageState extends State<BusinessGigsPage> {
 
   List<Gig> get _filteredGigs {
     if (_filter == 'All') return _gigs;
-    return _gigs
-        .where((g) => g.status.toUpperCase() == _filter.toUpperCase())
-        .toList();
+    if (_filter == 'Open') {
+      return _gigs.where((g) => g.status.toUpperCase() == 'OPEN').toList();
+    }
+    if (_filter == 'Closed') {
+      return _gigs.where((g) => g.status.toUpperCase() == 'CLOSED').toList();
+    }
+    return _gigs.where((g) => g.status.toUpperCase() == _filter.toUpperCase()).toList();
   }
 
   (Color bgColor, Color textColor) _statusStyle(String status) {
@@ -118,6 +124,36 @@ class _BusinessGigsPageState extends State<BusinessGigsPage> {
     if (updated == true) {
       _loadGigs();
     }
+  }
+
+  void _showSnack(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.errorRed,
+      ),
+    );
+  }
+
+  Future<void> _openProposal(String raw) async {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) {
+      _showSnack('No proposal link available.');
+      return;
+    }
+    var text = trimmed;
+    final uri = Uri.tryParse(trimmed);
+    if (uri == null || uri.scheme.isEmpty) {
+      text = 'https://$trimmed';
+    }
+    await Clipboard.setData(ClipboardData(text: text));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Link copied'),
+        backgroundColor: AppColors.successGreen,
+      ),
+    );
   }
 
   @override
@@ -175,7 +211,7 @@ class _BusinessGigsPageState extends State<BusinessGigsPage> {
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
-                        children: ['All', 'Open', 'In Progress', 'Closed']
+                        children: ['All', 'Open', 'Closed']
                             .map((f) => Padding(
                                   padding: const EdgeInsets.only(right: 10),
                                   child: GestureDetector(
@@ -226,6 +262,7 @@ class _BusinessGigsPageState extends State<BusinessGigsPage> {
                   child: RefreshIndicator(
                     onRefresh: _loadGigs,
                     child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -272,13 +309,16 @@ class _BusinessGigsPageState extends State<BusinessGigsPage> {
                                   _GigCard(
                                     title: gig.title,
                                     meta:
-                                        'NPR ${gig.budgetNpr} · ${gig.isRemote ? 'Remote' : 'On-site'} · ${gig.durationDays} days · Due ${gig.deadline}',
+                                        'NPR ${gig.budgetNpr} · ${gig.isRemote ? 'Remote' : 'On-site'} · ${gig.durationDays} days · Due ${formatDateDmy(gig.deadline)}',
                                     statusText: statusLabel,
                                     statusBg: bgColor,
                                     statusColor: textColor,
+                                    proposalLink: gig.proposalLink,
                                     onManage: () => _openEditGig(gig),
+                                    onViewProposal: () =>
+                                        _openProposal(gig.proposalLink),
                                   ),
-                                  const SizedBox(height: 12),
+                                  const SizedBox(height: 8),
                                 ],
                               );
                             }),
@@ -445,52 +485,46 @@ class _BusinessGigsPageState extends State<BusinessGigsPage> {
   }
 
   Widget _bottomNav() {
-    return SafeArea(
-      top: false,
-      child: Container(
-        height: 68,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(
-            top: BorderSide(color: AppColors.borderColor, width: 1),
-          ),
+    const blue = AppColors.primaryBlue;
+    const muted = AppColors.mutedText;
+    return BottomNavigationBar(
+      currentIndex: _selectedNavIndex,
+      type: BottomNavigationBarType.fixed,
+      backgroundColor: Colors.white,
+      selectedItemColor: blue,
+      unselectedItemColor: muted,
+      selectedFontSize: 12,
+      unselectedFontSize: 12,
+      onTap: (i) {
+        if (i == 0) {
+          setState(() => _selectedNavIndex = 0);
+          Navigator.pop(context);
+          return;
+        }
+        setState(() => _selectedNavIndex = i);
+      },
+      items: const [
+        BottomNavigationBarItem(
+          icon: Icon(Icons.home_outlined),
+          activeIcon: Icon(Icons.home_rounded),
+          label: 'Home',
         ),
-        child: Row(
-          children: [
-            _BottomNavItem(
-              icon: Icons.home_outlined,
-              activeIcon: Icons.home_rounded,
-              label: 'Home',
-              selected: _selectedNavIndex == 0,
-              onTap: () {
-                setState(() => _selectedNavIndex = 0);
-                Navigator.pop(context);
-              },
-            ),
-            _BottomNavItem(
-              icon: Icons.work_outline_rounded,
-              activeIcon: Icons.work_rounded,
-              label: 'Gigs',
-              selected: _selectedNavIndex == 1,
-              onTap: () => setState(() => _selectedNavIndex = 1),
-            ),
-            _BottomNavItem(
-              icon: Icons.assignment_outlined,
-              activeIcon: Icons.assignment_rounded,
-              label: 'Projects',
-              selected: _selectedNavIndex == 2,
-              onTap: () => setState(() => _selectedNavIndex = 2),
-            ),
-            _BottomNavItem(
-              icon: Icons.person_outline_rounded,
-              activeIcon: Icons.person_rounded,
-              label: 'Profile',
-              selected: _selectedNavIndex == 3,
-              onTap: () => setState(() => _selectedNavIndex = 3),
-            ),
-          ],
+        BottomNavigationBarItem(
+          icon: Icon(Icons.work_outline_rounded),
+          activeIcon: Icon(Icons.work_rounded),
+          label: 'Gigs',
         ),
-      ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.assignment_outlined),
+          activeIcon: Icon(Icons.assignment_rounded),
+          label: 'Projects',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.person_outline_rounded),
+          activeIcon: Icon(Icons.person_rounded),
+          label: 'Profile',
+        ),
+      ],
     );
   }
 }
@@ -501,7 +535,9 @@ class _GigCard extends StatelessWidget {
   final String statusText;
   final Color statusBg;
   final Color statusColor;
+  final String proposalLink;
   final VoidCallback onManage;
+  final VoidCallback onViewProposal;
 
   const _GigCard({
     required this.title,
@@ -509,7 +545,9 @@ class _GigCard extends StatelessWidget {
     required this.statusText,
     required this.statusBg,
     required this.statusColor,
+    required this.proposalLink,
     required this.onManage,
+    required this.onViewProposal,
   });
 
   @override
@@ -521,6 +559,13 @@ class _GigCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.borderColor),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -528,149 +573,122 @@ class _GigCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.darkText,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
-                  color: statusBg,
-                  borderRadius: BorderRadius.circular(8),
+                  color: AppColors.softBlueBg,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.primaryBlue, width: 2),
                 ),
-                child: Text(
-                  statusText,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: statusColor,
+                alignment: Alignment.center,
+                child: const Icon(Icons.work_outline, size: 20, color: AppColors.primaryBlue),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.darkText,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: statusBg,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            statusText,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: statusColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(Icons.schedule, size: 13, color: AppColors.mutedText),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            meta,
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              color: AppColors.mutedText,
+                              height: 1.4,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 42,
+            child: OutlinedButton.icon(
+              onPressed: onManage,
+              icon: const Icon(Icons.arrow_forward, size: 16),
+              label: const Text(
+                'Manage',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.primaryBlue,
+                side: const BorderSide(color: AppColors.primaryBlue),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ),
+          if (proposalLink.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              height: 42,
+              child: OutlinedButton.icon(
+                onPressed: onViewProposal,
+                icon: const Icon(Icons.description, size: 16),
+                label: const Text(
+                  'View Proposal',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primaryBlue,
+                  side: const BorderSide(color: AppColors.primaryBlue),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
                   ),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            meta,
-            style: const TextStyle(
-              fontSize: 12.5,
-              color: AppColors.mutedText,
-              height: 1.4,
             ),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              _ActionLink(
-                label: 'Manage',
-                icon: Icons.arrow_forward,
-                onTap: onManage,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ActionLink extends StatelessWidget {
-  final String label;
-  final IconData? icon;
-  final VoidCallback onTap;
-
-  const _ActionLink({
-    required this.label,
-    this.icon,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: AppColors.primaryBlue,
-            ),
-          ),
-          if (icon != null) ...[
-            const SizedBox(width: 4),
-            Icon(icon, size: 14, color: AppColors.primaryBlue),
           ],
         ],
       ),
     );
   }
 }
-
-class _BottomNavItem extends StatelessWidget {
-  final IconData icon;
-  final IconData activeIcon;
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _BottomNavItem({
-    required this.icon,
-    required this.activeIcon,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const blue = AppColors.primaryBlue;
-
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 38,
-              height: 32,
-              decoration: BoxDecoration(
-                color: selected ? const Color(0xFFEFF6FF) : Colors.transparent,
-                borderRadius: BorderRadius.circular(9),
-              ),
-              alignment: Alignment.center,
-              child: Icon(
-                selected ? activeIcon : icon,
-                size: 22,
-                color: selected ? blue : const Color(0xFF64748B),
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10.5,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                color: selected ? blue : const Color(0xFF64748B),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-

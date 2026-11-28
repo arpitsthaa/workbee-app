@@ -4,7 +4,9 @@ import 'package:workbee_frontend/models/api_models.dart';
 import 'package:workbee_frontend/pages/business/business_gigs_page.dart';
 import 'package:workbee_frontend/pages/business/business_profile_screen.dart';
 import 'package:workbee_frontend/pages/business/business_projects_page.dart';
+import 'package:workbee_frontend/services/token_service.dart';
 import 'package:workbee_frontend/widgets/common_app_bar.dart';
+import 'package:workbee_frontend/widgets/stat_card.dart';
 
 class BusinessDashboardPage extends StatefulWidget {
   final String businessName;
@@ -21,8 +23,6 @@ class BusinessDashboardPage extends StatefulWidget {
 }
 
 class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
-  static const softBlueBg = Color(0xFFEFF6FF);
-
   int _selectedIndex = 0;
   String? _errorMessage;
   BusinessDashboardResponse? _dashboard;
@@ -89,59 +89,89 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
 
     if (_errorMessage != null) return _buildError(context, _errorMessage!);
 
-    final rawBusinessName = _dashboard?.businessName ?? widget.businessName;
-    final displayName = rawBusinessName.contains('@') ? widget.businessName : rawBusinessName;
-    final displayLocation = _dashboard?.location ?? widget.location;
-    final recentApplications = _dashboard?.recentApplications ?? const [];
+    final rawBusinessName = _dashboard?.businessName ?? '';
+    final tokenName = TokenService.getNameSync() ?? '';
+    final displayName = tokenName.isNotEmpty
+        ? tokenName
+        : (rawBusinessName.isNotEmpty && !rawBusinessName.contains('@')
+            ? rawBusinessName
+            : widget.businessName);
+    final displayLocation =
+        _dashboard?.location ?? TokenService.getLocationSync() ?? widget.location;
+    final recentApplications = (_dashboard?.recentApplications ?? const [])
+        .where((a) {
+      final s = a.status.toUpperCase();
+      return s != 'ACCEPTED' && s != 'REJECTED';
+    }).toList();
     final isLoading = _dashboard == null;
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: CommonAppBar(
-        displayName: displayName,
-        role: 'business',
-        onAvatarTap: () => setState(() => _selectedIndex = 3),
-      ),
       body: SafeArea(
         child: IndexedStack(
           index: _selectedIndex,
           children: [
-            _buildHomeBody(
-              primaryBlue,
-              softBlueBg,
-              darkText,
-              mutedText,
-              borderColor,
-              _dashboard,
+            _withAppBar(
               displayName,
-              displayLocation,
-              recentApplications,
-              isLoading,
+              _buildHomeBody(
+                primaryBlue,
+                softBlueBg,
+                darkText,
+                mutedText,
+                borderColor,
+                _dashboard,
+                displayName,
+                displayLocation,
+                recentApplications,
+                isLoading,
+              ),
             ),
-            BusinessGigsPage(
-              businessName: displayName,
-              location: displayLocation,
-              showNavBar: false,
-              showAppBar: false,
+            _withAppBar(
+              displayName,
+              BusinessGigsPage(
+                businessName: displayName,
+                location: displayLocation,
+                showNavBar: false,
+                showAppBar: false,
+              ),
             ),
-            BusinessProjectsScreen(
-              businessName: displayName,
-              location: displayLocation,
-              showNavBar: false,
-              showAppBar: false,
-              initialTab: 0,
-              tabNotifier: _projectsTabNotifier,
+            _withAppBar(
+              displayName,
+              BusinessProjectsScreen(
+                businessName: displayName,
+                location: displayLocation,
+                showNavBar: false,
+                showAppBar: false,
+                initialTab: 0,
+                tabNotifier: _projectsTabNotifier,
+              ),
             ),
-            BusinessProfilePage(
-              businessName: displayName,
-              location: displayLocation,
-              showNavBar: false,
-              showAppBar: false,
+            _withAppBar(
+              displayName,
+              BusinessProfilePage(
+                businessName: displayName,
+                location: displayLocation,
+                showNavBar: false,
+                showAppBar: false,
+              ),
             ),
           ],
         ),
       ),
-      bottomNavigationBar: _bottomNav(),
+      bottomNavigationBar: _buildBottomNav(),
+    );
+  }
+
+  Widget _withAppBar(String displayName, Widget child) {
+    return Column(
+      children: [
+        CommonAppBar(
+          displayName: displayName,
+          role: 'business',
+          onAvatarTap: () => setState(() => _selectedIndex = 3),
+        ),
+        Expanded(child: child),
+      ],
     );
   }
 
@@ -161,7 +191,7 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 480),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 24, 16),
+          padding: const EdgeInsets.fromLTRB(20, 8, 24, 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -226,20 +256,8 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
                   ),
                 ),
               const SizedBox(height: 20),
-              _buildActiveGigsCard(
+              _buildStatsGrid(
                 primaryBlue,
-                softBlueBg,
-                darkText,
-                mutedText,
-                borderColor,
-                dashboard,
-              ),
-              const SizedBox(height: 22),
-              _buildMetricGrid(
-                primaryBlue,
-                softBlueBg,
-                darkText,
-                mutedText,
                 borderColor,
                 dashboard,
               ),
@@ -270,207 +288,100 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
     );
   }
 
-  Widget _bottomNav() {
-    return SafeArea(
-      top: false,
-      child: Container(
-        height: 68,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(
-            top: BorderSide(color: Color(0xFFE2E8F0), width: 1),
-          ),
+  Widget _buildBottomNav() {
+    const primaryBlue = Color(0xFF1D61E7);
+    const mutedText = Color(0xFF64748B);
+    return BottomNavigationBar(
+      currentIndex: _selectedIndex,
+      type: BottomNavigationBarType.fixed,
+      backgroundColor: Colors.white,
+      selectedItemColor: primaryBlue,
+      unselectedItemColor: mutedText,
+      selectedFontSize: 12,
+      unselectedFontSize: 12,
+      onTap: (i) => setState(() => _selectedIndex = i),
+      items: const [
+        BottomNavigationBarItem(
+          icon: Icon(Icons.home_outlined),
+          activeIcon: Icon(Icons.home_rounded),
+          label: 'Home',
         ),
-        child: Row(
-          children: [
-            _BottomNavItem(
-              icon: Icons.home_outlined,
-              activeIcon: Icons.home_rounded,
-              label: 'Home',
-              selected: _selectedIndex == 0,
-              onTap: () => setState(() => _selectedIndex = 0),
-            ),
-            _BottomNavItem(
-              icon: Icons.work_outline_rounded,
-              activeIcon: Icons.work_rounded,
-              label: 'Gigs',
-              selected: _selectedIndex == 1,
-              onTap: () => setState(() => _selectedIndex = 1),
-            ),
-            _BottomNavItem(
-              icon: Icons.assignment_outlined,
-              activeIcon: Icons.assignment_rounded,
-              label: 'Projects',
-              selected: _selectedIndex == 2,
-              onTap: () => setState(() => _selectedIndex = 2),
-            ),
-            _BottomNavItem(
-              icon: Icons.person_outline_rounded,
-              activeIcon: Icons.person_rounded,
-              label: 'Profile',
-              selected: _selectedIndex == 3,
-              onTap: () => setState(() => _selectedIndex = 3),
-            ),
-          ],
+        BottomNavigationBarItem(
+          icon: Icon(Icons.work_outline_rounded),
+          activeIcon: Icon(Icons.work_rounded),
+          label: 'Gigs',
         ),
-      ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.assignment_outlined),
+          activeIcon: Icon(Icons.assignment_rounded),
+          label: 'Projects',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.person_outline_rounded),
+          activeIcon: Icon(Icons.person_rounded),
+          label: 'Profile',
+        ),
+      ],
     );
   }
 
-  Widget _buildActiveGigsCard(
+  Widget _buildStatsGrid(
       Color primaryBlue,
-      Color softBlueBg,
-      Color darkText,
-      Color mutedText,
       Color borderColor,
       BusinessDashboardResponse? dashboard,
       ) {
     final isLoading = dashboard == null;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: borderColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Active Gigs',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: darkText,
-                ),
-              ),
-              GestureDetector(
-                onTap: () => setState(() => _selectedIndex = 1),
-                child: Row(
-                  children: [
-                    Text(
-                      'View all',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: primaryBlue,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Icon(
-                      Icons.arrow_forward,
-                      size: 16,
-                      color: primaryBlue,
-                    ),
-                  ],
-                ),
-              ),
-            ],
+    Widget card(String count, String title, String subtitle, VoidCallback onTap) {
+      return Expanded(
+        child: SizedBox(
+          height: 100,
+          child: StatCard(
+            countText: count,
+            subtitleText: '$title · $subtitle',
+            borderColor: borderColor,
+            onTap: onTap,
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (isLoading)
-                      Text(
-                        '0',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w800,
-                          color: primaryBlue,
-                        ),
-                      )
-                    else
-                      Text(
-                        dashboard.activeGigs.toString(),
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w800,
-                          color: primaryBlue,
-                        ),
-                      ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Open for applications',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: mutedText,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: softBlueBg,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.work_outline,
-                  size: 24,
-                  color: primaryBlue,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+        ),
+      );
+    }
 
-  Widget _buildMetricGrid(
-      Color primaryBlue,
-      Color softBlueBg,
-      Color darkText,
-      Color mutedText,
-      Color borderColor,
-      BusinessDashboardResponse? dashboard,
-      ) {
-    final isLoading = dashboard == null;
     return Column(
       children: [
         Row(
           children: [
-            Expanded(
-              child: _MetricCard(
-                count: dashboard?.newApplicants.toString() ?? '',
-                title: 'New Applicants',
-                subtitle: 'Ready to review',
-                borderColor: borderColor,
-                isLoading: isLoading,
-              ),
+            card(
+              isLoading ? '0 gigs' : '${dashboard.activeGigs} gigs',
+              'Active gigs',
+              'Open for applications',
+              () => setState(() => _selectedIndex = 1),
+            ),
+            const SizedBox(width: 12),
+            card(
+              isLoading ? '0 applicants' : '${dashboard.newApplicants} applicants',
+              'New applicants',
+              'Ready to review',
+              () {
+                _projectsTabNotifier.value = 0;
+                setState(() => _selectedIndex = 2);
+              },
             ),
           ],
         ),
         const SizedBox(height: 12),
         Row(
           children: [
-            Expanded(
-              child: _MetricCard(
-                count: dashboard?.projectsInProgress.toString() ?? '',
-                title: 'Projects in Progress',
-                subtitle: 'Work awaiting review',
-                borderColor: borderColor,
-                isLoading: isLoading,
-              ),
+            card(
+              isLoading ? '0 projects' : '${dashboard.projectsInProgress} projects',
+              'In progress',
+              'Work awaiting review',
+              () => setState(() => _selectedIndex = 2),
             ),
             const SizedBox(width: 12),
-            Expanded(
-              child: _MetricCard(
-                count: dashboard?.completedProjects.toString() ?? '',
-                title: 'Completed Projects',
-                subtitle: 'After your approval',
-                borderColor: borderColor,
-                isLoading: isLoading,
-              ),
+            card(
+              isLoading ? '0 projects' : '${dashboard.completedProjects} projects',
+              'Completed',
+              'After your approval',
+              () => setState(() => _selectedIndex = 2),
             ),
           ],
         ),
@@ -687,77 +598,7 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
           ),
         ),
       ),
-      bottomNavigationBar: _bottomNav(),
-    );
-  }
-}
-
-class _MetricCard extends StatelessWidget {
-  final String count;
-  final String title;
-  final String subtitle;
-  final Color borderColor;
-  final bool isLoading;
-
-  const _MetricCard({
-    required this.count,
-    required this.title,
-    required this.subtitle,
-    required this.borderColor,
-    this.isLoading = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: borderColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          if (isLoading)
-            Text(
-              '0',
-              style: const TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF1D61E7),
-                height: 1.1,
-              ),
-            )
-          else
-            Text(
-              count,
-              style: const TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF1D61E7),
-                height: 1.1,
-              ),
-            ),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF0F172A),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Color(0xFF64748B),
-            ),
-          ),
-        ],
-      ),
+      bottomNavigationBar: _buildBottomNav(),
     );
   }
 }
@@ -857,60 +698,5 @@ class _RecentApplicationRow extends StatelessWidget {
       ),
     ),
   );
-  }
-}
-
-class _BottomNavItem extends StatelessWidget {
-  final IconData icon;
-  final IconData activeIcon;
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _BottomNavItem({
-    required this.icon,
-    required this.activeIcon,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const blue = Color(0xFF2563EB);
-
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 38,
-              height: 32,
-              decoration: BoxDecoration(
-                color: selected ? const Color(0xFFEFF6FF) : Colors.transparent,
-                borderRadius: BorderRadius.circular(9),
-              ),
-              alignment: Alignment.center,
-              child: Icon(
-                selected ? activeIcon : icon,
-                size: 22,
-                color: selected ? blue : const Color(0xFF64748B),
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10.5,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                color: selected ? blue : const Color(0xFF64748B),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

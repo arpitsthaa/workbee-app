@@ -51,7 +51,6 @@ class StudentProfileSerializer(serializers.ModelSerializer):
 
 class BusinessProfileSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source="user.email", read_only=True)
-    full_name = serializers.CharField(source="user.full_name", required=False)
     location = serializers.CharField(source="user.location", required=False)
 
     class Meta:
@@ -59,7 +58,6 @@ class BusinessProfileSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "email",
-            "full_name",
             "location",
             "business_type",
             "about",
@@ -103,6 +101,7 @@ class GigSerializer(serializers.ModelSerializer):
             "location",
             "is_remote",
             "status",
+            "proposal_link",
             "applicants_count",
             "has_applied",
             "created_at",
@@ -200,9 +199,11 @@ class ProjectReviewSerializer(serializers.ModelSerializer):
 
 class ProjectSerializer(serializers.ModelSerializer):
     gig_title = serializers.CharField(source="gig.title", read_only=True)
+    gig_description = serializers.CharField(source="gig.description", read_only=True)
     budget_npr = serializers.IntegerField(source="gig.budget_npr", read_only=True)
     deadline = serializers.DateField(source="gig.deadline", read_only=True)
     deliverables = serializers.JSONField(source="gig.deliverables", read_only=True)
+    proposal_link = serializers.URLField(source="gig.proposal_link", read_only=True)
     business_name = serializers.CharField(
         source="business.email", read_only=True
     )
@@ -215,9 +216,11 @@ class ProjectSerializer(serializers.ModelSerializer):
             "id",
             "gig",
             "gig_title",
+            "gig_description",
             "budget_npr",
             "deadline",
             "deliverables",
+            "proposal_link",
             "business_name",
             "student_name",
             "status",
