@@ -112,6 +112,10 @@ class _RegisterBusinessPageState extends State<RegisterBusinessPage> {
             role: 'business',
           );
         }
+        await TokenService.updateProfile(
+          name: businessName,
+          location: location,
+        );
       }
 
       _showMessage(result['message'] ?? 'Business account created successfully!');

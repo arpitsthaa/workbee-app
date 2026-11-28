@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:workbee_frontend/clients/business_client.dart';
 import 'package:workbee_frontend/constants/app_colors.dart';
+import 'package:workbee_frontend/pages/business/business_payment_page.dart';
 
 /// Page for posting a new gig.
 class PostGigPage extends StatefulWidget {
@@ -25,8 +25,7 @@ class _PostGigPageState extends State<PostGigPage> {
   final TextEditingController _deadlineController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
   final TextEditingController _proposalLinkController = TextEditingController();
-
-  bool _isPosting = false;
+  bool _isRemote = true;
 
   @override
   void dispose() {
@@ -154,37 +153,28 @@ class _PostGigPageState extends State<PostGigPage> {
       return;
     }
 
-    setState(() => _isPosting = true);
+    final gigData = <String, dynamic>{
+      'title': title,
+      'description': description,
+      'required_skills': _parseSkills(skillsRaw),
+      'budget_npr': int.parse(budgetRaw),
+      'duration_days': 7,
+      'deadline': deadline,
+      'location': locationRaw,
+      'is_remote': _isRemote,
+      'category': 'Design & creative',
+      'deliverables': <String>[],
+      'proposal_link': _proposalLinkController.text.trim(),
+    };
 
-    try {
-      final result = await BusinessClient.postGig({
-        'title': title,
-        'description': description,
-        'required_skills': _parseSkills(skillsRaw),
-        'budget_npr': int.parse(budgetRaw),
-        'duration_days': 7,
-        'deadline': deadline,
-        'location': locationRaw,
-        'is_remote': true,
-        'category': 'Design & creative',
-        'deliverables': [],
-        'proposal_link': _proposalLinkController.text.trim(),
-      });
+    final posted = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BusinessPaymentPage(gigData: gigData),
+      ),
+    );
 
-      if (!mounted) return;
-
-      if (result.containsKey('error')) {
-        setState(() => _isPosting = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                result['error'] as String? ?? 'Failed to post gig'),
-            backgroundColor: AppColors.errorRed,
-          ),
-        );
-        return;
-      }
-
+    if (posted == true && mounted) {
       _titleController.clear();
       _descriptionController.clear();
       _skillsController.clear();
@@ -192,26 +182,7 @@ class _PostGigPageState extends State<PostGigPage> {
       _deadlineController.clear();
       _locationController.clear();
       _proposalLinkController.clear();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Gig posted successfully!'),
-            backgroundColor: AppColors.successGreen,
-          ),
-        );
-      }
-
       Navigator.pop(context, true);
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _isPosting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Connection error: $e'),
-          backgroundColor: AppColors.errorRed,
-        ),
-      );
     }
   }
 
@@ -390,11 +361,21 @@ class _PostGigPageState extends State<PostGigPage> {
                   ),
                   const SizedBox(height: 20),
 
-                  SizedBox(
+                   SegmentedButton<bool>(
+                     segments: const [
+                       ButtonSegment<bool>(value: true, label: Text('Remote')),
+                       ButtonSegment<bool>(value: false, label: Text('On-site')),
+                     ],
+                     selected: {_isRemote},
+                     onSelectionChanged: (s) => setState(() => _isRemote = s.first),
+                   ),
+                   const SizedBox(height: 12),
+
+                   SizedBox(
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: _isPosting ? null : _postGig,
+                      onPressed: _postGig,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primaryBlue,
                         foregroundColor: Colors.white,
@@ -403,22 +384,13 @@ class _PostGigPageState extends State<PostGigPage> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: _isPosting
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Text(
-                              'Post Gig',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
+                      child: const Text(
+                        'Continue',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 24),

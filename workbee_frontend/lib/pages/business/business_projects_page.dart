@@ -37,6 +37,7 @@ class _BusinessProjectsScreenState extends State<BusinessProjectsScreen> {
   String? _applicationsError;
   String? _projectsError;
   int _selectedNavIndex = 2;
+  bool _sortByRating = false;
 
   @override
   void initState() {
@@ -236,6 +237,19 @@ class _BusinessProjectsScreenState extends State<BusinessProjectsScreen> {
     );
   }
 
+  List<GigApplication> get _visibleApplications => _applications
+      .where((a) {
+        final s = a.status.toUpperCase();
+        return s != 'ACCEPTED' && s != 'REJECTED';
+      })
+      .toList();
+  List<BusinessProject> get _visibleProjects => _projects
+      .where((p) {
+        final s = p.status.toUpperCase();
+        return s != 'COMPLETED' && s != 'APPROVED';
+      })
+      .toList();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -288,89 +302,121 @@ class _BusinessProjectsScreenState extends State<BusinessProjectsScreen> {
                         ? _loadApplications
                         : _loadProjects,
                     child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.fromLTRB(20, 22, 20, 24),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (_activeTab == 0) ...[
-                            const Text(
-                              'Application updates',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.darkText,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            if (_applicationsLoading && _applications.isEmpty)
-                              const SizedBox(
-                                height: 200,
-                                child: Center(child: CircularProgressIndicator()),
-                              )
-                            else if (_applicationsError != null &&
-                                _applications.isEmpty)
-                              _ErrorText(_applicationsError ?? 'Something went wrong')
-                            else if (_applications.isEmpty)
-                              const Text(
-                                'No applicants yet.',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: AppColors.mutedText,
-                                ),
-                              )
-                            else
-                              ..._applications.map((app) {
-                                final canUpdate =
-                                    app.status.toUpperCase() == 'PENDING' ||
-                                        app.status.toUpperCase() == 'SHORTLISTED';
-                                return Column(
-                                  children: [
-                                    ApplicantCard(
-                                      app: app,
-                                      canUpdate: canUpdate,
-                                      onUpdateStatus: (status) =>
-                                          _updateApplicationStatus(app.id, status),
-                                      isUpdating: false,
-                                      onApplicantTap: () {
-                                        showModalBottomSheet(
-                                          context: context,
-                                          isScrollControlled: true,
-                                          backgroundColor: Colors.white,
-                                          shape: const RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.vertical(
-                                              top: Radius.circular(20),
-                                            ),
-                                          ),
-                                          builder: (context) =>
-                                              ApplicantInfoBottomSheet(
-                                            app: app,
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                    const SizedBox(height: 12),
-                                  ],
-                                );
-                              }),
+                           if (_activeTab == 0) ...[
+                             Row(
+                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                               children: [
+                                 const Text(
+                                   'Application updates',
+                                   style: TextStyle(
+                                     fontSize: 16,
+                                     fontWeight: FontWeight.w700,
+                                     color: AppColors.darkText,
+                                   ),
+                                 ),
+                                 GestureDetector(
+                                   onTap: () => setState(() => _sortByRating = !_sortByRating),
+                                   child: Container(
+                                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                     decoration: BoxDecoration(
+                                       color: _sortByRating ? AppColors.softBlueBg : Colors.transparent,
+                                       borderRadius: BorderRadius.circular(8),
+                                       border: Border.all(color: AppColors.borderColor),
+                                     ),
+                                     child: Text(
+                                       'Sort by rating',
+                                       style: TextStyle(
+                                         fontSize: 12.5,
+                                         fontWeight: FontWeight.w600,
+                                         color: _sortByRating ? AppColors.primaryBlue : AppColors.mutedText,
+                                       ),
+                                     ),
+                                   ),
+                                 ),
+                               ],
+                             ),
+                             const SizedBox(height: 12),
+                             Builder(
+                               builder: (context) {
+                                 final apps = [..._visibleApplications];
+                                 if (_sortByRating) {
+                                   apps.sort((a, b) => b.studentRating.compareTo(a.studentRating));
+                                 }
+                                 if (_applicationsLoading && apps.isEmpty) {
+                                   return const SizedBox(
+                                     height: 200,
+                                     child: Center(child: CircularProgressIndicator()),
+                                   );
+                                 }
+                                 if (_applicationsError != null && apps.isEmpty) {
+                                   return _ErrorText(_applicationsError ?? 'Something went wrong');
+                                 }
+                                 if (apps.isEmpty) {
+                                   return const _EmptyStateCard(
+                                     title: 'No applicants yet.',
+                                     subtitle:
+                                         'Share your gigs to start receiving applications.',
+                                   );
+                                 }
+                                 return Column(
+                                   children: apps.map((app) {
+                                     final canUpdate =
+                                         app.status.toUpperCase() == 'PENDING' ||
+                                             app.status.toUpperCase() == 'SHORTLISTED';
+                                     return Column(
+                                       children: [
+                                         ApplicantCard(
+                                           app: app,
+                                           canUpdate: canUpdate,
+                                           onUpdateStatus: (status) =>
+                                               _updateApplicationStatus(app.id, status),
+                                           isUpdating: false,
+                                           onApplicantTap: () {
+                                             showModalBottomSheet(
+                                               context: context,
+                                               isScrollControlled: true,
+                                               backgroundColor: Colors.white,
+                                               shape: const RoundedRectangleBorder(
+                                                 borderRadius: BorderRadius.vertical(
+                                                   top: Radius.circular(20),
+                                                 ),
+                                               ),
+                                               builder: (context) =>
+                                                   ApplicantInfoBottomSheet(
+                                                 app: app,
+                                               ),
+                                             );
+                                           },
+                                         ),
+                                         const SizedBox(height: 12),
+                                       ],
+                                     );
+                                   }).toList(),
+                                 );
+                               },
+                             ),
                           ] else ...[
-                            if (_projectsLoading && _projects.isEmpty)
-                              const SizedBox(
-                                height: 200,
-                                child: Center(child: CircularProgressIndicator()),
-                              )
-                            else if (_projectsError != null &&
-                                _projects.isEmpty)
-                              _ErrorText(_projectsError ?? 'Something went wrong')
-                            else if (_projects.isEmpty)
-                              const Text(
-                                'No projects yet.',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: AppColors.mutedText,
-                                ),
-                              )
-                            else
-                              ..._projects.map((project) {
+                           if (_projectsLoading && _visibleProjects.isEmpty)
+                               const SizedBox(
+                                 height: 200,
+                                 child: Center(child: CircularProgressIndicator()),
+                               )
+                             else if (_projectsError != null &&
+                                 _visibleProjects.isEmpty)
+                               _ErrorText(_projectsError ?? 'Something went wrong')
+                             else if (_visibleProjects.isEmpty)
+                               const _EmptyStateCard(
+                                 title: 'No projects yet.',
+                                 subtitle:
+                                     'Approve an applicant to start your first project.',
+                               )
+                             else
+                               ..._visibleProjects.map((project) {
                                 final canReview =
                                     project.status.toUpperCase() == 'COMPLETED' &&
                                     project.submissionLink.isNotEmpty;
@@ -424,52 +470,44 @@ class _BusinessProjectsScreenState extends State<BusinessProjectsScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: widget.showNavBar
-          ? SafeArea(
-              top: false,
-              child: Container(
-                height: 68,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  border: Border(
-                    top: BorderSide(color: AppColors.borderColor, width: 1),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    _BottomNavItem(
-                      icon: Icons.home_outlined,
-                      activeIcon: Icons.home_rounded,
-                      label: 'Home',
-                      selected: _selectedNavIndex == 0,
-                      onTap: () => setState(() => _selectedNavIndex = 0),
-                    ),
-                    _BottomNavItem(
-                      icon: Icons.work_outline_rounded,
-                      activeIcon: Icons.work_rounded,
-                      label: 'Gigs',
-                      selected: _selectedNavIndex == 1,
-                      onTap: () => setState(() => _selectedNavIndex = 1),
-                    ),
-                    _BottomNavItem(
-                      icon: Icons.assignment_outlined,
-                      activeIcon: Icons.assignment_rounded,
-                      label: 'Projects',
-                      selected: _selectedNavIndex == 2,
-                      onTap: () => setState(() => _selectedNavIndex = 2),
-                    ),
-                    _BottomNavItem(
-                      icon: Icons.person_outline_rounded,
-                      activeIcon: Icons.person_rounded,
-                      label: 'Profile',
-                      selected: _selectedNavIndex == 3,
-                      onTap: () => setState(() => _selectedNavIndex = 3),
-                    ),
-                  ],
-                ),
-              ),
-            )
-          : null,
+      bottomNavigationBar: widget.showNavBar ? _buildBottomNav() : null,
+    );
+  }
+
+  Widget _buildBottomNav() {
+    const blue = AppColors.primaryBlue;
+    const muted = AppColors.mutedText;
+    return BottomNavigationBar(
+      currentIndex: _selectedNavIndex,
+      type: BottomNavigationBarType.fixed,
+      backgroundColor: Colors.white,
+      selectedItemColor: blue,
+      unselectedItemColor: muted,
+      selectedFontSize: 12,
+      unselectedFontSize: 12,
+      onTap: (i) => setState(() => _selectedNavIndex = i),
+      items: const [
+        BottomNavigationBarItem(
+          icon: Icon(Icons.home_outlined),
+          activeIcon: Icon(Icons.home_rounded),
+          label: 'Home',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.work_outline_rounded),
+          activeIcon: Icon(Icons.work_rounded),
+          label: 'Gigs',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.assignment_outlined),
+          activeIcon: Icon(Icons.assignment_rounded),
+          label: 'Projects',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.person_outline_rounded),
+          activeIcon: Icon(Icons.person_rounded),
+          label: 'Profile',
+        ),
+      ],
     );
   }
 }
@@ -510,6 +548,54 @@ class _TabButton extends StatelessWidget {
   }
 }
 
+/// Card-style empty state matching the gigs page design.
+class _EmptyStateCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+
+  const _EmptyStateCard({
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borderColor),
+      ),
+      child: Column(
+        children: [
+          const Icon(Icons.inbox_outlined,
+              size: 56, color: AppColors.borderLight),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: AppColors.darkText,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            style: const TextStyle(
+              fontSize: 14,
+              color: AppColors.mutedText,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Simple error text widget.
 class _ErrorText extends StatelessWidget {
   final String message;
@@ -523,62 +609,6 @@ class _ErrorText extends StatelessWidget {
       style: const TextStyle(
         fontSize: 14,
         color: AppColors.mutedText,
-      ),
-    );
-  }
-}
-
-/// Bottom navigation item.
-class _BottomNavItem extends StatelessWidget {
-  final IconData icon;
-  final IconData activeIcon;
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _BottomNavItem({
-    required this.icon,
-    required this.activeIcon,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const blue = AppColors.primaryBlue;
-
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 38,
-              height: 32,
-              decoration: BoxDecoration(
-                color: selected ? const Color(0xFFEFF6FF) : Colors.transparent,
-                borderRadius: BorderRadius.circular(9),
-              ),
-              alignment: Alignment.center,
-              child: Icon(
-                selected ? activeIcon : icon,
-                size: 22,
-                color: selected ? blue : const Color(0xFF64748B),
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10.5,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                color: selected ? blue : const Color(0xFF64748B),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

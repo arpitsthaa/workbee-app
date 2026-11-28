@@ -108,12 +108,10 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
       return _buildProfileSkeleton();
     }
 
-    final displayName =
-        _profile != null
-            ? (TokenService.getNameSync()?.isNotEmpty ?? false
-                ? TokenService.getNameSync()!
-                : _profile!.email.split('@').first)
-            : widget.businessName;
+    final tokenName = TokenService.getNameSync() ?? '';
+    final displayName = tokenName.isNotEmpty
+        ? tokenName
+        : (widget.businessName.isNotEmpty ? widget.businessName : 'My Business');
     final displayLocation = _profile?.location ?? widget.location;
     final isVerified = _profile?.isVerified ?? false;
 
@@ -419,52 +417,42 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
           ),
         ),
       ),
-      bottomNavigationBar: widget.showNavBar
-          ? SafeArea(
-              top: false,
-              child: Container(
-                height: 68,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  border: Border(
-                    top: BorderSide(color: _borderColor, width: 1),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    _BottomNavItem(
-                      icon: Icons.home_outlined,
-                      activeIcon: Icons.home_rounded,
-                      label: 'Home',
-                      selected: _selectedNavIndex == 0,
-                      onTap: () => setState(() => _selectedNavIndex = 0),
-                    ),
-                    _BottomNavItem(
-                      icon: Icons.work_outline_rounded,
-                      activeIcon: Icons.work_rounded,
-                      label: 'Gigs',
-                      selected: _selectedNavIndex == 1,
-                      onTap: () => setState(() => _selectedNavIndex = 1),
-                    ),
-                    _BottomNavItem(
-                      icon: Icons.assignment_outlined,
-                      activeIcon: Icons.assignment_rounded,
-                      label: 'Projects',
-                      selected: _selectedNavIndex == 2,
-                      onTap: () => setState(() => _selectedNavIndex = 2),
-                    ),
-                    _BottomNavItem(
-                      icon: Icons.person_outline_rounded,
-                      activeIcon: Icons.person_rounded,
-                      label: 'Profile',
-                      selected: _selectedNavIndex == 3,
-                      onTap: () => setState(() => _selectedNavIndex = 3),
-                    ),
-                  ],
-                ),
-              ),
-            )
-          : null,
+      bottomNavigationBar: widget.showNavBar ? _buildBottomNav() : null,
+    );
+  }
+
+  Widget _buildBottomNav() {
+    return BottomNavigationBar(
+      currentIndex: _selectedNavIndex,
+      type: BottomNavigationBarType.fixed,
+      backgroundColor: Colors.white,
+      selectedItemColor: _primaryBlue,
+      unselectedItemColor: _mutedText,
+      selectedFontSize: 12,
+      unselectedFontSize: 12,
+      onTap: (i) => setState(() => _selectedNavIndex = i),
+      items: const [
+        BottomNavigationBarItem(
+          icon: Icon(Icons.home_outlined),
+          activeIcon: Icon(Icons.home_rounded),
+          label: 'Home',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.work_outline_rounded),
+          activeIcon: Icon(Icons.work_rounded),
+          label: 'Gigs',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.assignment_outlined),
+          activeIcon: Icon(Icons.assignment_rounded),
+          label: 'Projects',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.person_outline_rounded),
+          activeIcon: Icon(Icons.person_rounded),
+          label: 'Profile',
+        ),
+      ],
     );
   }
 
@@ -711,107 +699,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
           ),
         ),
       ),
-      bottomNavigationBar: widget.showNavBar
-          ? SafeArea(
-              top: false,
-              child: Container(
-                height: 68,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  border: Border(
-                    top: BorderSide(color: _borderColor, width: 1),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    _BottomNavItem(
-                      icon: Icons.home_outlined,
-                      activeIcon: Icons.home_rounded,
-                      label: 'Home',
-                      selected: _selectedNavIndex == 0,
-                      onTap: () => setState(() => _selectedNavIndex = 0),
-                    ),
-                    _BottomNavItem(
-                      icon: Icons.work_outline_rounded,
-                      activeIcon: Icons.work_rounded,
-                      label: 'Gigs',
-                      selected: _selectedNavIndex == 1,
-                      onTap: () => setState(() => _selectedNavIndex = 1),
-                    ),
-                    _BottomNavItem(
-                      icon: Icons.assignment_outlined,
-                      activeIcon: Icons.assignment_rounded,
-                      label: 'Projects',
-                      selected: _selectedNavIndex == 2,
-                      onTap: () => setState(() => _selectedNavIndex = 2),
-                    ),
-                    _BottomNavItem(
-                      icon: Icons.person_outline_rounded,
-                      activeIcon: Icons.person_rounded,
-                      label: 'Profile',
-                      selected: _selectedNavIndex == 3,
-                      onTap: () => setState(() => _selectedNavIndex = 3),
-                    ),
-                  ],
-                ),
-              ),
-            )
-          : null,
-    );
-  }
-}
-
-class _BottomNavItem extends StatelessWidget {
-  final IconData icon;
-  final IconData activeIcon;
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _BottomNavItem({
-    required this.icon,
-    required this.activeIcon,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const blue = AppColors.primaryBlue;
-
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 38,
-              height: 32,
-              decoration: BoxDecoration(
-                color: selected ? const Color(0xFFEFF6FF) : Colors.transparent,
-                borderRadius: BorderRadius.circular(9),
-              ),
-              alignment: Alignment.center,
-              child: Icon(
-                selected ? activeIcon : icon,
-                size: 22,
-                color: selected ? blue : const Color(0xFF64748B),
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10.5,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                color: selected ? blue : const Color(0xFF64748B),
-              ),
-            ),
-          ],
-        ),
-      ),
+      bottomNavigationBar: widget.showNavBar ? _buildBottomNav() : null,
     );
   }
 }

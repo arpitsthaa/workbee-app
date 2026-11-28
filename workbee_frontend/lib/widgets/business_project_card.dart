@@ -99,10 +99,10 @@ class BusinessProjectCard extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 6),
-                      Row(
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 4,
                         children: [
-                          const Icon(Icons.attach_money, size: 13, color: AppColors.mutedText),
-                          const SizedBox(width: 6),
                           Text(
                             'NPR ${p.budgetNpr}',
                             style: const TextStyle(
@@ -111,17 +111,21 @@ class BusinessProjectCard extends StatelessWidget {
                               color: AppColors.darkText,
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          const Icon(Icons.schedule, size: 13, color: AppColors.mutedText),
-                          const SizedBox(width: 6),
-                          Text(
-                            p.deadline.isNotEmpty
-                                ? 'Due ${formatDateDmy(p.deadline)}'
-                                : '—',
-                            style: const TextStyle(
-                              fontSize: 12.5,
-                              color: AppColors.mutedText,
-                            ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.schedule, size: 13, color: AppColors.mutedText),
+                              const SizedBox(width: 6),
+                              Text(
+                                p.deadline.isNotEmpty
+                                    ? 'Due ${formatDateDmy(p.deadline)}'
+                                    : '—',
+                                style: const TextStyle(
+                                  fontSize: 12.5,
+                                  color: AppColors.mutedText,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -542,17 +546,16 @@ class StudentInfoBottomSheet extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 20),
-              Row(
-                children: [
-                  _InfoChip(label: 'Rating', value: '${p.studentRating.toStringAsFixed(1)} / 5'),
-                  const SizedBox(width: 8),
-                  _InfoChip(label: 'Projects', value: p.verifiedProjectsCount.toString()),
-                  if (p.studentSkills.isNotEmpty) ...[
-                    const SizedBox(width: 8),
-                    _InfoChip(label: 'Skills', value: p.studentSkills.join(', ')),
-                  ],
-                ],
-              ),
+               Wrap(
+                 spacing: 8,
+                 runSpacing: 8,
+                 children: [
+                   _InfoChip(label: 'Rating', value: '${p.studentRating.toStringAsFixed(1)} / 5'),
+                   _InfoChip(label: 'Projects', value: p.verifiedProjectsCount.toString()),
+                   if (p.studentSkills.isNotEmpty)
+                     _InfoChip(label: 'Skills', value: p.studentSkills.join(', ')),
+                 ],
+               ),
               const SizedBox(height: 20),
               Row(
                 children: [

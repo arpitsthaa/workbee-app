@@ -229,17 +229,16 @@ class ApplicantInfoBottomSheet extends StatelessWidget {
               const SizedBox(height: 20),
 
               // Quick info chips
-              Row(
-                children: [
-                  _InfoChip(label: 'Rating', value: '${app.studentRating.toStringAsFixed(1)} / 5'),
-                  const SizedBox(width: 8),
-                  _InfoChip(label: 'Projects', value: app.verifiedProjectsCount.toString()),
-                  if (skills.isNotEmpty) ...[
-                    const SizedBox(width: 8),
-                    _InfoChip(label: 'Skills', value: skills.join(', ')),
-                  ],
-                ],
-              ),
+               Wrap(
+                 spacing: 8,
+                 runSpacing: 8,
+                 children: [
+                   _InfoChip(label: 'Rating', value: '${app.studentRating.toStringAsFixed(1)} / 5'),
+                   _InfoChip(label: 'Projects', value: app.verifiedProjectsCount.toString()),
+                   if (skills.isNotEmpty)
+                     _InfoChip(label: 'Skills', value: skills.join(', ')),
+                 ],
+               ),
               const SizedBox(height: 20),
 
               // Application details section

@@ -273,6 +273,33 @@ class StudentClient {
     }
   }
 
+  static Future<Map<String, dynamic>> requestPayout(
+      int projectId, String esewaPhone) async {
+    final url = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.studentPayout}');
+    final headers = await _authHeaders();
+    try {
+      final response = await http
+          .post(
+            url,
+            headers: headers,
+            body: jsonEncode({'project_id': projectId, 'esewa_phone': esewaPhone}),
+          )
+          .timeout(_timeout);
+      final body = _decodeBody(response.body);
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return body;
+      }
+      return {
+        'error': _errorMessage(body, response.statusCode),
+        'status': response.statusCode,
+      };
+    } on TimeoutException {
+      return {'error': 'Server took too long to respond.', 'status': 408};
+    } catch (e) {
+      return {'error': 'Connection error: $e', 'status': 0};
+    }
+  }
+
   // ---- Split dashboard endpoints (parallel fetch) ----
 
   static Future<Map<String, dynamic>> getDashboardProfile() async {

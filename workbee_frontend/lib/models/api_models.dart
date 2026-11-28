@@ -3,6 +3,7 @@ class Gig {
   final String businessName;
   final String title;
   final String category;
+  final String description;
   final List<String> requiredSkills;
   final int budgetNpr;
   final int durationDays;
@@ -20,6 +21,7 @@ class Gig {
     required this.businessName,
     required this.title,
     required this.category,
+    this.description = '',
     required this.requiredSkills,
     required this.budgetNpr,
     required this.durationDays,
@@ -39,6 +41,7 @@ class Gig {
       businessName: (json['business_name'] ?? '') as String,
       title: (json['title'] ?? '') as String,
       category: (json['category'] ?? '') as String,
+      description: (json['description'] ?? '') as String,
       requiredSkills: List<String>.from(json['required_skills'] ?? []),
       budgetNpr: (json['budget_npr'] ?? 0) as int,
       durationDays: (json['duration_days'] ?? 0) as int,

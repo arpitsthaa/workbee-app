@@ -7,6 +7,7 @@ import 'package:workbee_frontend/models/api_models.dart';
 import 'package:workbee_frontend/services/token_service.dart';
 import 'package:workbee_frontend/widgets/error_retry_state.dart';
 import 'package:workbee_frontend/widgets/loading_state.dart';
+import 'package:workbee_frontend/pages/student/project_details_page.dart';
 import 'package:workbee_frontend/widgets/student_project_card.dart';
 
 /// My Work page showing the student's applications and projects.
@@ -380,15 +381,23 @@ class MyWorkPageState extends State<MyWorkPage> {
                         ),
                         const SizedBox(height: 12),
                         if (_applications.isEmpty)
-                          const Text(
-                            'No applications yet.',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: AppColors.mutedText,
-                            ),
+                          Column(
+                            children: const [
+                              Icon(Icons.inbox_outlined, size: 48, color: AppColors.borderLight),
+                              SizedBox(height: 8),
+                              Text(
+                                'No applications yet.',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: AppColors.mutedText,
+                                ),
+                              ),
+                            ],
                           )
                         else
-                          ..._applications.map((app) {
+                          ..._applications
+                              .where((a) => a.status.toUpperCase() != 'ACCEPTED')
+                              .map((app) {
                             final canWithdraw = _canWithdraw(app.status);
                             return Column(
                               children: [
@@ -454,11 +463,26 @@ class MyWorkPageState extends State<MyWorkPage> {
                                 StudentProjectCard(
                                   project: project,
                                   isSelected: isSelected,
-                                  onSelect: () {
-                                    setState(() {
-                                      _selectedProjectId = project.id;
-                                    });
-                                  },
+                                   onSelect: () {
+                                     Navigator.push(
+                                       context,
+                                       MaterialPageRoute(
+                                         builder: (_) => ProjectDetailsPage(
+                                           project: project,
+                                           onStatusChanged: (newStatus) {
+                                             _handleSaveStatus(project, newStatus);
+                                           },
+                                           onSubmitWork: (link, note) async {
+                                             _linkController.text = link;
+                                             _noteController.text = note;
+                                             await _handleSubmitWork(project);
+                                           },
+                                           isSubmitting:
+                                               _submittingProjectId == project.id,
+                                         ),
+                                       ),
+                                     ).then((_) => _loadWork());
+                                   },
                                   onStatusChanged: (newStatus) {
                                     setState(() {
                                       _selectedStatuses[project.id] = newStatus;

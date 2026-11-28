@@ -58,6 +58,52 @@ class _StudentPassportPageState extends State<StudentPassportPage> {
     }
   }
 
+  Future<void> _requestPayout(int projectId) async {
+    final controller = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Request Payout'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.phone,
+          decoration: const InputDecoration(
+            hintText: 'eSewa phone number',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('Submit'),
+          ),
+        ],
+      ),
+    );
+    if (result == null || result.isEmpty) return;
+    if (result.length != 10) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid 10-digit phone number')),
+      );
+      return;
+    }
+    final res = await StudentClient.requestPayout(projectId, result);
+    if (!mounted) return;
+    if (res.containsKey('error')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(res['error'] as String? ?? 'Failed')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Payout request submitted')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -174,24 +220,26 @@ class _StudentPassportPageState extends State<StudentPassportPage> {
                   ),
                 )
               else
-                ...(_passport?.completedProjects ?? []).map((review) {
-                  return Column(
-                    children: [
-                      VerifiedProjectCard(
-                        title: review.gigTitle,
-                        businessAndLocation:
-                            '${review.businessName} · ${review.businessLocation}',
-                        roleAndSkills:
-                            '${review.roleTitle} · ${review.skills.join(', ')}',
-                        dateText: 'Completed ${formatDateDmy(review.completedAt ?? review.createdAt)}',
-                        ratingText: '${review.rating.toStringAsFixed(1)}/5',
-                        feedback: review.reviewComment,
-                        borderColor: AppColors.borderColor,
-                      ),
-                      const SizedBox(height: 14),
-                    ],
-                  );
-                }),
+                 ...(_passport?.completedProjects ?? []).map((review) {
+                   return Column(
+                     children: [
+                       VerifiedProjectCard(
+                         title: review.gigTitle,
+                         businessAndLocation:
+                             '${review.businessName} · ${review.businessLocation}',
+                         roleAndSkills:
+                             '${review.roleTitle} · ${review.skills.join(', ')}',
+                         dateText: 'Completed ${formatDateDmy(review.completedAt ?? review.createdAt)}',
+                         ratingText: '${review.rating.toStringAsFixed(1)}/5',
+                         feedback: review.reviewComment,
+                         borderColor: AppColors.borderColor,
+                         projectId: review.project,
+                         onRequestPayout: () => _requestPayout(review.project),
+                       ),
+                       const SizedBox(height: 14),
+                     ],
+                   );
+                 }),
             ],
           ),
         ),
@@ -211,6 +259,8 @@ class VerifiedProjectCard extends StatelessWidget {
   final String ratingText;
   final String feedback;
   final Color borderColor;
+  final int projectId;
+  final VoidCallback onRequestPayout;
 
   const VerifiedProjectCard({
     super.key,
@@ -219,6 +269,8 @@ class VerifiedProjectCard extends StatelessWidget {
     required this.roleAndSkills,
     required this.dateText,
     required this.ratingText,
+    required this.projectId,
+    required this.onRequestPayout,
     required this.feedback,
     required this.borderColor,
   });
@@ -318,6 +370,15 @@ class VerifiedProjectCard extends StatelessWidget {
                 maxLines: 1,
               ),
             ],
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            height: 40,
+            child: OutlinedButton(
+              onPressed: onRequestPayout,
+              child: const Text('Request Payout'),
+            ),
           ),
           const SizedBox(height: 10),
           Text(

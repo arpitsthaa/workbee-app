@@ -8,7 +8,7 @@ import 'package:workbee_frontend/pages/business/business_edit_gig_page.dart';
 import 'package:workbee_frontend/pages/business/business_post_gig_page.dart';
 import 'package:workbee_frontend/services/token_service.dart';
 import 'package:workbee_frontend/widgets/common_app_bar.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/services.dart';
 
 class BusinessGigsPage extends StatefulWidget {
   final String businessName;
@@ -89,9 +89,13 @@ class _BusinessGigsPageState extends State<BusinessGigsPage> {
 
   List<Gig> get _filteredGigs {
     if (_filter == 'All') return _gigs;
-    return _gigs
-        .where((g) => g.status.toUpperCase() == _filter.toUpperCase())
-        .toList();
+    if (_filter == 'Open') {
+      return _gigs.where((g) => g.status.toUpperCase() == 'OPEN').toList();
+    }
+    if (_filter == 'Closed') {
+      return _gigs.where((g) => g.status.toUpperCase() == 'CLOSED').toList();
+    }
+    return _gigs.where((g) => g.status.toUpperCase() == _filter.toUpperCase()).toList();
   }
 
   (Color bgColor, Color textColor) _statusStyle(String status) {
@@ -120,6 +124,36 @@ class _BusinessGigsPageState extends State<BusinessGigsPage> {
     if (updated == true) {
       _loadGigs();
     }
+  }
+
+  void _showSnack(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.errorRed,
+      ),
+    );
+  }
+
+  Future<void> _openProposal(String raw) async {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) {
+      _showSnack('No proposal link available.');
+      return;
+    }
+    var text = trimmed;
+    final uri = Uri.tryParse(trimmed);
+    if (uri == null || uri.scheme.isEmpty) {
+      text = 'https://$trimmed';
+    }
+    await Clipboard.setData(ClipboardData(text: text));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Link copied'),
+        backgroundColor: AppColors.successGreen,
+      ),
+    );
   }
 
   @override
@@ -177,7 +211,7 @@ class _BusinessGigsPageState extends State<BusinessGigsPage> {
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
-                        children: ['All', 'Open', 'In Progress', 'Closed']
+                        children: ['All', 'Open', 'Closed']
                             .map((f) => Padding(
                                   padding: const EdgeInsets.only(right: 10),
                                   child: GestureDetector(
@@ -228,6 +262,7 @@ class _BusinessGigsPageState extends State<BusinessGigsPage> {
                   child: RefreshIndicator(
                     onRefresh: _loadGigs,
                     child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -280,6 +315,8 @@ class _BusinessGigsPageState extends State<BusinessGigsPage> {
                                     statusColor: textColor,
                                     proposalLink: gig.proposalLink,
                                     onManage: () => _openEditGig(gig),
+                                    onViewProposal: () =>
+                                        _openProposal(gig.proposalLink),
                                   ),
                                   const SizedBox(height: 8),
                                 ],
@@ -448,52 +485,46 @@ class _BusinessGigsPageState extends State<BusinessGigsPage> {
   }
 
   Widget _bottomNav() {
-    return SafeArea(
-      top: false,
-      child: Container(
-        height: 68,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(
-            top: BorderSide(color: AppColors.borderColor, width: 1),
-          ),
+    const blue = AppColors.primaryBlue;
+    const muted = AppColors.mutedText;
+    return BottomNavigationBar(
+      currentIndex: _selectedNavIndex,
+      type: BottomNavigationBarType.fixed,
+      backgroundColor: Colors.white,
+      selectedItemColor: blue,
+      unselectedItemColor: muted,
+      selectedFontSize: 12,
+      unselectedFontSize: 12,
+      onTap: (i) {
+        if (i == 0) {
+          setState(() => _selectedNavIndex = 0);
+          Navigator.pop(context);
+          return;
+        }
+        setState(() => _selectedNavIndex = i);
+      },
+      items: const [
+        BottomNavigationBarItem(
+          icon: Icon(Icons.home_outlined),
+          activeIcon: Icon(Icons.home_rounded),
+          label: 'Home',
         ),
-        child: Row(
-          children: [
-            _BottomNavItem(
-              icon: Icons.home_outlined,
-              activeIcon: Icons.home_rounded,
-              label: 'Home',
-              selected: _selectedNavIndex == 0,
-              onTap: () {
-                setState(() => _selectedNavIndex = 0);
-                Navigator.pop(context);
-              },
-            ),
-            _BottomNavItem(
-              icon: Icons.work_outline_rounded,
-              activeIcon: Icons.work_rounded,
-              label: 'Gigs',
-              selected: _selectedNavIndex == 1,
-              onTap: () => setState(() => _selectedNavIndex = 1),
-            ),
-            _BottomNavItem(
-              icon: Icons.assignment_outlined,
-              activeIcon: Icons.assignment_rounded,
-              label: 'Projects',
-              selected: _selectedNavIndex == 2,
-              onTap: () => setState(() => _selectedNavIndex = 2),
-            ),
-            _BottomNavItem(
-              icon: Icons.person_outline_rounded,
-              activeIcon: Icons.person_rounded,
-              label: 'Profile',
-              selected: _selectedNavIndex == 3,
-              onTap: () => setState(() => _selectedNavIndex = 3),
-            ),
-          ],
+        BottomNavigationBarItem(
+          icon: Icon(Icons.work_outline_rounded),
+          activeIcon: Icon(Icons.work_rounded),
+          label: 'Gigs',
         ),
-      ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.assignment_outlined),
+          activeIcon: Icon(Icons.assignment_rounded),
+          label: 'Projects',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.person_outline_rounded),
+          activeIcon: Icon(Icons.person_rounded),
+          label: 'Profile',
+        ),
+      ],
     );
   }
 }
@@ -506,6 +537,7 @@ class _GigCard extends StatelessWidget {
   final Color statusColor;
   final String proposalLink;
   final VoidCallback onManage;
+  final VoidCallback onViewProposal;
 
   const _GigCard({
     required this.title,
@@ -515,6 +547,7 @@ class _GigCard extends StatelessWidget {
     required this.statusColor,
     required this.proposalLink,
     required this.onManage,
+    required this.onViewProposal,
   });
 
   @override
@@ -638,12 +671,7 @@ class _GigCard extends StatelessWidget {
               width: double.infinity,
               height: 42,
               child: OutlinedButton.icon(
-                onPressed: () async {
-                  final url = Uri.parse(proposalLink);
-                  if (await canLaunchUrl(url)) {
-                    await launchUrl(url, mode: LaunchMode.externalApplication);
-                  }
-                },
+                onPressed: onViewProposal,
                 icon: const Icon(Icons.description, size: 16),
                 label: const Text(
                   'View Proposal',
@@ -664,60 +692,3 @@ class _GigCard extends StatelessWidget {
     );
   }
 }
-
-class _BottomNavItem extends StatelessWidget {
-  final IconData icon;
-  final IconData activeIcon;
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _BottomNavItem({
-    required this.icon,
-    required this.activeIcon,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const blue = AppColors.primaryBlue;
-
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 38,
-              height: 32,
-              decoration: BoxDecoration(
-                color: selected ? const Color(0xFFEFF6FF) : Colors.transparent,
-                borderRadius: BorderRadius.circular(9),
-              ),
-              alignment: Alignment.center,
-              child: Icon(
-                selected ? activeIcon : icon,
-                size: 22,
-                color: selected ? blue : const Color(0xFF64748B),
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10.5,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                color: selected ? blue : const Color(0xFF64748B),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-
