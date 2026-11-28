@@ -4,14 +4,13 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('marketplace', '0005_remove_gig_marketplace_gig_status_idx_and_more'),
     ]
 
     operations = [
         migrations.RunSQL(
-            "ALTER TABLE marketplace_gig ADD COLUMN proposal_link VARCHAR(200) DEFAULT '';",
-            "ALTER TABLE marketplace_gig DROP COLUMN proposal_link;",
+            "ALTER TABLE marketplace_gig ADD COLUMN IF NOT EXISTS proposal_link VARCHAR(200) DEFAULT '';",
+            "ALTER TABLE marketplace_gig DROP COLUMN IF EXISTS proposal_link;",
         ),
     ]
